@@ -19,7 +19,7 @@ import numpy as np
 import cadquery as cq
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'r7'
+REV = 'r8'
 
 W, D = 91.0, 63.0            # outer size (x, ys)
 WALL, TOP, LID = 2.0, 1.5, 2.0
@@ -105,9 +105,10 @@ def frame(r, depth, t=1.2, cuts=()):
 
 
 # frames (縁取り) that hold each module in place sideways
-shell = shell.union(frame(NFC, -9.0, cuts=[box(9, 21, 50, 60, -20, 0)]))
-shell = shell.union(frame(VEIN, -10.0))
-shell = shell.union(frame(VOICE, -12.0, cuts=[box(53, 60, 35.5, 54.5, -20, 0), box(53, 60, 30, 60, -20, -6.0)]))
+# frames are kept short (half of r7) so the thin walls do not snap off
+shell = shell.union(frame(NFC, -5.25, cuts=[box(9, 21, 50, 60, -20, 0)]))
+shell = shell.union(frame(VEIN, -5.75))
+shell = shell.union(frame(VOICE, -6.75, cuts=[box(53, 60, 35.5, 54.5, -20, 0), box(53, 60, 30, 60, -20, -3.75)]))
 # USB exit: notch at the bottom of the right wall, closed by the lid
 shell = shell.cut(box(W - WALL - 1, W + 1, 42.25, 46.75, Z_BOT - 1, Z_LID + 4.0))
 # lid hook slots in the left wall
