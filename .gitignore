@@ -2,5 +2,7 @@ site/
 fab/
 case/*.step
 case/*.stl
+station/*.step
+station/*.stl
 __pycache__/
 *.kicad_prl

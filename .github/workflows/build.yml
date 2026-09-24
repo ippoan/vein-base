@@ -53,6 +53,9 @@ jobs:
       - name: Build 3D preview + interference check
         run: python3 tools/build_viewer.py
 
+      - name: Build Vein Station enclosure + 3D preview + interference check
+        run: python3 station/build_station.py
+
       - uses: actions/upload-artifact@v4
         with:
           name: vein-base-v${{ env.VER }}-fab
@@ -60,6 +63,7 @@ jobs:
             pcb/vein_base.kicad_pcb
             fab/vein_base_v*
             case/vein_base_v*
+            station/vein_station_*
 
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
