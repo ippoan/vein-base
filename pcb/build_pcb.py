@@ -24,12 +24,12 @@ for n in ['3V3', 'GND', 'G5_TX', 'G6_RX', '5V', 'G7', 'G8', 'G38', 'G39']:
     ni = pcbnew.NETINFO_ITEM(b, n); b.Add(ni); nets[n] = ni
 
 
-LIBS = set()
+LIBS = {}  # nickname -> fp-lib-table uri
 
 
-def load(lib, name):
-    fp = pcbnew.FootprintLoad(FP + lib, name)
-    nick = lib.removesuffix('.pretty'); LIBS.add(nick)
+def load(lib, name, base=FP, uri_base=FP):
+    fp = pcbnew.FootprintLoad(base + lib, name)
+    nick = lib.removesuffix('.pretty'); LIBS[nick] = uri_base + lib
     fp.SetFPID(pcbnew.LIB_ID(nick, name))  # DRC library parity needs the lib nickname
     b.Add(fp); return fp
 
@@ -62,10 +62,9 @@ for p in J3.Pads():
         p.SetNet(nets[{'1': 'G5_TX', '2': 'G6_RX', '3': '3V3', '4': 'GND'}[n]])
 print('J3 pads:', [(n, padpos(J3, n)) for n in '1234'])
 
-H1 = load('MountingHole.pretty', 'MountingHole_2.2mm_M2')
+# 2.4 mm loose-fit M2 hole from the project library (stock M2 is 2.2 mm)
+H1 = load('vein_base.pretty', 'MountingHole_2.4mm_M2', base='', uri_base='${KIPRJMOD}/')
 H1.SetReference('H1'); H1.SetPosition(P(0, 0))
-for p in H1.Pads():
-    p.SetDrillSize(pcbnew.VECTOR2I(mm(2.4), mm(2.4))); p.SetSize(pcbnew.VECTOR2I(mm(2.4), mm(2.4)))
 
 LAY = {'F.Cu': pcbnew.F_Cu, 'B.Cu': pcbnew.B_Cu}
 
@@ -118,7 +117,7 @@ b.Save('vein_base.kicad_pcb')
 # project-local fp-lib-table so DRC can resolve the footprint libraries
 with open('fp-lib-table', 'w') as f:
     f.write('(fp_lib_table\n  (version 7)\n')
-    for nick in sorted(LIBS):
-        f.write(f'  (lib (name "{nick}")(type "KiCad")(uri "{FP}{nick}.pretty")(options "")(descr ""))\n')
+    for nick, uri in sorted(LIBS.items()):
+        f.write(f'  (lib (name "{nick}")(type "KiCad")(uri "{uri}")(options "")(descr ""))\n')
     f.write(')\n')
 print('saved')
