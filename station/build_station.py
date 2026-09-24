@@ -191,7 +191,16 @@ model = [dict(key=k, label=l, color=c, opacity=o, group=g, data=base64.b64encode
 tpl = open(os.path.join(ROOT, 'tools/station_template.html'), encoding='utf-8').read()
 os.makedirs(os.path.join(ROOT, 'site/station'), exist_ok=True)
 page = os.path.join(ROOT, 'site/station/index.html')
-open(page, 'w', encoding='utf-8').write(tpl.replace('__MODEL__', json.dumps(model)).replace('__REV__', REV))
+SUB = 'VoiceS3R・指静脈・NFC を上向きに収める卓上筐体の案。ドラッグで回転、ホイール/ピンチで拡大。'
+DIMS = [('外形', '91 × 63 × 27.6'), ('壁 / 天板 / 底蓋', '2 / 1.5 / 2'), ('NFC 窓', '20 × 30'),
+        ('USB 出口(右の壁の下端)', '4.5 × 4'), ('底蓋', '左 爪 + M3 × 3(三角配置)'),
+        ('VoiceS3R', '返し 1.2(天板 0.8)/ 縁取り'), ('中継基板', 'ケースなし / レール + 中央ボス'),
+        ('縁取り(枠)', '厚 1.2 / 高さ 3.75〜5.25 / すき間 0.2')]
+NOTE = 'モジュールは写真からの実測(±1〜2 mm)による簡略形状です。指静脈モジュールは採寸待ちのため仮の箱、プラグ同士の位置関係は目安です。単位 mm。'
+dims = ''.join(f'        <tr><td>{k}</td><td>{v}</td></tr>\n' for k, v in DIMS)
+page_html = (tpl.replace('__MODEL__', json.dumps(model)).replace('__REV__', REV).replace('__SUB__', SUB)
+             .replace('__DIMS__', dims).replace('__NOTE__', NOTE).replace('__TZ__', '-15'))
+open(page, 'w', encoding='utf-8').write(page_html)
 print('wrote', page, os.path.getsize(page), 'bytes')
 
 if bad:
