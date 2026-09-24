@@ -24,7 +24,7 @@ import numpy as np
 import cadquery as cq
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'r11'
+REV = 'r12'
 
 W, D = 99.0, 70.0            # outer size (x, ys)
 WALL, TOP, LID = 2.0, 1.5, 2.0
@@ -145,10 +145,6 @@ DB9_HOLES = cyl_y(DB9_XC - 12.5, -1, WALL + 1, DB9_ZC, 2.8).union(cyl_y(DB9_XC +
 DB9_RECESS = box(DB9_X0, DB9_X1, -1, 1.0, DB9_Z0, DB9_Z1)
 shell = shell.cut(box(DB9_S0, DB9_S1, -1, WALL + 1, Z_BOT - 1, DB9_ZC))
 shell = shell.cut(DB9_D).cut(DB9_HOLES).cut(DB9_RECESS)
-# lid hook slots in the left and right walls
-for ys0 in (45, 57):
-    shell = shell.cut(box(1.0, WALL + 0.1, ys0, ys0 + 8, Z_BOT - 1, Z_BOT + 1.2))
-    shell = shell.cut(box(W - WALL - 0.1, W - 1.0, ys0, ys0 + 8, Z_BOT - 1, Z_BOT + 1.2))
 # screw bosses (M3 self-tapping, pilot 2.5): front-left beside the vein module, back-right beside the board
 SCREWS = [(8.0, 60.0), (W - 6.7, 20.0)]   # head counterbore (r3.0) keeps 1.6 to the lid edge
 PAD = 1.0                                 # pad on the lid around each screw: 2.0 - 1.2 counterbore + 1.0 = 1.8
@@ -157,9 +153,7 @@ for x, ys in SCREWS:
 
 # ---- enclosure: lid with pedestals ----------------------------------------------------------------------
 lid = rbox(WALL + CLR, W - WALL - CLR, WALL + CLR, D - WALL - CLR, Z_BOT, Z_LID, R_OUT - WALL - CLR)
-for ys0 in (45, 57):
-    lid = lid.union(box(1.1, WALL + CLR + 0.5, ys0 + 0.3, ys0 + 7.7, Z_BOT + 0.1, Z_BOT + 1.1))
-    lid = lid.union(box(W - WALL - CLR - 0.5, W - 1.1, ys0 + 0.3, ys0 + 7.7, Z_BOT + 0.1, Z_BOT + 1.1))
+# no hook tabs (r12): the lid sits inside the walls, so the two diagonal M3 screws are enough to hold it
 # NFC pedestal (pushes the unit up against the top plate), with a relief for the screw head on its back
 ped_nfc = box(NFC[0] + 3, NFC[1] - 3, NFC[2] + 3, NFC[3] - 3, Z_LID, -9.5).cut(cyl_z(NX, NFC[2] + 12, 3.0, Z_LID, 0))
 # vein pedestal: two rails under the long edges; the back rail leaves room for the J3 plug
@@ -254,7 +248,7 @@ DIMS = [('外形', f'{W:g} × {D:g} × {-Z_BOT:g}'), ('壁 / 天板 / 底蓋', '
         ('奥の壁', 'NFC Grove ・ VoiceS3R 側面(USB-C / PORT.A)・ DB9'),
         ('DB9', 'D 部の中心で上下分割(下は底蓋の舌)、外側 1 mm の座ぐり'),
         ('基板', '60 × 35、VoiceS3R の下と DB9 の横'), ('RS232', 'MAX3232 + DIP でストレート/クロス切替'),
-        ('底蓋', '左右 爪 + M3 × 2'), ('VoiceS3R', '返し 1.2(天板 0.8)/ 縁取り')]
+        ('底蓋', 'M3 × 2(対角)、爪なし'), ('VoiceS3R', '返し 1.2(天板 1.0)/ 縁取り')]
 NOTE = ('モジュールは写真からの実測(±1〜2 mm)による簡略形状です。指静脈モジュールは採寸待ちのため仮の箱、DB9 と基板上の部品は'
         'KiCad のフットプリント寸法からの簡略形状です。DIP は底蓋を開けて設定します。単位 mm。')
 dims = ''.join(f'        <tr><td>{k}</td><td>{v}</td></tr>\n' for k, v in DIMS)
