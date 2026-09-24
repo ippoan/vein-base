@@ -1,10 +1,13 @@
-"""Vein Station: desktop enclosure for VoiceS3R (+ vein-base), Finger Vein Module (A) and Unit NFC, all facing up.
+"""Vein Station: desktop enclosure for VoiceS3R (+ the vein-base relay PCB only), Finger Vein Module (A) and Unit NFC,
+all facing up.
 Run from the repository root:  python3 station/build_station.py
 Writes station/vein_station_<REV>_{shell,lid}.{step,stl} and the 3D preview site/station/index.html,
 and fails if the enclosure collides with a module, plug or cable.
 
 Coordinates: x = left→right, y = back→front is NEGATIVE (the top-view drawing's y is used as `ys`, Y = -ys),
-z = 0 at the top surface, down is negative. Outer 91 × 63 × 30.3.
+z = 0 at the top surface, down is negative. Outer 91 × 63 × 27.6.
+The vein-base case (shell/plate) is not used here: the relay PCB hangs on the VoiceS3R Ext.Pin headers and the lid
+rails push it (and the VoiceS3R) up against the lip.
 Every module is held the same way: supported from below by the lid, pressed against a lip in the top plate, and
 located sideways by a frame (縁取り) hanging from the top plate. No screws in the modules. Around the VoiceS3R the
 plate is thinned to 0.8 and the lip is 1.2 wide (button and speaker holes are 3 inside the edge), so it shows almost
@@ -16,12 +19,12 @@ import numpy as np
 import cadquery as cq
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'r6'
+REV = 'r7'
 
 W, D = 91.0, 63.0            # outer size (x, ys)
 WALL, TOP, LID = 2.0, 1.5, 2.0
-Z_BOT = -30.3                # bottom of the walls / lid
-Z_LID = Z_BOT + LID          # lid top (-28.3)
+Z_BOT = -27.6                # bottom of the walls / lid
+Z_LID = Z_BOT + LID          # lid top (-25.6): 0.5 under the J3 body on the relay PCB
 R_OUT = 4.0
 CLR = 0.1
 
@@ -49,19 +52,36 @@ VOICE = (29, 53, 33, 57)      # 24 × 24, USB-C / PORT.A / J3 face +x
 TOP_VOICE = 0.8               # top plate thinned around the VoiceS3R
 VOICE_LIP = 1.2
 Z_ATOM_BOT = -TOP_VOICE - 16.8  # -17.6
-Z_BASE_BOT = Z_ATOM_BOT - 9.5  # -27.1
 
 nfc = rbox(*NFC, -9.5, -1.5, 1.5)
 vein = rbox(*VEIN, -16.5, -1.5, 2.0)
 atom = rbox(*VOICE, Z_ATOM_BOT, -TOP_VOICE, 3.0)
-base = rbox(*VOICE, Z_BASE_BOT, Z_ATOM_BOT, 3.0)
+# relay PCB (vein-base v0.6 board only), rotated so its USB-C side (-y in board coords) faces +x here
+VX, VYS = (VOICE[0] + VOICE[1]) / 2, (VOICE[2] + VOICE[3]) / 2
+
+
+def board(bx0, bx1, by0, by1, z0, z1):
+    """Box given in vein-base board coords (x, y; z from the VoiceS3R bottom face) -> station coords."""
+    return box(VX - by1, VX - by0, VYS - bx1, VYS - bx0, Z_ATOM_BOT + z0, Z_ATOM_BOT + z1)
+
+
+pcb = board(-10, 10, -10.6, 9.3, -4.1, -2.5)
+hdr_plastic = hdr_pins = None
+for bx, bys in ((7.62, (2.54, 0, -2.54, -5.08, -7.62)), (-7.62, (0, -2.54, -5.08, -7.62))):
+    for by in bys:
+        pl = board(bx - 1.27, bx + 1.27, by - 1.27, by + 1.27, -2.5, 0)
+        pn = board(bx - 0.32, bx + 0.32, by - 0.32, by + 0.32, -7.1, -2.5)
+        hdr_plastic = pl if hdr_plastic is None else hdr_plastic.union(pl)
+        hdr_pins = pn if hdr_pins is None else hdr_pins.union(pn)
+j3 = (board(-4.3, 4.3, -10.6, -4.2, -7.5, -4.1).union(board(-5.5, -3.4, -9.5, -6.5, -4.4, -4.1))
+      .union(board(3.4, 5.5, -9.5, -6.5, -4.4, -4.1)))
 nfc_plug = box(11, 19, 51, 59, -8.0, -3.0)
 usb_head = cyl_x(53, 60, 44.5, Z_ATOM_BOT + 7.5, 4.0).union(box(60, 67, 40, 49, Z_ATOM_BOT + 3.3, Z_ATOM_BOT + 11.7))
 usb_cable = (box(67, 71, 42.75, 46.25, Z_ATOM_BOT + 6.0, Z_ATOM_BOT + 9.5)
              .union(box(71, 74.5, 42.75, 46.25, Z_LID, Z_ATOM_BOT + 9.5))
              .union(box(71, W + 6, 42.75, 46.25, Z_LID, Z_LID + 3.5)))
 porta_plug = box(53, 65, 46, 55, Z_ATOM_BOT, Z_ATOM_BOT + 4.0)
-j3_plug = box(53, 58, 41, 48, Z_ATOM_BOT - 6.8, Z_ATOM_BOT - 4.7)
+j3_plug = board(-3.7, 3.7, -17.0, -10.6, -6.8, -4.7).union(board(-2.8, 2.8, -19.0, -17.0, -6.3, -5.2))
 
 # ---- enclosure: shell (top plate + walls) ----------------------------------------------------------------
 shell = rbox(0, W, 0, D, Z_BOT, 0, R_OUT)
@@ -106,14 +126,19 @@ for ys0 in (20, 40):
 ped_nfc = box(6, 24, 6, 48, Z_LID, -9.5).cut(cyl_z(15, 39, 3.0, Z_LID, 0))
 # vein pedestal: two rails under the long edges (bottom details of the module still unknown)
 ped_vein = box(33, 84, 5, 9, Z_LID, -16.5).union(box(33, 84, 23, 27, Z_LID, -16.5))
-# pad under the vein-base: pushes VoiceS3R + vein-base up against the lip (no screw)
-pad = box(VOICE[0] + 3, VOICE[1] - 3, VOICE[2] + 3, VOICE[3] - 3, Z_LID, Z_BASE_BOT)
-lid = lid.union(ped_nfc).union(ped_vein).union(pad)
+# PCB supports: two rails under the PCB edges (clear of the header pin tails) and a boss at the PCB centre
+# (around its 2.4 mm hole, clear of the J3 on the underside). They push PCB + VoiceS3R up against the lip.
+Z_PCB_BOT = Z_ATOM_BOT - 4.1
+pcb_sup = (board(-9.8, -8.5, -8.5, 8.5, -30, -4.1).union(board(8.5, 9.8, -8.5, 8.5, -30, -4.1))
+           .union(cyl_z(VX, VYS, 2.0, Z_LID - 1, Z_PCB_BOT)))
+pcb_sup = pcb_sup.intersect(box(0, W, 0, D, Z_LID, 0))
+lid = lid.union(ped_nfc).union(ped_vein).union(pcb_sup)
 for x, ys in SCREWS:
     lid = lid.cut(cyl_z(x, ys, 1.7, Z_BOT - 1, Z_LID + 1)).cut(cyl_z(x, ys, 3.0, Z_BOT - 1, Z_BOT + 1.2))
 
 # ---- interference check ---------------------------------------------------------------------------------
-checks = [('NFC', nfc), ('指静脈', vein), ('VoiceS3R', atom), ('vein-base', base), ('NFC Grove', nfc_plug),
+checks = [('NFC', nfc), ('指静脈', vein), ('VoiceS3R', atom), ('PCB', pcb), ('header plastic', hdr_plastic), ('header pins', hdr_pins),
+          ('J3', j3), ('NFC Grove', nfc_plug),
           ('USB head', usb_head), ('USB cable', usb_cable),
           ('PORT.A Grove', porta_plug), ('J3 plug', j3_plug)]
 bad = []
@@ -148,7 +173,10 @@ parts = [
     ('nfc', 'NFC Unit 48×24×8', '#f2f2ee', 1, 'mods', nfc),
     ('vein', '指静脈モジュール(仮の箱)', '#2e3538', 1, 'mods', vein),
     ('atom', 'VoiceS3R', '#1fa49a', 1, 'mods', atom),
-    ('base', 'vein-base', '#5b8fd6', 1, 'mods', base),
+    ('pcb', '中継基板(vein-base の基板のみ)', '#1f7a4d', 1, 'mods', pcb),
+    ('hdrpl', 'ピンヘッダー樹脂', '#2b2f33', 1, 'mods', hdr_plastic),
+    ('hdrpin', 'ピン', '#d8b25a', 1, 'mods', hdr_pins),
+    ('j3', 'J3 MX1.25 4P', '#f1efe8', 1, 'mods', j3),
     ('nfcplug', 'NFC 側 Grove プラグ', '#c47f0e', 1, 'mods', nfc_plug),
     ('portaplug', 'PORT.A Grove プラグ', '#c47f0e', 1, 'mods', porta_plug),
     ('j3plug', 'J3 プラグ(指静脈ケーブル)', '#e7e1cf', 1, 'mods', j3_plug),
