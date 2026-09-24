@@ -72,7 +72,7 @@ Common auto-merge / `Refs #N` rules are in user memory. Only repo-specific value
 
 - 原寸確認は `vein_base_v<版>_fitcheck_1to1_seen_from_below.pdf` を 100% で印刷し、**回さずに**「USB-C / cable side」を PORT.A 側に向けて VoiceS3R 底面に当てる。`fitcheck_1to1.pdf`(上から見た図)を回して当てると、見かけ上合ってしまう。
 - 基板と実装は JLCPCB の Standard PCBA。SMT は Bottom 面(J3)、J1/J2 は THT 実装。実装プレビューで、J3 が裏面にあって開口が USB-C 側を向いているか確認する。
-- ケースは MJF PA12。国内なら DMM.make、基板と同じ荷物にするなら JLC3DP(JLCPCB のカートでまとめられる)。
+- ケースの本番材料は DMM.make の「PA12｜MJF」(グレー、磨きなし)。形の確認だけなら SLA のエコノミーレジンでよい(肉厚は 1.0 mm 以上)。基板と同じ荷物にするなら JLC3DP の MJF PA12(JLCPCB のカートでまとめられる)。
 - 決済・ログインは人が行う。Claude はファイルの用意と確認まで。
 
 ---
