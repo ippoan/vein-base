@@ -7,7 +7,8 @@ Writes station/vein_station_<REV>_{shell,lid}.{step,stl} and the 3D preview site
 and fails if the enclosure collides with a module, plug or cable, or if the shell cannot be lowered onto them.
 
 Coordinates: x = left→right, y = back→front is NEGATIVE (the top-view drawing's y is used as `ys`, Y = -ys),
-z = 0 at the top surface, down is negative. Outer 97 × 70 × 27.6.
+z = 0 at the top surface, down is negative. Outer 99 × 70 × 27.6.
+Every wall is at least 1.0 thick in every direction (DMM's minimum for resin SLA; measured on the STL, r11).
 Every connection is on the back wall: the NFC Grove socket, the VoiceS3R's side (USB-C over PORT.A) and the DB9
 all sit right behind windows in the back wall, so the cables plug in from outside; the PORT.A ↔ NFC Grove cable
 loops outside. The vein module is at the front.
@@ -23,9 +24,9 @@ import numpy as np
 import cadquery as cq
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'r10'
+REV = 'r11'
 
-W, D = 97.0, 70.0            # outer size (x, ys)
+W, D = 99.0, 70.0            # outer size (x, ys)
 WALL, TOP, LID = 2.0, 1.5, 2.0
 Z_BOT = -27.6                # bottom of the walls / lid
 Z_LID = Z_BOT + LID          # lid top (-25.6): 0.9 under the DB9 pin tails
@@ -55,7 +56,7 @@ BACK = WALL + FIT             # modules that show a side in the back wall start 
 NFC = (3, 27, BACK, BACK + 48)  # 24 × 48, Grove socket at the back
 VOICE = (29, 53, BACK, BACK + 24)  # 24 × 24, USB-C / PORT.A side at the back
 VEIN = (31, 90, 41, 67)       # 59 × 26, front
-TOP_VOICE = 0.8               # top plate thinned around the VoiceS3R
+TOP_VOICE = 1.0               # top plate thinned around the VoiceS3R (1.0 = the SLA minimum)
 VOICE_LIP = 1.2
 Z_ATOM_BOT = -TOP_VOICE - 16.8  # -17.6
 NX = (NFC[0] + NFC[1]) / 2
@@ -96,6 +97,7 @@ db9_shell = board(DB9_BX - 8.5, DB9_BX + 8.5, BY0 - 7.0, BY0 - 1.0, -0.5, 8.0)
 tails = board(DB9_BX - 6.5, DB9_BX + 6.5, BY0 + 3.0, BY0 + 8.5, -7.1, -4.1)
 DB9_XC, DB9_ZC = VX - DB9_BX, Z_ATOM_BOT + 3.75                      # D-shell centre in station coords
 DB9_X0, DB9_X1 = DB9_XC - 15.4, DB9_XC + 15.4
+DB9_S0, DB9_S1 = DB9_XC - 17.0, DB9_XC + 17.0        # wall split: 1.7 of wall/tongue outside the post holes
 DB9_Z0, DB9_Z1 = Z_ATOM_BOT - 3.5, Z_ATOM_BOT + 11.0                  # cable plug body height
 db9_posts = cyl_y(DB9_XC - 12.5, -3, BACK, DB9_ZC, 2.5).union(cyl_y(DB9_XC + 12.5, -3, BACK, DB9_ZC, 2.5))
 db9_plug = box(DB9_X0 + 0.25, DB9_X1 - 0.25, -40, 1.0 - 0.2, DB9_Z0 + 0.25, DB9_Z1 - 0.25)
@@ -129,31 +131,35 @@ def frame(r, depth, t=1.2, cuts=()):
 shell = shell.union(frame(NFC, -5.25))
 shell = shell.union(frame(VEIN, -5.75))
 shell = shell.union(frame(VOICE, -6.75))
+# the NFC and VoiceS3R frames run side by side: fill the strip between them so no thin notch is left
+shell = shell.union(box(NFC[1] + FIT, VOICE[0] - FIT, BACK, NFC[3] + FIT + 1.2, -5.25, -TOP))
 # back wall windows: NFC Grove socket, VoiceS3R side (PORT.A at the bottom, USB-C above it)
 shell = shell.cut(box(NX - 5.5, NX + 5.5, -1, WALL + 1, -7.2, -TOP))
 shell = shell.cut(box(VX - 7.0, VX + 7.0, -1, WALL + 1, Z_ATOM_BOT - 0.5, Z_ATOM_BOT + 12.0))
 # DB9: the back wall is split at the D-shell centre. The shell keeps the upper half of the D opening, the post
 # holes and the 1 mm recess outside for the cable plug (the wall there is 1 mm so the D shell still engages the plug
 # fully); everything below the centre is a tongue on the lid. The flange rests on the inside of both.
-DB9_D = box(DB9_XC - 8.8, DB9_XC + 8.8, -1, WALL + 1, Z_ATOM_BOT - 0.8, Z_ATOM_BOT + 8.3)
+DB9_D = box(DB9_XC - 8.65, DB9_XC + 8.65,   # 1.05 of web to the post holes (D shell is ±8.5)
+             -1, WALL + 1, Z_ATOM_BOT - 0.8, Z_ATOM_BOT + 8.3)
 DB9_HOLES = cyl_y(DB9_XC - 12.5, -1, WALL + 1, DB9_ZC, 2.8).union(cyl_y(DB9_XC + 12.5, -1, WALL + 1, DB9_ZC, 2.8))
 DB9_RECESS = box(DB9_X0, DB9_X1, -1, 1.0, DB9_Z0, DB9_Z1)
-shell = shell.cut(box(DB9_X0, DB9_X1, -1, WALL + 1, Z_BOT - 1, DB9_ZC))
+shell = shell.cut(box(DB9_S0, DB9_S1, -1, WALL + 1, Z_BOT - 1, DB9_ZC))
 shell = shell.cut(DB9_D).cut(DB9_HOLES).cut(DB9_RECESS)
 # lid hook slots in the left and right walls
 for ys0 in (45, 57):
-    shell = shell.cut(box(0.8, WALL + 0.1, ys0, ys0 + 8, Z_BOT - 1, Z_BOT + 1.2))
-    shell = shell.cut(box(W - WALL - 0.1, W - 0.8, ys0, ys0 + 8, Z_BOT - 1, Z_BOT + 1.2))
+    shell = shell.cut(box(1.0, WALL + 0.1, ys0, ys0 + 8, Z_BOT - 1, Z_BOT + 1.2))
+    shell = shell.cut(box(W - WALL - 0.1, W - 1.0, ys0, ys0 + 8, Z_BOT - 1, Z_BOT + 1.2))
 # screw bosses (M3 self-tapping, pilot 2.5): front-left beside the vein module, back-right beside the board
-SCREWS = [(8.0, 60.0), (W - WALL - 1.8, 20.0)]
+SCREWS = [(8.0, 60.0), (W - 6.7, 20.0)]   # head counterbore (r3.0) keeps 1.6 to the lid edge
+PAD = 1.0                                 # pad on the lid around each screw: 2.0 - 1.2 counterbore + 1.0 = 1.8
 for x, ys in SCREWS:
-    shell = shell.union(cyl_z(x, ys, 2.6, Z_LID, -TOP).cut(cyl_z(x, ys, 1.25, Z_LID - 1, -TOP - 2)))
+    shell = shell.union(cyl_z(x, ys, 2.6, Z_LID + PAD, -TOP).cut(cyl_z(x, ys, 1.25, Z_LID - 1, -TOP - 2)))
 
 # ---- enclosure: lid with pedestals ----------------------------------------------------------------------
 lid = rbox(WALL + CLR, W - WALL - CLR, WALL + CLR, D - WALL - CLR, Z_BOT, Z_LID, R_OUT - WALL - CLR)
 for ys0 in (45, 57):
-    lid = lid.union(box(1.0, WALL + CLR + 0.5, ys0 + 0.3, ys0 + 7.7, Z_BOT + 0.1, Z_BOT + 1.1))
-    lid = lid.union(box(W - WALL - CLR - 0.5, W - 1.0, ys0 + 0.3, ys0 + 7.7, Z_BOT + 0.1, Z_BOT + 1.1))
+    lid = lid.union(box(1.1, WALL + CLR + 0.5, ys0 + 0.3, ys0 + 7.7, Z_BOT + 0.1, Z_BOT + 1.1))
+    lid = lid.union(box(W - WALL - CLR - 0.5, W - 1.1, ys0 + 0.3, ys0 + 7.7, Z_BOT + 0.1, Z_BOT + 1.1))
 # NFC pedestal (pushes the unit up against the top plate), with a relief for the screw head on its back
 ped_nfc = box(NFC[0] + 3, NFC[1] - 3, NFC[2] + 3, NFC[3] - 3, Z_LID, -9.5).cut(cyl_z(NX, NFC[2] + 12, 3.0, Z_LID, 0))
 # vein pedestal: two rails under the long edges; the back rail leaves room for the J3 plug
@@ -168,11 +174,11 @@ pcb_sup = (board(BX0 + 1, BX1 - 1, BY0 + 0.5, BY0 + 2.0, -30, -4.1)
 pcb_sup = pcb_sup.intersect(box(0, W, 0, D, Z_LID, 0))
 lid = lid.union(ped_nfc).union(ped_vein).union(pcb_sup)
 # tongue that closes the DB9 slot from below (in the wall line, joined to the lid under the board)
-lid = lid.union(box(DB9_X0 + CLR, DB9_X1 - CLR, 0, WALL, Z_BOT, DB9_ZC)
-                .union(box(DB9_X0 + CLR, DB9_X1 - CLR, WALL, WALL + CLR + 0.5, Z_BOT, Z_LID))
+lid = lid.union(box(DB9_S0 + CLR, DB9_S1 - CLR, 0, WALL, Z_BOT, DB9_ZC)
+                .union(box(DB9_S0 + CLR, DB9_S1 - CLR, WALL, WALL + CLR + 0.5, Z_BOT, Z_LID))
                 .cut(DB9_D).cut(DB9_HOLES).cut(DB9_RECESS))
 for x, ys in SCREWS:
-    lid = lid.cut(cyl_z(x, ys, 1.7, Z_BOT - 1, Z_LID + 1)).cut(cyl_z(x, ys, 3.0, Z_BOT - 1, Z_BOT + 1.2))
+    lid = lid.union(cyl_z(x, ys, 3.8, Z_LID, Z_LID + PAD)).cut(cyl_z(x, ys, 1.7, Z_BOT - 1, Z_LID + 1)).cut(cyl_z(x, ys, 3.0, Z_BOT - 1, Z_BOT + 1.2))
 
 # ---- interference check ---------------------------------------------------------------------------------
 checks = [('NFC', nfc), ('指静脈', vein), ('VoiceS3R', atom), ('board', pcb), ('header plastic', hdr_plastic),
