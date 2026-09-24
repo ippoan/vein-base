@@ -26,7 +26,7 @@ edit shared parts there.
 - 生成物(STL / STEP / PDF / gerber zip / CPL)は git に入れない(`.gitignore` 済み)。古い生成物を発注しかけた事故があったため。取得は常に CI の Artifacts から。
 - BOM の元データは `pcb/jlc_bom.csv`(LCSC 品番入り)。`fab/` は CI の出力先。
 - フットプリントは lib nickname 付きで置き、`build_pcb.py` がプロジェクトローカルの `fp-lib-table` を書き出す(DRC の lib_footprint_* 警告対策)。標準から変えたフットプリントは `pcb/vein_base.pretty/` に置く(例: 2.4 mm の M2 穴)。
-- `station/` は一体筐体 Vein Station の案(版は `build_station.py` の `REV`)。モジュール寸法は写真からの実測で ±1〜2 mm、指静脈モジュールは仮の箱。筐体とモジュール・プラグ・ケーブルの干渉は CI で fail させる(プラグ同士の重なりは参考形状なので検査しない)。
+- `station/` は一体筐体 Vein Station の案(版は `build_station.py` の `REV`)。vein-base はケースを使わず基板だけを入れる(底蓋のレールとボスで基板ごと VoiceS3R を返しに押し上げる)。モジュール寸法は写真からの実測で ±1〜2 mm、指静脈モジュールは仮の箱。筐体とモジュール・プラグ・ケーブルの干渉は CI で fail させる(プラグ同士の重なりは参考形状なので検査しない)。
 - `pcb/vein_base.kicad_pcb` は `build_pcb.py` の出力。手で編集せず、スクリプトを直す。
 
 ## Build / test / lint
