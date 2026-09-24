@@ -1,4 +1,4 @@
 Comment,Designator,Footprint,LCSC Part #,Note
-"Pin header 1x5 2.54mm male, straight",J1,PinHeader_1x05_P2.54mm_Vertical,,THT
-"Pin header 1x4 2.54mm male, straight",J2,PinHeader_1x04_P2.54mm_Vertical,,THT
-Molex PicoBlade 53261-0471 (MX1.25 4P RA SMD),J3,Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal,,裏面実装。互換品可(寸法要確認)
+"Pin header 1x5 2.54mm male, straight (ZHOURI 2.54-1*5)",J1,PinHeader_1x05_P2.54mm_Vertical,C5156614,THT; mating 6mm / tail 3mm / plastic 2.54mm
+"Pin header 1x4 2.54mm male, straight (ZHOURI 2.54-1*4)",J2,PinHeader_1x04_P2.54mm_Vertical,C5116483,THT; mating 6mm / tail 3mm / plastic 2.54mm
+Molex PicoBlade 53261-0471 (MX1.25 4P RA SMD),J3,Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal,C240847,Bottom side; opening faces USB-C edge
