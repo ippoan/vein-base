@@ -19,7 +19,7 @@ import numpy as np
 import cadquery as cq
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'r8'
+REV = 'r9'
 
 W, D = 91.0, 63.0            # outer size (x, ys)
 WALL, TOP, LID = 2.0, 1.5, 2.0
@@ -114,8 +114,9 @@ shell = shell.cut(box(W - WALL - 1, W + 1, 42.25, 46.75, Z_BOT - 1, Z_LID + 4.0)
 # lid hook slots in the left wall
 for ys0 in (20, 40):
     shell = shell.cut(box(0.8, WALL + 0.1, ys0, ys0 + 8, Z_BOT - 1, Z_BOT + 1.2))
-# screw bosses (M3 self-tapping, pilot 2.5) in the cable bay
-SCREWS = [(84.5, 35.0), (84.5, 55.5)]
+# screw bosses (M3 self-tapping, pilot 2.5): three points in a triangle — front-left beside the NFC Grove plug,
+# back-middle just right of the VoiceS3R's back corner, and front-right in the cable bay
+SCREWS = [(6.0, 56.5), (58.0, 33.5), (84.5, 55.5)]
 for x, ys in SCREWS:
     shell = shell.union(cyl_z(x, ys, 2.6, Z_LID, -TOP).cut(cyl_z(x, ys, 1.25, Z_LID - 1, -TOP - 2)))
 
