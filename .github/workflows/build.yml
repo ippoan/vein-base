@@ -21,6 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Read version
+        run: echo "VER=$(cat VERSION)" >> "$GITHUB_ENV"
+
       - name: Install KiCad 7 and CadQuery
         run: |
           sudo apt-get update
@@ -29,15 +32,16 @@ jobs:
 
       - name: Build PCB (KiCad)
         run: |
+          N=fab/vein_base_v$VER
           cd pcb && python3 build_pcb.py && cd ..
           mkdir -p fab/gerber
           kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o fab/gerber/ pcb/vein_base.kicad_pcb
           kicad-cli pcb export drill --format excellon --excellon-separate-th -o fab/gerber/ pcb/vein_base.kicad_pcb
           kicad-cli pcb export pos --format csv --units mm --side both -o fab/pos.csv pcb/vein_base.kicad_pcb
-          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o fab/fitcheck_1to1.pdf pcb/vein_base.kicad_pcb
-          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts --mirror -o fab/fitcheck_1to1_seen_from_below.pdf pcb/vein_base.kicad_pcb
-          kicad-cli pcb export step --subst-models -o fab/vein_base_pcb.step pcb/vein_base.kicad_pcb
-          (cd fab/gerber && zip -q ../vein_base_gerbers.zip *)
+          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o ${N}_fitcheck_1to1.pdf pcb/vein_base.kicad_pcb
+          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts --mirror -o ${N}_fitcheck_1to1_seen_from_below.pdf pcb/vein_base.kicad_pcb
+          kicad-cli pcb export step --subst-models -o ${N}_pcb.step pcb/vein_base.kicad_pcb
+          (cd fab/gerber && zip -q ../vein_base_v${VER}_gerbers.zip *)
           python3 tools/make_jlc_cpl.py
 
       - name: DRC
@@ -51,12 +55,11 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: vein-base-fab
+          name: vein-base-v${{ env.VER }}-fab
           path: |
             pcb/vein_base.kicad_pcb
-            fab/
-            case/*.step
-            case/*.stl
+            fab/vein_base_v*
+            case/vein_base_v*
 
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
