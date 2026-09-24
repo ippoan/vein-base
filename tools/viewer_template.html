@@ -56,7 +56,7 @@ td:last-child{text-align:right;font-family:var(--mono);white-space:nowrap;paddin
 </head>
 <body>
 <div class="wrap">
-  <header><h1>vein-base</h1><span class="sub">VoiceS3R の下に積むケース。上ケース + 底板の 2 部品(24.4 角)と、上蓋なしで VoiceS3R の下端にかぶせるカップ(1 部品)の 2 通り。ドラッグで回転、ホイール/ピンチで拡大。<a href="station/" style="color:var(--accent)">一体筐体 Vein Station の 3D はこちら</a></span></header>
+  <header><h1>vein-base</h1><span class="sub">VoiceS3R の下に積むケース。上蓋なしの 1 部品のカップで、VoiceS3R の下端 3 mm にかぶせる。ドラッグで回転、ホイール/ピンチで拡大。<a href="station/" style="color:var(--accent)">一体筐体 Vein Station の 3D はこちら</a></span></header>
   <div class="stage" id="stage">
     <canvas id="c"></canvas>
     <div class="views">
@@ -67,14 +67,10 @@ td:last-child{text-align:right;font-family:var(--mono);white-space:nowrap;paddin
   <aside>
     <div>
       <div class="lbl">分解表示</div>
-      <div class="row"><input id="explode" type="range" min="0" max="1" step="0.01" value="0.35"><span class="val" id="exv">35%</span></div>
+      <div class="row"><input id="explode" type="range" min="0" max="1" step="0.01" value="0"><span class="val" id="exv">0%</span></div>
     </div>
     <div>
-      <div class="lbl">ケースの形</div>
-      <div class="row"><button type="button" class="btn" data-case="two">上ケース + 底板</button><button type="button" class="btn" data-case="cup">カップ(1 部品)</button></div>
-    </div>
-    <div>
-      <div class="lbl">ケース上部の透明度</div>
+      <div class="lbl">ケースの透明度</div>
       <div class="row"><input id="cop" type="range" min="0.1" max="1" step="0.05" value="0.55"><span class="val" id="copv">55%</span></div>
     </div>
     <div>
@@ -85,7 +81,7 @@ td:last-child{text-align:right;font-family:var(--mono);white-space:nowrap;paddin
       <div class="lbl">主要寸法</div>
       <table>
         <tr><td>基板</td><td>20.0 × 19.9 × 1.6</td></tr>
-        <tr><td>ケース</td><td>24.0 × 24.0 × 9.5</td></tr>
+        <tr><td>ケース(カップ)</td><td>27.3 × 27.3 × 12.5</td></tr>
         <tr><td>ヘッダー列間隔</td><td>15.24</td></tr>
         <tr><td>J3 ピン(1〜4)</td><td>RXD TXD 3V3 GND</td></tr>
         <tr><td>基板上面(Atom底面から)</td><td>−2.5</td></tr>
@@ -119,26 +115,23 @@ for(const p of MODEL){
   g.computeVertexNormals();
   const m = new THREE.MeshStandardMaterial({color:p.color, roughness:.55, metalness:p.key==='hdrpin'||p.key==='screw'?.6:.05,
      transparent:p.opacity<1, opacity:p.opacity, depthWrite:p.opacity>=1, side:THREE.DoubleSide});
-  const mesh = new THREE.Mesh(g,m); mesh.userData = p; scene.add(mesh); meshes[p.key]=mesh; mesh.visible = p.key!=='cup';
+  const mesh = new THREE.Mesh(g,m); mesh.userData = p; scene.add(mesh); meshes[p.key]=mesh; 
   if(p.opacity<1 && p.key!=='cover'){ mesh.renderOrder = 2; }
 }
-for(const k of ['shell','plate','cup'].filter(k=>meshes[k])){ meshes[k].renderOrder=1; meshes[k].add(new THREE.LineSegments(new THREE.EdgesGeometry(meshes[k].geometry, 25), new THREE.LineBasicMaterial({color:0x2c4f86, transparent:true, opacity:.6}))); }
+for(const k of ['cup']){ meshes[k].renderOrder=1; meshes[k].add(new THREE.LineSegments(new THREE.EdgesGeometry(meshes[k].geometry, 25), new THREE.LineBasicMaterial({color:0x2c4f86, transparent:true, opacity:.6}))); }
 const atomEdges = new THREE.LineSegments(new THREE.EdgesGeometry(meshes.atom.geometry, 25), new THREE.LineBasicMaterial({color:0x6d8597, transparent:true, opacity:.7}));
 meshes.atom.add(atomEdges);
 // parts list
 const partsEl = document.getElementById('parts');
 for(const p of MODEL){
   const id='p_'+p.key; const l=document.createElement('label');
-  l.innerHTML = `<input type="checkbox" id="${id}" ${meshes[p.key].visible?'checked':''}><span class="sw" style="background:${p.color}"></span>${p.label}`;
+  l.innerHTML = `<input type="checkbox" id="${id}" checked><span class="sw" style="background:${p.color}"></span>${p.label}`;
   partsEl.appendChild(l);
   l.querySelector('input').addEventListener('change',e=>{meshes[p.key].visible=e.target.checked;});
 }
 function applyExplode(t){ for(const p of MODEL){ meshes[p.key].position.z = OFFS[p.group]*t; } document.getElementById('exv').textContent=Math.round(t*100)+'%'; }
 const ex=document.getElementById('explode'); ex.addEventListener('input',()=>applyExplode(+ex.value)); applyExplode(+ex.value);
-// case variant: two parts (shell + plate) or the one-part cup
-function setCase(cup){ for(const [k,on] of [['shell',!cup],['plate',!cup],['cup',cup]]){ if(!meshes[k]) continue; meshes[k].visible=on; const c=document.getElementById('p_'+k); if(c) c.checked=on; } }
-document.querySelectorAll('[data-case]').forEach(b=>b.addEventListener('click',()=>setCase(b.dataset.case==='cup')));
-const cop=document.getElementById('cop'); cop.addEventListener('input',()=>{const v=+cop.value; const m=(meshes.cup&&meshes.cup.visible?meshes.cup:meshes.shell).material; m.opacity=v; m.transparent=v<1; m.depthWrite=v>=1; m.needsUpdate=true; document.getElementById('copv').textContent=Math.round(v*100)+'%';});
+const cop=document.getElementById('cop'); cop.addEventListener('input',()=>{const v=+cop.value; const m=meshes.cup.material; m.opacity=v; m.transparent=v<1; m.depthWrite=v>=1; m.needsUpdate=true; document.getElementById('copv').textContent=Math.round(v*100)+'%';});
 const VIEWS={iso:[58,-78,42],top:[0,0.01,95],bottom:[0,0.01,-95],side:[95,0,0],cable:[0,-90,10]};
 function setView(k){const v=VIEWS[k]; camera.position.set(v[0],v[1],v[2]); controls.target.set(0,2,-2); controls.update();}
 document.querySelectorAll('.views button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.v)));
