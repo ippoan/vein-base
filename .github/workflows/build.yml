@@ -28,7 +28,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends kicad kicad-footprints
-          pip install --break-system-packages cadquery numpy
+          pip install --break-system-packages cadquery numpy trimesh scipy rtree
 
       - name: Build PCB (KiCad)
         run: |
@@ -58,6 +58,9 @@ jobs:
 
       - name: Build Vein Station SE enclosure + 3D preview + interference check
         run: python3 station/build_station_se.py
+
+      - name: Minimum wall thickness of the printed parts (DMM resin SLA needs 1.0 mm)
+        run: python3 tools/check_thickness.py 1.0 case/vein_base_v*_cup.stl station/vein_station_r*_shell.stl station/vein_station_r*_lid.stl
 
       - uses: actions/upload-artifact@v4
         with:
