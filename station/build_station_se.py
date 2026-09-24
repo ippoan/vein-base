@@ -262,7 +262,8 @@ tpl = open(os.path.join(ROOT, 'tools/station_template.html'), encoding='utf-8').
 os.makedirs(os.path.join(ROOT, 'site/station-se'), exist_ok=True)
 page = os.path.join(ROOT, 'site/station-se/index.html')
 page_html = (tpl.replace('__MODEL__', json.dumps(model)).replace('__REV__', 'SE ' + REV).replace('__SUB__', SUB)
-             .replace('__DIMS__', dims).replace('__NOTE__', NOTE).replace('__TZ__', f'{Z_BOT / 2:.1f}'))
+             .replace('__DIMS__', dims).replace('__NOTE__', NOTE).replace('__TZ__', f'{Z_BOT / 2:.1f}')
+             .replace('__DOWNLOADS__', '<p>CoreS3 SE 版は採用していないので、発注用の STL は置いていない。</p>'))
 open(page, 'w', encoding='utf-8').write(page_html)
 print('wrote', page, os.path.getsize(page), 'bytes')
 

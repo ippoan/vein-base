@@ -32,6 +32,19 @@ def tri(shape):
     return v[np.array(ts)].reshape(-1).astype(np.float32)
 
 
+def downloads_html(files, site_dir):
+    """Copy the STLs next to the page and return the download links (file name carries the version)."""
+    import shutil
+    rows = []
+    for label, path in files:
+        name = os.path.basename(path)
+        shutil.copyfile(path, os.path.join(site_dir, name))
+        kb = os.path.getsize(path) // 1024
+        rows.append(f'<a href="{name}" download>{label}<span>{name} · {kb} KB</span></a>')
+    rows.append('<p>DMM.make の本番材料は「PA12｜MJF」(グレー、磨きなし)。形の確認だけならエコノミーレジン(SLA)。</p>')
+    return ''.join(rows)
+
+
 def main():
     cup = cq.importers.importStep(os.path.join(ROOT, f'case/vein_base_v{VER}_cup.step'))
     pcb = cq.importers.importStep(os.path.join(ROOT, f'fab/vein_base_v{VER}_pcb.step')).translate((-KICAD_ORIGIN[0], KICAD_ORIGIN[1], -4.1))
@@ -76,7 +89,9 @@ def main():
     tpl = open(os.path.join(ROOT, 'tools/viewer_template.html'), encoding='utf-8').read()
     os.makedirs(os.path.join(ROOT, 'site'), exist_ok=True)
     out = os.path.join(ROOT, 'site/index.html')
-    open(out, 'w', encoding='utf-8').write(tpl.replace('__MODEL__', json.dumps(model)))
+    dl = downloads_html([('ケース(カップ 1 部品)', os.path.join(ROOT, f'case/vein_base_v{VER}_cup.stl'))],
+                        os.path.join(ROOT, 'site'))
+    open(out, 'w', encoding='utf-8').write(tpl.replace('__MODEL__', json.dumps(model)).replace('__DOWNLOADS__', dl))
     open(os.path.join(ROOT, 'site/.nojekyll'), 'w').write('')
     print('wrote', out, os.path.getsize(out), 'bytes')
 

@@ -43,6 +43,11 @@ aside{background:var(--panel);border:1px solid var(--line);border-radius:10px;pa
 .parts{display:grid;gap:4px}
 .parts label{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 4px;border-radius:5px;cursor:pointer}
 .parts label:hover{background:var(--chip)}
+.dl{display:flex;flex-direction:column;gap:6px}
+.dl a{display:flex;flex-direction:column;gap:2px;font:500 13px var(--sans);color:var(--ink);text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+.dl a:hover{background:var(--chip)}
+.dl a span{font:400 11px var(--mono);color:var(--muted);overflow-wrap:anywhere}
+.dl p{margin:0;font-size:11px;color:var(--muted)}
 .prow{display:flex;align-items:center;gap:4px}
 .prow label{flex:1;min-width:0}
 .pbtns{display:flex;gap:6px;margin-bottom:6px}
@@ -71,6 +76,10 @@ td:last-child{text-align:right;font-family:var(--mono);white-space:nowrap;paddin
     <div class="pick" id="pick">部品をクリックで名前を表示</div>
   </div>
   <aside>
+    <div>
+      <div class="lbl">DMM 用 STL(発注用)</div>
+      <div class="dl">__DOWNLOADS__</div>
+    </div>
     <div>
       <div class="lbl">分解表示</div>
       <div class="row"><input id="explode" type="range" min="0" max="1" step="0.01" value="0"><span class="val" id="exv">0%</span></div>
