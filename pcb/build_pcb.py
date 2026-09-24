@@ -117,12 +117,8 @@ text('vein-base v0.5', 0, 2.6, layer=pcbnew.B_SilkS, size=0.8, mirror=True)
 b.Save('vein_base.kicad_pcb')
 # project-local fp-lib-table so DRC can resolve the footprint libraries
 with open('fp-lib-table', 'w') as f:
-    f.write('(fp_lib_table
-  (version 7)
-')
+    f.write('(fp_lib_table\n  (version 7)\n')
     for nick in sorted(LIBS):
-        f.write(f'  (lib (name "{nick}")(type "KiCad")(uri "{FP}{nick}.pretty")(options "")(descr ""))
-')
-    f.write(')
-')
+        f.write(f'  (lib (name "{nick}")(type "KiCad")(uri "{FP}{nick}.pretty")(options "")(descr ""))\n')
+    f.write(')\n')
 print('saved')
