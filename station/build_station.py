@@ -24,7 +24,7 @@ import numpy as np
 import cadquery as cq
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'r12'
+REV = 'r13'
 
 W, D = 99.0, 70.0            # outer size (x, ys)
 WALL, TOP, LID = 2.0, 1.5, 2.0
@@ -113,7 +113,9 @@ shell = shell.cut(rbox(WALL, W - WALL, WALL, D - WALL, Z_BOT - 1, -TOP, R_OUT - 
 # top openings: NFC label window, vein with a 1 mm lip, VoiceS3R with a 1.2 mm lip on a plate thinned to 1.0
 shell = shell.cut(box(NFC[0] + 2, NFC[1] - 2, NFC[2] + 8, NFC[3] - 5, -TOP - 1, 1))
 shell = shell.cut(rbox(VEIN[0] + 1, VEIN[1] - 1, VEIN[2] + 1, VEIN[3] - 1, -TOP - 1, 1, 1.5))
-shell = shell.cut(rbox(VOICE[0] - FIT, VOICE[1] + FIT, VOICE[2] - FIT, VOICE[3] + FIT, -TOP - 1, -TOP_VOICE, 3.0 + FIT))
+# the thinned pocket is square: its neighbours (frame, back wall, fill strip) are square, and a rounded pocket left
+# crescent-shaped 0.5 mm steps in its corners (r12). It is under the plate, so the square corners do not show.
+shell = shell.cut(box(VOICE[0] - FIT, VOICE[1] + FIT, VOICE[2] - FIT, VOICE[3] + FIT, -TOP - 1, -TOP_VOICE))
 shell = shell.cut(rbox(VOICE[0] + VOICE_LIP, VOICE[1] - VOICE_LIP, VOICE[2] + VOICE_LIP, VOICE[3] - VOICE_LIP, -TOP - 1, 1, 3.0 - VOICE_LIP))
 
 
@@ -139,9 +141,11 @@ shell = shell.cut(box(VX - 7.0, VX + 7.0, -1, WALL + 1, Z_ATOM_BOT - 0.5, Z_ATOM
 # DB9: the back wall is split at the D-shell centre. The shell keeps the upper half of the D opening, the post
 # holes and the 1 mm recess outside for the cable plug (the wall there is 1 mm so the D shell still engages the plug
 # fully); everything below the centre is a tongue on the lid. The flange rests on the inside of both.
-DB9_D = box(DB9_XC - 8.65, DB9_XC + 8.65,   # 1.05 of web to the post holes (D shell is ±8.5)
-             -1, WALL + 1, Z_ATOM_BOT - 0.8, Z_ATOM_BOT + 8.3)
-DB9_HOLES = cyl_y(DB9_XC - 12.5, -1, WALL + 1, DB9_ZC, 2.8).union(cyl_y(DB9_XC + 12.5, -1, WALL + 1, DB9_ZC, 2.8))
+DB9_D = box(DB9_XC - 8.65, DB9_XC + 8.65, -1, WALL + 1, Z_ATOM_BOT - 0.8, Z_ATOM_BOT + 8.3)
+# the post holes are joined to the D opening (r13): a 1.05 mm web between them was a thin post like the old lid tabs.
+# The plug hood covers the whole opening from outside.
+DB9_HOLES = (cyl_y(DB9_XC - 12.5, -1, WALL + 1, DB9_ZC, 2.8).union(cyl_y(DB9_XC + 12.5, -1, WALL + 1, DB9_ZC, 2.8))
+             .union(box(DB9_XC - 12.5, DB9_XC + 12.5, -1, WALL + 1, DB9_ZC - 2.8, DB9_ZC + 2.8)))
 DB9_RECESS = box(DB9_X0, DB9_X1, -1, 1.0, DB9_Z0, DB9_Z1)
 shell = shell.cut(box(DB9_S0, DB9_S1, -1, WALL + 1, Z_BOT - 1, DB9_ZC))
 shell = shell.cut(DB9_D).cut(DB9_HOLES).cut(DB9_RECESS)
