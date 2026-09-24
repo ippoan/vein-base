@@ -1,0 +1,75 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install KiCad 7 and CadQuery
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends kicad kicad-footprints
+          pip install --break-system-packages cadquery numpy
+
+      - name: Build PCB (KiCad)
+        run: |
+          cd pcb && python3 build_pcb.py && cd ..
+          mkdir -p fab/gerber
+          kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o fab/gerber/ pcb/vein_base.kicad_pcb
+          kicad-cli pcb export drill --format excellon --excellon-separate-th -o fab/gerber/ pcb/vein_base.kicad_pcb
+          kicad-cli pcb export pos --format csv --units mm --side both -o fab/pos.csv pcb/vein_base.kicad_pcb
+          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o fab/fitcheck_1to1.pdf pcb/vein_base.kicad_pcb
+          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts --mirror -o fab/fitcheck_1to1_seen_from_below.pdf pcb/vein_base.kicad_pcb
+          kicad-cli pcb export step --subst-models -o fab/vein_base_pcb.step pcb/vein_base.kicad_pcb
+          (cd fab/gerber && zip -q ../vein_base_gerbers.zip *)
+          python3 tools/make_jlc_cpl.py
+
+      - name: DRC
+        run: python3 tools/check_drc.py
+
+      - name: Build case (CadQuery)
+        run: cd case && python3 build_case.py
+
+      - name: Build 3D preview + interference check
+        run: python3 tools/build_viewer.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vein-base-fab
+          path: |
+            pcb/vein_base.kicad_pcb
+            fab/
+            case/*.step
+            case/*.stl
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: site
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>vein-base 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#eef1f3; --panel:#ffffff; --ink:#1c2328; --muted:#5d6b75; --line:#d4dbe0;
+  --accent:#1f7a4d; --stage:#e3e8ec; --chip:#f3f5f6;
+  --sans:"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12171b; --panel:#1a2126; --ink:#e4eaee; --muted:#93a2ad; --line:#2c363d;
+    --accent:#4cc28a; --stage:#0d1114; --chip:#222b31; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12171b; --panel:#1a2126; --ink:#e4eaee; --muted:#93a2ad; --line:#2c363d;
+  --accent:#4cc28a; --stage:#0d1114; --chip:#222b31; color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);padding-inline:16px;box-sizing:border-box}
+.wrap{max-width:1200px;margin:0 auto;padding-block:16px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr) 290px;height:100%;box-sizing:border-box}
+@media (max-width:820px){.wrap{grid-template-columns:1fr;height:auto}}
+header{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+h1{font-size:20px;margin:0;font-weight:600;letter-spacing:.01em}
+.sub{color:var(--muted);font-size:13px}
+.stage{position:relative;background:var(--stage);border:1px solid var(--line);border-radius:10px;min-height:420px;overflow:hidden}
+@media (max-width:820px){.stage{height:62vh}}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.views{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap}
+.views button,.btn{font:500 12px var(--sans);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+.views button:hover,.btn:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pick{position:absolute;left:10px;bottom:10px;font:500 12px var(--mono);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 9px;color:var(--ink)}
+aside{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:16px;overflow:auto}
+.lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.parts{display:grid;gap:4px}
+.parts label{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 4px;border-radius:5px;cursor:pointer}
+.parts label:hover{background:var(--chip)}
+.sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.25);flex:none}
+.row{display:flex;align-items:center;gap:10px;font-size:13px}
+.row input[type=range]{flex:1;accent-color:var(--accent)}
+.val{font:500 12px var(--mono);color:var(--muted);min-width:34px;text-align:right}
+table{width:100%;border-collapse:collapse;font-size:12px}
+td{padding:4px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td:last-child{text-align:right;font-family:var(--mono);white-space:nowrap;padding-left:8px}
+.note{font-size:12px;color:var(--muted);line-height:1.6;margin:0}
+</style>
+<style>html{color-scheme:light}body{margin:0}</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>vein-base v0.5</h1><span class="sub">Atomic ベースと同じ 24×24 で VoiceS3R の下に積むケース。指静脈・NFC・USB-C の挿し口を同じ面にそろえた版。ドラッグで回転、ホイール/ピンチで拡大。</span></header>
+  <div class="stage" id="stage">
+    <canvas id="c"></canvas>
+    <div class="views">
+      <button data-v="iso">斜め</button><button data-v="top">上(Atom側)</button><button data-v="bottom">下(カバー側)</button><button data-v="side">横</button><button data-v="cable">挿し口側</button>
+    </div>
+    <div class="pick" id="pick">部品をクリックで名前を表示</div>
+  </div>
+  <aside>
+    <div>
+      <div class="lbl">分解表示</div>
+      <div class="row"><input id="explode" type="range" min="0" max="1" step="0.01" value="0.35"><span class="val" id="exv">35%</span></div>
+    </div>
+    <div>
+      <div class="lbl">ケース上部の透明度</div>
+      <div class="row"><input id="cop" type="range" min="0.1" max="1" step="0.05" value="0.55"><span class="val" id="copv">55%</span></div>
+    </div>
+    <div>
+      <div class="lbl">表示する部品</div>
+      <div class="parts" id="parts"></div>
+    </div>
+    <div>
+      <div class="lbl">主要寸法</div>
+      <table>
+        <tr><td>基板</td><td>20.0 × 19.9 × 1.6</td></tr>
+        <tr><td>ケース</td><td>24.0 × 24.0 × 9.5</td></tr>
+        <tr><td>ヘッダー列間隔</td><td>15.24</td></tr>
+        <tr><td>J3 ピン(1〜4)</td><td>RXD TXD 3V3 GND</td></tr>
+        <tr><td>基板上面(Atom底面から)</td><td>−2.5</td></tr>
+        <tr><td>固定ネジ</td><td>M2 × 12</td></tr>
+      </table>
+    </div>
+    <p class="note">VoiceS3R は外形の箱で表しています(USB-C・PORT.A の位置は参考)。コネクタとプラグは簡略形状です。単位 mm。</p>
+  </aside>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const MODEL = __MODEL__;
+const cv = document.getElementById('c'), stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({canvas:cv, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 0.5, 1000);
+camera.up.set(0,0,1);
+const controls = new THREE.OrbitControls(camera, cv);
+controls.enableDamping = true; controls.target.set(0,2,-2);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 0.75));
+const d1 = new THREE.DirectionalLight(0xffffff, 0.75); d1.position.set(40,-30,60); scene.add(d1);
+const d2 = new THREE.DirectionalLight(0xffffff, 0.35); d2.position.set(-40,50,-40); scene.add(d2);
+const OFFS = {atom:16, shell:7, pcb:0, plate:-8, screw:-16};
+const meshes = {};
+function decode(b64){const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Float32Array(u.buffer);}
+for(const p of MODEL){
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(decode(p.data),3));
+  g.computeVertexNormals();
+  const m = new THREE.MeshStandardMaterial({color:p.color, roughness:.55, metalness:p.key==='hdrpin'||p.key==='screw'?.6:.05,
+     transparent:p.opacity<1, opacity:p.opacity, depthWrite:p.opacity>=1, side:THREE.DoubleSide});
+  const mesh = new THREE.Mesh(g,m); mesh.userData = p; scene.add(mesh); meshes[p.key]=mesh;
+  if(p.opacity<1 && p.key!=='cover'){ mesh.renderOrder = 2; }
+}
+for(const k of ['shell','plate']){ meshes[k].renderOrder=1; meshes[k].add(new THREE.LineSegments(new THREE.EdgesGeometry(meshes[k].geometry, 25), new THREE.LineBasicMaterial({color:0x2c4f86, transparent:true, opacity:.6}))); }
+const atomEdges = new THREE.LineSegments(new THREE.EdgesGeometry(meshes.atom.geometry, 25), new THREE.LineBasicMaterial({color:0x6d8597, transparent:true, opacity:.7}));
+meshes.atom.add(atomEdges);
+// parts list
+const partsEl = document.getElementById('parts');
+for(const p of MODEL){
+  const id='p_'+p.key; const l=document.createElement('label');
+  l.innerHTML = `<input type="checkbox" id="${id}" checked><span class="sw" style="background:${p.color}"></span>${p.label}`;
+  partsEl.appendChild(l);
+  l.querySelector('input').addEventListener('change',e=>{meshes[p.key].visible=e.target.checked;});
+}
+function applyExplode(t){ for(const p of MODEL){ meshes[p.key].position.z = OFFS[p.group]*t; } document.getElementById('exv').textContent=Math.round(t*100)+'%'; }
+const ex=document.getElementById('explode'); ex.addEventListener('input',()=>applyExplode(+ex.value)); applyExplode(+ex.value);
+const cop=document.getElementById('cop'); cop.addEventListener('input',()=>{const v=+cop.value; const m=meshes.shell.material; m.opacity=v; m.transparent=v<1; m.depthWrite=v>=1; m.needsUpdate=true; document.getElementById('copv').textContent=Math.round(v*100)+'%';});
+const VIEWS={iso:[58,-78,42],top:[0,0.01,95],bottom:[0,0.01,-95],side:[95,0,0],cable:[0,-90,10]};
+function setView(k){const v=VIEWS[k]; camera.position.set(v[0],v[1],v[2]); controls.target.set(0,2,-2); controls.update();}
+document.querySelectorAll('.views button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.v)));
+setView('iso');
+// picking
+const ray=new THREE.Raycaster(), mv=new THREE.Vector2(); let down=null;
+cv.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY];});
+cv.addEventListener('pointerup',e=>{ if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>4) return;
+  const r=cv.getBoundingClientRect(); mv.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(mv,camera);
+  const hits=ray.intersectObjects(Object.values(meshes).filter(m=>m.visible),false);
+  const h=hits.find(h=>h.object.userData.key!=='atom')||hits[0];
+  document.getElementById('pick').textContent = h ? h.object.userData.label : '部品をクリックで名前を表示';
+});
+function resize(){const w=stage.clientWidth,h=stage.clientHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();}
+new ResizeObserver(resize).observe(stage); resize();
+(function loop(){controls.update(); renderer.render(scene,camera); requestAnimationFrame(loop);})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+site/
+fab/gerber/
+fab/pos.csv
+fab/drc.rpt
+__pycache__/
+*.kicad_prl
