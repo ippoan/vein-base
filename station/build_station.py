@@ -110,7 +110,7 @@ nfc_plug = box(NX - 4.0, NX + 4.0, -6, BACK, -6.7, -1.9)
 # ---- enclosure: shell (top plate + walls) ----------------------------------------------------------------
 shell = rbox(0, W, 0, D, Z_BOT, 0, R_OUT)
 shell = shell.cut(rbox(WALL, W - WALL, WALL, D - WALL, Z_BOT - 1, -TOP, R_OUT - WALL))
-# top openings: NFC label window, vein with a 1 mm lip, VoiceS3R with a 1.2 mm lip on a plate thinned to 0.8
+# top openings: NFC label window, vein with a 1 mm lip, VoiceS3R with a 1.2 mm lip on a plate thinned to 1.0
 shell = shell.cut(box(NFC[0] + 2, NFC[1] - 2, NFC[2] + 8, NFC[3] - 5, -TOP - 1, 1))
 shell = shell.cut(rbox(VEIN[0] + 1, VEIN[1] - 1, VEIN[2] + 1, VEIN[3] - 1, -TOP - 1, 1, 1.5))
 shell = shell.cut(rbox(VOICE[0] - FIT, VOICE[1] + FIT, VOICE[2] - FIT, VOICE[3] + FIT, -TOP - 1, -TOP_VOICE, 3.0 + FIT))
