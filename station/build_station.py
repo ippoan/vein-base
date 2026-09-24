@@ -217,6 +217,19 @@ for name, part in (('shell', shell), ('lid', lid)):
     print(name, round(bb.xlen, 2), round(bb.ylen, 2), round(bb.zlen, 2))
 
 
+def downloads_html(files, site_dir):
+    """Copy the STLs next to the page and return the download links (file name carries the version)."""
+    import shutil
+    rows = []
+    for label, path in files:
+        name = os.path.basename(path)
+        shutil.copyfile(path, os.path.join(site_dir, name))
+        kb = os.path.getsize(path) // 1024
+        rows.append(f'<a href="{name}" download>{label}<span>{name} · {kb} KB</span></a>')
+    rows.append('<p>DMM.make の本番材料は「PA12｜MJF」(グレー、磨きなし)。形の確認だけならエコノミーレジン(SLA)。</p>')
+    return ''.join(rows)
+
+
 # ---- 3D preview ------------------------------------------------------------------------------------------
 def tri(shape):
     vs, ts = shape.val().tessellate(0.03, 0.15)
@@ -259,8 +272,11 @@ dims = ''.join(f'        <tr><td>{k}</td><td>{v}</td></tr>\n' for k, v in DIMS)
 tpl = open(os.path.join(ROOT, 'tools/station_template.html'), encoding='utf-8').read()
 os.makedirs(os.path.join(ROOT, 'site/station'), exist_ok=True)
 page = os.path.join(ROOT, 'site/station/index.html')
+DOWNLOADS = downloads_html([('ケース上部(天板+壁)', os.path.join(out, f'vein_station_{REV}_shell.stl')),
+                            ('底蓋+台', os.path.join(out, f'vein_station_{REV}_lid.stl'))], os.path.join(ROOT, 'site/station'))
 page_html = (tpl.replace('__MODEL__', json.dumps(model)).replace('__REV__', REV).replace('__SUB__', SUB)
-             .replace('__DIMS__', dims).replace('__NOTE__', NOTE).replace('__TZ__', '-15'))
+             .replace('__DIMS__', dims).replace('__NOTE__', NOTE).replace('__TZ__', '-15')
+             .replace('__DOWNLOADS__', DOWNLOADS))
 open(page, 'w', encoding='utf-8').write(page_html)
 print('wrote', page, os.path.getsize(page), 'bytes')
 
