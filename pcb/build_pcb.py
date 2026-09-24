@@ -24,8 +24,14 @@ for n in ['3V3', 'GND', 'G5_TX', 'G6_RX', '5V', 'G7', 'G8', 'G38', 'G39']:
     ni = pcbnew.NETINFO_ITEM(b, n); b.Add(ni); nets[n] = ni
 
 
+LIBS = set()
+
+
 def load(lib, name):
-    fp = pcbnew.FootprintLoad(FP + lib, name); b.Add(fp); return fp
+    fp = pcbnew.FootprintLoad(FP + lib, name)
+    nick = lib.removesuffix('.pretty'); LIBS.add(nick)
+    fp.SetFPID(pcbnew.LIB_ID(nick, name))  # DRC library parity needs the lib nickname
+    b.Add(fp); return fp
 
 
 def padpos(fp, num):
@@ -109,4 +115,14 @@ text('J3 1RX 2TX 3V3 4G', 0, 8.3, layer=pcbnew.B_SilkS, size=0.8, mirror=True)
 text('vein-base v0.5', 0, 2.6, layer=pcbnew.B_SilkS, size=0.8, mirror=True)
 
 b.Save('vein_base.kicad_pcb')
+# project-local fp-lib-table so DRC can resolve the footprint libraries
+with open('fp-lib-table', 'w') as f:
+    f.write('(fp_lib_table
+  (version 7)
+')
+    for nick in sorted(LIBS):
+        f.write(f'  (lib (name "{nick}")(type "KiCad")(uri "{FP}{nick}.pretty")(options "")(descr ""))
+')
+    f.write(')
+')
 print('saved')
