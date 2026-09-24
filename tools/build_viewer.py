@@ -44,8 +44,8 @@ def main():
     screw = (cq.Workplane('XY').workplane(offset=-8.3).circle(1.0).extrude(11.3)
              .union(cq.Workplane('XY').workplane(offset=-9.6).circle(1.9).extrude(1.3)))
     atom = box(-12, 12, -12, 12, 0, 16.8).edges('|Z').fillet(3.0)
-    usb = box(-4.5, 4.5, -13.0, -11.0, 0.6, 3.8)
-    grplug = box(-4.9, 4.9, -22.0, -12.0, 4.2, 9.0)
+    usb = box(-4.5, 4.5, -13.0, -11.0, 5.9, 9.1)          # USB-C is above PORT.A (photo measurement)
+    grplug = box(-4.9, 4.9, -22.0, -12.0, 0.0, 4.0)       # PORT.A plug sits at the bottom face
 
     parts = [
         ('atom', 'VoiceS3R(外形のみ)', '#9fb6c8', 0.18, 'atom', atom),

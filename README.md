@@ -28,6 +28,10 @@ VoiceS3R(Ext.Pin メス)
 - UART は 57600 bps。
 - NFC(M5Stack Unit NFC U216)は本体の PORT.A を使用(I2C:SDA=G2、SCL=G1)。
 
+## Vein Station(一体筐体・案)
+
+VoiceS3R(vein-base 付き)・指静脈モジュール・NFC ユニットを上向きに並べて収める卓上筐体の案。`station/build_station.py`(CadQuery)が筐体(ケース上部・底蓋)の STEP / STL と 3D プレビュー(https://ippoan.github.io/vein-base/station/)を作り、モジュール・プラグ・USB ケーブルとの干渉をチェックする。指静脈モジュールは採寸待ちのため仮の箱。
+
 ## フォルダ構成
 
 | パス | 内容 |
