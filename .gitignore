@@ -1,6 +1,6 @@
 site/
-fab/gerber/
-fab/pos.csv
-fab/drc.rpt
+fab/
+case/*.step
+case/*.stl
 __pycache__/
 *.kicad_prl

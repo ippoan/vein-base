@@ -4,7 +4,10 @@ Coords: x,y = board coords (origin = Atom center / M2 screw); z=0 = VoiceS3R bot
 PCB top z=-2.5 (header plastic sits in the top-wall slots, flush at z=0), PCB bottom z=-4.1.
 One M2x12 screw from the bottom clamps PLATE -> PCB -> SHELL -> VoiceS3R.
 """
+import os
 import cadquery as cq
+
+VER = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'VERSION')).read().strip()
 
 SIZE, R_OUT = 24.0, 3.0
 WALL, TOP_T = 1.2, 2.5
@@ -46,7 +49,7 @@ plate = plate.cut(cq.Workplane('XY').workplane(offset=Z_BOT - 1).circle(1.15).ex
 plate = plate.cut(cq.Workplane('XY').workplane(offset=Z_BOT - 1).circle(2.2).extrude(1 + 1.2))             # head counterbore
 
 for name, part in (('shell', shell), ('plate', plate)):
-    cq.exporters.export(part, f'vein_base_{name}.step')
-    cq.exporters.export(part, f'vein_base_{name}.stl', tolerance=0.02, angularTolerance=0.1)
+    cq.exporters.export(part, f'vein_base_v{VER}_{name}.step')
+    cq.exporters.export(part, f'vein_base_v{VER}_{name}.stl', tolerance=0.02, angularTolerance=0.1)
     bb = part.val().BoundingBox()
     print(name, round(bb.xlen, 2), round(bb.ylen, 2), round(bb.zlen, 2))

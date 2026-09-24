@@ -8,6 +8,7 @@ import numpy as np
 import cadquery as cq
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+VER = open(os.path.join(ROOT, 'VERSION')).read().strip()
 KICAD_ORIGIN = (100.0, 100.0)   # build_pcb.py places the board at (100,100) in KiCad coordinates
 
 
@@ -32,9 +33,9 @@ def tri(shape):
 
 
 def main():
-    shell = cq.importers.importStep(os.path.join(ROOT, 'case/vein_base_shell.step'))
-    plate = cq.importers.importStep(os.path.join(ROOT, 'case/vein_base_plate.step'))
-    pcb = cq.importers.importStep(os.path.join(ROOT, 'fab/vein_base_pcb.step')).translate((-KICAD_ORIGIN[0], KICAD_ORIGIN[1], -4.1))
+    shell = cq.importers.importStep(os.path.join(ROOT, f'case/vein_base_v{VER}_shell.step'))
+    plate = cq.importers.importStep(os.path.join(ROOT, f'case/vein_base_v{VER}_plate.step'))
+    pcb = cq.importers.importStep(os.path.join(ROOT, f'fab/vein_base_v{VER}_pcb.step')).translate((-KICAD_ORIGIN[0], KICAD_ORIGIN[1], -4.1))
     hR_pl, hR_pin = header(7.62, [2.54, 0, -2.54, -5.08, -7.62])
     hL_pl, hL_pin = header(-7.62, [0, -2.54, -5.08, -7.62])
     j3 = (box(-4.3, 4.3, -10.6, -4.2, -7.5, -4.1).cut(box(-3.7, 3.7, -10.7, -7.1, -6.9, -4.6))

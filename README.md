@@ -33,8 +33,10 @@ VoiceS3R(Ext.Pin メス)
 | パス | 内容 |
 |---|---|
 | `pcb/` | KiCad 7 の基板データと生成スクリプト(`build_pcb.py`、KiCad 付属の Python で実行) |
-| `case/` | ケース上部・底板の STEP / STL と生成スクリプト(`build_case.py`、CadQuery) |
-| `fab/` | JLCPCB 発注用(ガーバー zip、BOM、CPL)、原寸の確認用 PDF、基板の STEP |
+| `VERSION` | 版番号。出力ファイル名(`vein_base_v<版>_*`)と基板裏のシルクに入る |
+| `case/` | ケース生成スクリプト(`build_case.py`、CadQuery) |
+| `pcb/jlc_bom.csv` | JLCPCB 用 BOM の元データ(LCSC 品番) |
+| `fab/` | CI の出力先(git 管理外)。JLCPCB 発注用(ガーバー zip、BOM、CPL)、原寸の確認用 PDF、基板の STEP |
 | `tools/` | CI 用スクリプト(DRC チェック、JLC 用 CPL 変換、3D プレビュー生成と干渉チェック) |
 
 ## CI(GitHub Actions)
@@ -45,7 +47,7 @@ VoiceS3R(Ext.Pin メス)
 2. DRC をかけ、違反があれば失敗させる。
 3. CadQuery でケースを生成する。
 4. 3D プレビューを生成し、ケースと部品・VoiceS3R の干渉チェックを行う(干渉があれば失敗)。
-5. 製造データを Artifacts(`vein-base-fab`)にアップロードする。
+5. 製造データを Artifacts(`vein-base-v<版>-fab`)にアップロードする。ファイル名はすべて `vein_base_v<版>_*` で、発注時に版を取り違えないようにしている。STL / STEP / PDF 等の生成物はリポジトリに置かず、常に Artifacts から取る。
 6. 3D プレビューを GitHub Pages に公開する。
 
 寸法や配線を変えるときは、`pcb/build_pcb.py` / `case/build_case.py` を編集して push すれば、製造データと 3D プレビューがまとめて更新されます。
@@ -59,7 +61,7 @@ VoiceS3R(Ext.Pin メス)
 
 ## 発注前の確認(未検証の項目)
 
-1. `fab/fitcheck_1to1_seen_from_below.pdf` を原寸(100%)で印刷し、VoiceS3R の底面に当てる。ピン列の左右とネジ穴の位置が合うか確認する。
+1. `vein_base_v<版>_fitcheck_1to1_seen_from_below.pdf` を原寸(100%)で印刷し、VoiceS3R の底面に当てる。ピン列の左右とネジ穴の位置が合うか確認する。
 2. 付属ケーブルの結線がストレート(4P の n 番 = 9P の n 番)か、テスターで確認する。
 3. J3 の LCSC 品番を選ぶ(Molex 53261-0471 または互換品)。JLC の実装プレビューで、裏面に載り、開口が USB-C 側の端を向いているか確認する。
 4. M2 ネジの長さ、VoiceS3R のメスヘッダーの深さ、VoiceS3R 底面の出っ張りの有無を実物で確認する。

@@ -5,7 +5,10 @@ J1 (x=+7.62) 3V3,G5,G6,G7,G8 from y=+2.54 down; J2 (x=-7.62) G39,G38,5V,GND from
 J3 = MX1.25 4P RA SMD (bottom), mates with the included 9P->4P cable (9P side re-pinned: 1->5, 2->6).
 J3 pin order: 1=module RXD (<- G5), 2=module TXD (-> G6), 3=VCC 3V3, 4=GND.
 """
+import os
 import pcbnew
+
+VER = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'VERSION')).read().strip()
 
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
@@ -113,7 +116,7 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=0.8, mirror=False):
 text('GND', -4.6, -7.0)
 text('USB-C / cable side', 0, -9.6)
 text('J3 1RX 2TX 3V3 4G', 0, 8.3, layer=pcbnew.B_SilkS, size=0.8, mirror=True)
-text('vein-base v0.6', 0, 6.0, layer=pcbnew.B_SilkS, size=0.8, mirror=True)
+text(f'vein-base v{VER}', 0, 6.0, layer=pcbnew.B_SilkS, size=0.8, mirror=True)
 
 b.Save('vein_base.kicad_pcb')
 # project-local fp-lib-table so DRC can resolve the footprint libraries
