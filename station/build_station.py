@@ -5,6 +5,8 @@ and fails if the enclosure collides with a module, plug or cable.
 
 Coordinates: x = left→right, y = back→front is NEGATIVE (the top-view drawing's y is used as `ys`, Y = -ys),
 z = 0 at the top surface, down is negative. Outer 91 × 63 × 30.3.
+Each module is located sideways by a frame (縁取り) hanging from the top plate. The VoiceS3R top is flush and fully
+visible; VoiceS3R + vein-base are held down by one M2x16 screw from the lid into the vein-base.
 Module sizes come from the photo measurements (±1–2 mm); the finger vein module is still a 59×26×15 block.
 """
 import base64, json, os
@@ -12,7 +14,7 @@ import numpy as np
 import cadquery as cq
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'r4'
+REV = 'r5'
 
 W, D = 91.0, 63.0            # outer size (x, ys)
 WALL, TOP, LID = 2.0, 1.5, 2.0
@@ -42,12 +44,12 @@ def rbox(x0, x1, ys0, ys1, z0, z1, r):
 NFC = (3, 27, 3, 51)          # 24 × 48, Grove end at ys=51 (front)
 VEIN = (29, 88, 3, 29)        # 59 × 26
 VOICE = (29, 53, 33, 57)      # 24 × 24, USB-C / PORT.A / J3 face +x
-Z_ATOM_BOT = -1.5 - 16.8      # -18.3
-Z_BASE_BOT = Z_ATOM_BOT - 9.5  # -27.8
+Z_ATOM_BOT = -16.8            # VoiceS3R top is flush with the top surface (z=0), fully visible
+Z_BASE_BOT = Z_ATOM_BOT - 9.5  # -26.3
 
 nfc = rbox(*NFC, -9.5, -1.5, 1.5)
 vein = rbox(*VEIN, -16.5, -1.5, 2.0)
-atom = rbox(*VOICE, Z_ATOM_BOT, -1.5, 3.0)
+atom = rbox(*VOICE, Z_ATOM_BOT, 0, 3.0)
 base = rbox(*VOICE, Z_BASE_BOT, Z_ATOM_BOT, 3.0)
 nfc_plug = box(11, 19, 51, 59, -8.0, -3.0)
 usb_head = cyl_x(53, 60, 44.5, Z_ATOM_BOT + 7.5, 4.0).union(box(60, 67, 40, 49, Z_ATOM_BOT + 3.3, Z_ATOM_BOT + 11.7))
@@ -60,10 +62,27 @@ j3_plug = box(53, 58, 41, 48, Z_ATOM_BOT - 6.8, Z_ATOM_BOT - 4.7)
 # ---- enclosure: shell (top plate + walls) ----------------------------------------------------------------
 shell = rbox(0, W, 0, D, Z_BOT, 0, R_OUT)
 shell = shell.cut(rbox(WALL, W - WALL, WALL, D - WALL, Z_BOT - 1, -TOP, R_OUT - WALL))
-# top openings: NFC label window, vein and VoiceS3R with a 1 mm lip
+# top openings: NFC label window, vein with a 1 mm lip, VoiceS3R fully open (its top is flush)
+FIT = 0.2                     # side clearance to the locating frames
 shell = shell.cut(box(5, 25, 5, 35, -TOP - 1, 1))
 shell = shell.cut(rbox(VEIN[0] + 1, VEIN[1] - 1, VEIN[2] + 1, VEIN[3] - 1, -TOP - 1, 1, 1.5))
-shell = shell.cut(rbox(VOICE[0] + 1, VOICE[1] - 1, VOICE[2] + 1, VOICE[3] - 1, -TOP - 1, 1, 2.2))
+shell = shell.cut(rbox(VOICE[0] - FIT, VOICE[1] + FIT, VOICE[2] - FIT, VOICE[3] + FIT, -TOP - 1, 1, 3.0 + FIT))
+
+
+def frame(r, depth, t=1.2, cuts=()):
+    """Locating frame hanging from the top plate: a ring around rectangle r (+FIT), minus `cuts` (plug openings)."""
+    x0, x1, y0, y1 = r[0] - FIT, r[1] + FIT, r[2] - FIT, r[3] + FIT
+    ring = box(x0 - t, x1 + t, y0 - t, y1 + t, depth, -TOP).cut(box(x0, x1, y0, y1, depth - 1, 0))
+    ring = ring.intersect(box(WALL, W - WALL, WALL, D - WALL, depth - 1, 0))
+    for c in cuts:
+        ring = ring.cut(c)
+    return ring
+
+
+# frames (縁取り) that hold each module in place sideways
+shell = shell.union(frame(NFC, -9.0, cuts=[box(9, 21, 50, 60, -20, 0)]))
+shell = shell.union(frame(VEIN, -10.0))
+shell = shell.union(frame(VOICE, -12.0, cuts=[box(53, 60, 35.5, 54.5, -20, 0), box(53, 60, 30, 60, -20, -6.0)]))
 # USB exit: notch at the bottom of the right wall, closed by the lid
 shell = shell.cut(box(W - WALL - 1, W + 1, 42.25, 46.75, Z_BOT - 1, Z_LID + 4.0))
 # lid hook slots in the left wall
@@ -82,7 +101,13 @@ for ys0 in (20, 40):
 ped_nfc = box(6, 24, 6, 48, Z_LID, -9.5).cut(cyl_z(15, 39, 3.0, Z_LID, 0))
 # vein pedestal: two rails under the long edges (bottom details of the module still unknown)
 ped_vein = box(33, 84, 5, 9, Z_LID, -16.5).union(box(33, 84, 23, 27, Z_LID, -16.5))
-lid = lid.union(ped_nfc).union(ped_vein)
+# pad under the vein-base: VoiceS3R + vein-base are held by one M2 screw from the lid into the vein-base
+# (replaces its own M2x12: lid 2 + pad 2 + stack 12 -> M2x16)
+VX, VYS = (VOICE[0] + VOICE[1]) / 2, (VOICE[2] + VOICE[3]) / 2
+pad = box(VOICE[0] + 3, VOICE[1] - 3, VOICE[2] + 3, VOICE[3] - 3, Z_LID, Z_BASE_BOT)
+lid = lid.union(ped_nfc).union(ped_vein).union(pad)
+lid = lid.cut(cyl_z(VX, VYS, 1.15, Z_BOT - 1, Z_BASE_BOT + 1)).cut(cyl_z(VX, VYS, 2.2, Z_BOT - 1, Z_BOT + 1.3))
+m2 = cyl_z(VX, VYS, 1.0, Z_BOT + 1.3, Z_ATOM_BOT - 1.0).union(cyl_z(VX, VYS, 1.9, Z_BOT, Z_BOT + 1.3))
 for x, ys in SCREWS:
     lid = lid.cut(cyl_z(x, ys, 1.7, Z_BOT - 1, Z_LID + 1)).cut(cyl_z(x, ys, 3.0, Z_BOT - 1, Z_BOT + 1.2))
 
@@ -128,6 +153,7 @@ parts = [
     ('j3plug', 'J3 プラグ(指静脈ケーブル)', '#e7e1cf', 1, 'mods', j3_plug),
     ('usbhead', 'USB-C L字の頭', '#24292d', 1, 'mods', usb_head),
     ('usbcable', 'USB ケーブル', '#3a4046', 1, 'mods', usb_cable),
+    ('m2', 'M2×16 ネジ(底蓋 → vein-base)', '#a9adb2', 1, 'lid', m2),
     ('lid', '底蓋+台', '#8fa09c', 0.9, 'lid', lid),
 ]
 model = [dict(key=k, label=l, color=c, opacity=o, group=g, data=base64.b64encode(tri(s).tobytes()).decode())
