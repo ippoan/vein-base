@@ -43,6 +43,12 @@ aside{background:var(--panel);border:1px solid var(--line);border-radius:10px;pa
 .parts{display:grid;gap:4px}
 .parts label{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 4px;border-radius:5px;cursor:pointer}
 .parts label:hover{background:var(--chip)}
+.prow{display:flex;align-items:center;gap:4px}
+.prow label{flex:1;min-width:0}
+.pbtns{display:flex;gap:6px;margin-bottom:6px}
+.pbtns button,.solo{font:500 12px var(--sans);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer}
+.solo{padding:2px 6px;font-size:11px;color:var(--muted);flex:none}
+.pbtns button:hover,.solo:hover{background:var(--chip);color:var(--ink)}
 .sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.25);flex:none}
 .row{display:flex;align-items:center;gap:10px;font-size:13px}
 .row input[type=range]{flex:1;accent-color:var(--accent)}
@@ -75,6 +81,7 @@ td:last-child{text-align:right;font-family:var(--mono);white-space:nowrap;paddin
     </div>
     <div>
       <div class="lbl">表示する部品</div>
+      <div class="pbtns"><button type="button" id="pall">全部表示</button><button type="button" id="pnone">全部非表示</button></div>
       <div class="parts" id="parts"></div>
     </div>
     <div>
@@ -123,12 +130,16 @@ const atomEdges = new THREE.LineSegments(new THREE.EdgesGeometry(meshes.atom.geo
 meshes.atom.add(atomEdges);
 // parts list
 const partsEl = document.getElementById('parts');
+function setVis(key,on){ meshes[key].visible=on; document.getElementById('p_'+key).checked=on; }
 for(const p of MODEL){
-  const id='p_'+p.key; const l=document.createElement('label');
-  l.innerHTML = `<input type="checkbox" id="${id}" checked><span class="sw" style="background:${p.color}"></span>${p.label}`;
-  partsEl.appendChild(l);
-  l.querySelector('input').addEventListener('change',e=>{meshes[p.key].visible=e.target.checked;});
+  const id='p_'+p.key; const row=document.createElement('div'); row.className='prow';
+  row.innerHTML = `<label><input type="checkbox" id="${id}" checked><span class="sw" style="background:${p.color}"></span>${p.label}</label><button type="button" class="solo" title="この部品だけ表示">だけ</button>`;
+  partsEl.appendChild(row);
+  row.querySelector('input').addEventListener('change',e=>{meshes[p.key].visible=e.target.checked;});
+  row.querySelector('.solo').addEventListener('click',()=>{ for(const q of MODEL) setVis(q.key, q.key===p.key); });
 }
+document.getElementById('pall').addEventListener('click',()=>{ for(const q of MODEL) setVis(q.key,true); });
+document.getElementById('pnone').addEventListener('click',()=>{ for(const q of MODEL) setVis(q.key,false); });
 function applyExplode(t){ for(const p of MODEL){ meshes[p.key].position.z = OFFS[p.group]*t; } document.getElementById('exv').textContent=Math.round(t*100)+'%'; }
 const ex=document.getElementById('explode'); ex.addEventListener('input',()=>applyExplode(+ex.value)); applyExplode(+ex.value);
 const cop=document.getElementById('cop'); cop.addEventListener('input',()=>{const v=+cop.value; const m=meshes.cup.material; m.opacity=v; m.transparent=v<1; m.depthWrite=v>=1; m.needsUpdate=true; document.getElementById('copv').textContent=Math.round(v*100)+'%';});
