@@ -29,8 +29,8 @@ shell = rrect(SIZE, SIZE, R_OUT, Z_BOT, 0.0)
 R_IN = 1.0
 shell = shell.cut(rrect(SIZE - 2 * WALL, SIZE - 2 * WALL, R_IN, Z_BOT - 1, -TOP_T))
 s = 0.2  # slot clearance around the header plastic (2.54 wide)
-shell = shell.cut(box(7.62 - 1.27 - s, 7.62 + 1.27 + s, -2.54 - 1.27 - s, 7.62 + 1.27 + s, -TOP_T - 1, 1))   # J1 1x5
-shell = shell.cut(box(-7.62 - 1.27 - s, -7.62 + 1.27 + s, 0 - 1.27 - s, 7.62 + 1.27 + s, -TOP_T - 1, 1))    # J2 1x4
+shell = shell.cut(box(7.62 - 1.27 - s, 7.62 + 1.27 + s, -7.62 - 1.27 - s, 2.54 + 1.27 + s, -TOP_T - 1, 1))   # J1 1x5
+shell = shell.cut(box(-7.62 - 1.27 - s, -7.62 + 1.27 + s, -7.62 - 1.27 - s, 0 + 1.27 + s, -TOP_T - 1, 1))    # J2 1x4
 shell = shell.cut(cq.Workplane('XY').workplane(offset=-TOP_T - 1).circle(1.2).extrude(TOP_T + 2))           # M2
 # MX1.25 4P plug opening on the -y wall: same side as the VoiceS3R USB-C / PORT.A
 shell = shell.cut(box(-4.75, 4.75, -SIZE / 2 - 1, -SIZE / 2 + WALL + 1, Z_BOT + PLATE_T + 0.2, PCB_BOT))
