@@ -1,6 +1,6 @@
 # vein-base
 
-M5Stack **Atom VoiceS3R** の下に積む 24×24 mm のベースです。**指静脈モジュール Waveshare Finger Vein Scanner Module (A)** を UART でつなぐための中継基板と、Atomic ベースと同じ外形のケースで構成しています。
+M5Stack **Atom VoiceS3R** の下に積む 24×24 mm のベースです。**指静脈モジュール Waveshare Finger Vein Scanner Module (A)** を UART でつなぐための中継基板と、ケース(24.4 mm 角・角 R なし・壁 1.4 mm。VoiceS3R より各辺 0.2 mm 大きい)で構成しています。
 
 **3D プレビュー:** https://ippoan.github.io/vein-base/(回転・分解表示・部品の表示切替ができます)
 
@@ -8,7 +8,7 @@ M5Stack **Atom VoiceS3R** の下に積む 24×24 mm のベースです。**指�
 
 ```
 VoiceS3R(Ext.Pin メス)
-  └ ケース上部 24×24(天板のスロットにピンヘッダーの樹脂をはめ込む)
+  └ ケース上部 24.4×24.4(天板のスロットにピンヘッダーの樹脂をはめ込む)
      └ 中継基板 20.0×19.9 mm(J1 1x5 / J2 1x4 オスピン、裏面に J3 MX1.25 4P 横型)
   └ 底板(M2×12 ネジ 1 本で全体を VoiceS3R に共締め)
 ```

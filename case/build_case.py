@@ -1,17 +1,20 @@
-"""vein-base enclosure: Atomic-base style 24x24 block under VoiceS3R (same footprint, adds height).
+"""vein-base enclosure: 24.4x24.4 square block under VoiceS3R (0.2 over its 24x24 footprint per side, adds height).
 Two parts: SHELL (top wall + walls, open bottom) and PLATE (bottom lid with screw boss + PCB rails).
 Coords: x,y = board coords (origin = Atom center / M2 screw); z=0 = VoiceS3R bottom face.
 PCB top z=-2.5 (header plastic sits in the top-wall slots, flush at z=0), PCB bottom z=-4.1.
 One M2x12 screw from the bottom clamps PLATE -> PCB -> SHELL -> VoiceS3R.
-Every wall is at least 1.0 thick (resin SLA minimum; DMM rejected v0.6 for a 0.3 counterbore floor and 0.87 corners).
+Every wall is at least 1.4 thick (resin SLA minimum is 1.0; DMM rejected v0.6 for a 0.3 counterbore floor and 0.87
+corners). The cavity is unchanged from v0.6 (the PCB's -y edge sits right on it), so the walls grow outwards; the outer
+corners are square, which keeps them thicker than the walls.
 """
 import os
 import cadquery as cq
 
 VER = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'VERSION')).read().strip()
 
-SIZE, R_OUT = 24.0, 3.0
-WALL, TOP_T = 1.2, 2.5
+CAV, R_IN = 21.6, 1.4        # cavity (unchanged): the PCB's -y edge (y=-10.6) sits on it
+WALL, TOP_T = 1.4, 2.5
+SIZE = CAV + 2 * WALL        # 24.4, square corners
 Z_BOT = -9.5
 PLATE_T = 1.5
 PCB_BOT = -4.1
@@ -29,9 +32,8 @@ def box(x0, x1, y0, y1, z0, z1):
 
 
 # ---- SHELL
-shell = rrect(SIZE, SIZE, R_OUT, Z_BOT, 0.0)
-R_IN = 1.4   # with R_OUT 3.0 and WALL 1.2 the corners keep >= 1.0 (1.0 gave 0.87)
-shell = shell.cut(rrect(SIZE - 2 * WALL, SIZE - 2 * WALL, R_IN, Z_BOT - 1, -TOP_T))
+shell = box(-SIZE / 2, SIZE / 2, -SIZE / 2, SIZE / 2, Z_BOT, 0.0)
+shell = shell.cut(rrect(CAV, CAV, R_IN, Z_BOT - 1, -TOP_T))
 s = 0.2  # slot clearance around the header plastic (2.54 wide)
 shell = shell.cut(box(7.62 - 1.27 - s, 7.62 + 1.27 + s, -7.62 - 1.27 - s, 2.54 + 1.27 + s, -TOP_T - 1, 1))   # J1 1x5
 shell = shell.cut(box(-7.62 - 1.27 - s, -7.62 + 1.27 + s, -7.62 - 1.27 - s, 0 + 1.27 + s, -TOP_T - 1, 1))    # J2 1x4
@@ -40,11 +42,11 @@ shell = shell.cut(cq.Workplane('XY').workplane(offset=-TOP_T - 1).circle(1.2).ex
 shell = shell.cut(box(-4.75, 4.75, -SIZE / 2 - 1, -SIZE / 2 + WALL + 1, Z_BOT + PLATE_T + 0.2, PCB_BOT))
 
 # ---- PLATE
-pw = SIZE - 2 * WALL - 2 * CLR
+pw = CAV - 2 * CLR
 plate = rrect(pw, pw, R_IN - CLR, Z_BOT, Z_BOT + PLATE_T)
 ztop = Z_BOT + PLATE_T
-# boss -> PCB. r2.4 covers the head counterbore (r2.2) so no thin ring is left under it, and leaves 1.25 around M2
-plate = plate.union(cq.Workplane('XY').workplane(offset=ztop).circle(2.4).extrude(PCB_BOT - ztop))
+# boss -> PCB. r2.6 covers the head counterbore (r2.2) so no thin ring is left under it, and leaves 1.45 around M2
+plate = plate.union(cq.Workplane('XY').workplane(offset=ztop).circle(2.6).extrude(PCB_BOT - ztop))
 for sx in (-1, 1):                                                                                          # edge rails
     plate = plate.union(box(sx * 9.2 if sx > 0 else -10.6, 10.6 if sx > 0 else -9.2, -9.6, 9.3, ztop, PCB_BOT))
 plate = plate.cut(cq.Workplane('XY').workplane(offset=Z_BOT - 1).circle(1.15).extrude(20))                 # M2 clearance
