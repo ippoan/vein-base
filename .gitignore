@@ -6,3 +6,4 @@ station/*.step
 station/*.stl
 __pycache__/
 *.kicad_prl
+station/cad/
