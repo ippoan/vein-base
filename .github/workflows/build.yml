@@ -11,9 +11,11 @@ permissions:
   pages: write
   id-token: write
 
+# Runs are grouped per branch, so a PR push never cancels a build (or the Pages deploy) of main or another PR.
+# A newer push to the same PR cancels the older run; on main every run finishes, so each merge gets deployed.
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -80,6 +82,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-24.04
+    # one Pages deployment at a time; a queued one waits instead of cancelling the running one
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
