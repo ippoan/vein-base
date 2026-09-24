@@ -1,0 +1,26 @@
+name: auto-merge
+
+# ippoan/ci-workflows の auto-merge.yml reusable workflow を呼ぶ。GitHub App
+# (CI_APP_ID/CI_APP_PRIVATE_KEY) の installation token で `gh pr merge --auto`
+# を実行する。App token で merge するので main への push で build.yml
+# (Pages deploy) も発火する。
+#
+# Prerequisites (one-time, in repo Settings):
+#   - General → "Allow auto-merge" is ON
+#   - Branches → main protection requires the `build` check from build.yml.
+#     Without that, this would merge instantly (reusable の verify_all_checks
+#     が兄弟 check の完了は待つ)。
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.draft == false
+    uses: ippoan/ci-workflows/.github/workflows/auto-merge.yml@main
+    secrets: inherit
