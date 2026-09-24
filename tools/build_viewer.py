@@ -33,8 +33,6 @@ def tri(shape):
 
 
 def main():
-    shell = cq.importers.importStep(os.path.join(ROOT, f'case/vein_base_v{VER}_shell.step'))
-    plate = cq.importers.importStep(os.path.join(ROOT, f'case/vein_base_v{VER}_plate.step'))
     cup = cq.importers.importStep(os.path.join(ROOT, f'case/vein_base_v{VER}_cup.step'))
     pcb = cq.importers.importStep(os.path.join(ROOT, f'fab/vein_base_v{VER}_pcb.step')).translate((-KICAD_ORIGIN[0], KICAD_ORIGIN[1], -4.1))
     hR_pl, hR_pin = header(7.62, [2.54, 0, -2.54, -5.08, -7.62])
@@ -52,37 +50,24 @@ def main():
         ('atom', 'VoiceS3R(外形のみ)', '#9fb6c8', 0.18, 'atom', atom),
         ('usb', 'USB-C 口', '#6b7a86', 0.9, 'atom', usb),
         ('grplug', 'NFC ケーブル(PORT.A・位置は参考)', '#e7e1cf', 0.85, 'atom', grplug),
-        ('shell', 'ケース上部(24.4 角)', '#3d6fb6', 0.55, 'shell', shell),
         ('hdrpl', 'ピンヘッダー樹脂', '#2b2f33', 1, 'pcb', hR_pl.union(hL_pl)),
         ('hdrpin', 'ピン', '#d8b25a', 1, 'pcb', hR_pin.union(hL_pin)),
         ('pcb', '中継基板', '#1f7a4d', 1, 'pcb', pcb),
         ('mx', 'J3 MX1.25 4P', '#f1efe8', 1, 'pcb', j3),
         ('mxplug', '指静脈ケーブル', '#e7e1cf', 0.85, 'pcb', plug),
-        ('plate', '底板', '#5b8fd6', 0.8, 'plate', plate),
-        ('cup', 'カップ(上蓋なしの 1 部品)', '#3d6fb6', 0.55, 'plate', cup),
+        ('cup', 'ケース(上蓋なしのカップ、1 部品)', '#3d6fb6', 0.55, 'plate', cup),
         ('screw', 'M2×12 ネジ', '#a9adb2', 1, 'screw', screw),
     ]
 
-    # interference check: fail the build if the case collides with anything
+    # interference check: fail the build if the cup collides with anything. The VoiceS3R is the rounded outline it
+    # wraps (the cup only touches the ledge under it)
     bad = []
-    for name, obj in [('pcb', pcb), ('headers', hR_pl.union(hL_pl).union(hR_pin).union(hL_pin)), ('J3', j3),
-                      ('plug', plug), ('screw', screw), ('VoiceS3R', box(-12, 12, -12, 12, 0.01, 16.8))]:
-        for cname, case in (('shell', shell), ('plate', plate)):
-            v = case.intersect(obj).val().Volume()
-            print(f'interference {cname:5s} x {name:8s} = {v:.3f} mm3')
-            if v > 0.01:
-                bad.append(f'{cname}/{name}')
-    # the one-part cup against the same parts, and against the rounded VoiceS3R it wraps (it only touches the ledge)
     for name, obj in [('pcb', pcb), ('headers', hR_pl.union(hL_pl).union(hR_pin).union(hL_pin)), ('J3', j3),
                       ('plug', plug), ('screw', screw), ('VoiceS3R', atom), ('USB-C', usb), ('PORT.A plug', grplug)]:
         v = cup.intersect(obj).val().Volume()
-        print(f'interference cup   x {name:8s} = {v:.3f} mm3')
+        print(f'interference cup x {name:11s} = {v:.3f} mm3')
         if v > 0.01:
             bad.append(f'cup/{name}')
-    v = shell.intersect(plate).val().Volume()
-    print(f'interference shell x plate = {v:.3f} mm3')
-    if v > 0.01:
-        bad.append('shell/plate')
     if bad:
         raise SystemExit('interference: ' + ', '.join(bad))
 
