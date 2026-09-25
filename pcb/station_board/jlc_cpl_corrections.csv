@@ -1,0 +1,7 @@
+Footprint,Rotation,OffsetX,OffsetY
+SOIC-16_3.9x9.9mm_P1.27mm,270,0,0
+SW_DIP_SPSTx04_Slide_6.7x11.72mm_W8.61mm_P2.54mm_LowProfile,270,0,0
+DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm,270,5.54,1.42
+PinHeader_1x05_P2.54mm_Vertical,270,0,5.08
+PinHeader_1x04_P2.54mm_Vertical,270,0,3.81
+Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal,0,0,-0.95
