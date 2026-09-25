@@ -49,6 +49,20 @@ jobs:
       - name: DRC
         run: python3 tools/check_drc.py
 
+      - name: Build Vein Station board (KiCad)
+        run: |
+          cd pcb/station_board && python3 build_board.py && cd ../..
+          mkdir -p fab/station/gerber
+          kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o fab/station/gerber/ pcb/station_board/station_board.kicad_pcb
+          kicad-cli pcb export drill --format excellon --excellon-separate-th -o fab/station/gerber/ pcb/station_board/station_board.kicad_pcb
+          kicad-cli pcb export pos --format csv --units mm --side both -o fab/station/pos.csv pcb/station_board/station_board.kicad_pcb
+          (cd fab/station/gerber && zip -q ../station_board_v${VER}_gerbers.zip *)
+          python3 tools/make_jlc_cpl.py --pos fab/station/pos.csv --bom pcb/station_board/jlc_bom.csv --prefix station_board_v --outdir fab/station
+
+      - name: Vein Station board DRC
+        # silk_edge_clearance: the DB9 footprint's outline silk runs off the board edge; only this board is exempt.
+        run: python3 tools/check_drc.py --board pcb/station_board/station_board.kicad_pcb --report fab/station/drc.rpt --ignore silk_edge_clearance
+
       - name: Build case (CadQuery)
         run: cd case && python3 build_case.py
 
@@ -72,6 +86,7 @@ jobs:
             fab/vein_base_v*
             case/vein_base_v*
             station/vein_station_*
+            fab/station/*
 
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'

@@ -24,7 +24,7 @@ edit shared parts there.
 - Ext.Pin の 2 列は **−y 端(y=−7.62)で揃う**。J1(x=+7.62)は +2.54 から 3V3,G5,G6,G7,G8、J2(x=−7.62)は 0 から G39,G38,5V,GND。実機の底面シルクで確認済み。ヘッダー位置を動かすときは基板・ケースのスロット・viewer の 3 か所を必ず一緒に直す。
 - 版番号は `VERSION` だけで管理する。出力ファイル名(`vein_base_v<版>_*`)、Artifacts 名(`vein-base-v<版>-fab`)、基板裏シルクはここから入る。形状や配線を変えたら上げる。
 - 生成物(STL / STEP / PDF / gerber zip / CPL)は git に入れない(`.gitignore` 済み)。古い生成物を発注しかけた事故があったため。取得は常に CI の Artifacts から。
-- BOM の元データは `pcb/jlc_bom.csv`(LCSC 品番入り)。`fab/` は CI の出力先。
+- BOM の元データは vein-base が `pcb/jlc_bom.csv`、station 基板が `pcb/station_board/jlc_bom.csv`(どちらも LCSC 品番入り)。`fab/` は CI の出力先。
 - フットプリントは lib nickname 付きで置き、`build_pcb.py` がプロジェクトローカルの `fp-lib-table` を書き出す(DRC の lib_footprint_* 警告対策)。標準から変えたフットプリントは `pcb/vein_base.pretty/` に置く(例: 2.4 mm の M2 穴)。
 - `pcb/vein_base.kicad_pcb` は `build_pcb.py` の出力。手で編集せず、スクリプトを直す。
 
@@ -33,10 +33,10 @@ edit shared parts there.
 ローカルに KiCad が無い前提。検証は PR の CI(`build` ジョブ)で行う。手元でできるのは構文チェックだけ:
 
 ```sh
-python -c "import ast; [ast.parse(open(f, encoding='utf-8').read()) for f in ['pcb/build_pcb.py','case/build_case.py','tools/build_viewer.py','tools/make_jlc_cpl.py','station/build_station.py']]"
+python -c "import ast; [ast.parse(open(f, encoding='utf-8').read()) for f in ['pcb/build_pcb.py','pcb/station_board/build_board.py','case/build_case.py','tools/build_viewer.py','tools/make_jlc_cpl.py','station/build_station.py']]"
 ```
 
-CI(`.github/workflows/build.yml`)の中身: `build_pcb.py` → kicad-cli で gerber / drill / pos / 原寸 PDF / STEP → `check_drc.py`(違反があれば fail)→ `build_case.py` → `build_viewer.py`(ケースと部品・VoiceS3R の干渉が 0.01 mm³ を超えたら fail)→ `station/build_station.py`(筐体とモジュール・プラグ・ケーブルの干渉で fail)。DRC の違反と干渉チェックの失敗は設計の問題なので、スクリプト側で握りつぶさない。
+CI(`.github/workflows/build.yml`)の中身: `build_pcb.py` → kicad-cli で gerber / drill / pos / 原寸 PDF / STEP → `check_drc.py`(違反があれば fail)→ 同様に `pcb/station_board/build_board.py` から station 基板の gerber / drill / pos / CPL / DRC(`silk_edge_clearance` はこの基板だけ無視)→ `build_case.py` → `build_viewer.py`(ケースと部品・VoiceS3R の干渉が 0.01 mm³ を超えたら fail)→ `station/build_station.py`(筐体とモジュール・プラグ・ケーブルの干渉で fail)。DRC の違反と干渉チェックの失敗は設計の問題なので、スクリプト側で握りつぶさない。
 
 ## CI / auto-merge (repo-specific config)
 
@@ -51,7 +51,7 @@ Common auto-merge / `Refs #N` rules are in user memory. Only repo-specific value
 
 ## Vein Station(`station/`)
 
-`station/build_station.py` 1 本で、筐体(`shell` = 天板+壁、`lid` = 底蓋+台)の STEP / STL と `site/station/` の 3D プレビューを作る。変更のたびに `REV`(r1, r2, …)を上げ、1 変更 1 PR で出す。
+`station/build_station.py` 1 本で、筐体(`shell` = 天板+壁、`lid` = 底蓋+台)の STEP / STL と `site/station/` の 3D プレビューを作る。変更のたびに `REV`(r1, r2, …)を上げ、1 変更 1 PR で出す。基板は `pcb/station_board/`(r10、`build_board.py`)が生成する 60 × 35 mm の 1 枚基板で、VoiceS3R の Ext.Pin・指静脈 J3(G5/G6)・MAX3232(G7=送信 / G8=受信)・DIP(1+2 = Passthrough、3+4 = Cross)・DB9 オス RA をまとめ、接続口はすべて奥の壁に出す。正本は `build_board.py` / `build_station.py` の docstring。
 
 - 座標: x = 左→右、`ys` = 奥→手前(3D では Y = −ys)、z = 天面 0 で下向きが負。上面図(artifact のたたき台)と同じ数値で書く。
 - 配置(r9): 左端に NFC を縦置き(Grove 端子は手前)、その右の上段に指静脈、下段に VoiceS3R。VoiceS3R の USB-C / PORT.A / J3 の辺は右のケーブル置き場に向け、USB ケーブルは右の壁の下端から出す。外形 91 × 63 × 27.6。
