@@ -19,8 +19,9 @@ Layout (se2):
   PORT.A ↔ NFC Grove loop in the front of the bay; the USB-C is an L plug turning back, its cable leaves through the
   back wall. DB9 of the RS232M leaves through the back wall (its real side is not known yet).
   G8/G9 for the vein UART come from an M-Bus breakout PCB under the RS232M, J3 (MX1.25 4P) facing the vein module.
-Still provisional: RS232M (no official CAD; 54 × 54 × 13.2 block, DB9 side), vein module (59 × 26 × 15 block),
-the breakout PCB.
+The finger vein module is a 59 × 26 × 15 block of the official outline (Waveshare product page,
+https://www.waveshare.com/finger-vein-scanner-module-a.htm); only its connector position is not known yet.
+Still provisional: RS232M (no official CAD; 54 × 54 × 13.2 block, DB9 side), the breakout PCB.
 """
 import base64, json, os, urllib.request
 import numpy as np
@@ -230,7 +231,7 @@ def tri(shape):
 
 parts = [
     ('shell', 'ケース上部(天板+壁)', '#3d6fb6', 0.5, 'shell', tri(shell)),
-    ('vein', '指静脈モジュール(仮の箱)', '#2e3538', 1, 'mods', tri(vein)),
+    ('vein', '指静脈モジュール(外形は公式値、コネクタ位置は未確定)', '#2e3538', 1, 'mods', tri(vein)),
     ('nfc', 'Unit NFC(公式 CAD)', '#f2f2ee', 1, 'mods', to_view(mesh_nfc(stl_tris('nfc')))),
     ('core', 'CoreS3 SE(公式 CAD)', '#e9e9e6', 1, 'mods', to_view(mesh_core(stl_tris('core')))),
     ('glass', 'CoreS3 SE の画面(CAD に無いので板で表示)', '#15181b', 1, 'mods', tri(glass)),
@@ -255,8 +256,8 @@ DIMS = [('外形', f'{W:g} × {D:g} × {-Z_BOT:.1f}'), ('壁 / 天板 / 底蓋',
         ('DB9 出口(奥の壁)', '34 × 17(位置は仮)'), ('リセット', '手前の壁に ⌀4 のピン穴'),
         ('底蓋', '左右 爪 + M3 × 2'), ('CoreS3 SE', '返し 1.5(天板 1.0)/ 縁取り'),
         ('指静脈の配線', 'M-Bus 分岐基板(G8/G9・3V3・GND)→ J3')]
-NOTE = ('CoreS3 SE と Unit NFC は M5Stack 公式 STL(m5stack/M5_Hardware)を表示しています。RS232M・指静脈モジュール・'
-        'M-Bus 分岐基板は仮の箱で、DB9 の向きは未確認です。単位 mm。')
+NOTE = ('CoreS3 SE と Unit NFC は M5Stack 公式 STL(m5stack/M5_Hardware)を表示しています。指静脈は Waveshare 公式寸法'
+        '(コネクタ位置は未確定)、RS232M・M-Bus 分岐基板は仮の箱で、DB9 の向きは未確認です。単位 mm。')
 dims = ''.join(f'        <tr><td>{k}</td><td>{v}</td></tr>\n' for k, v in DIMS)
 tpl = open(os.path.join(ROOT, 'tools/station_template.html'), encoding='utf-8').read()
 os.makedirs(os.path.join(ROOT, 'site/station-se'), exist_ok=True)
