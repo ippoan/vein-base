@@ -50,9 +50,9 @@ def main():
     pcb = cq.importers.importStep(os.path.join(ROOT, f'fab/vein_base_v{VER}_pcb.step')).translate((-KICAD_ORIGIN[0], KICAD_ORIGIN[1], -4.1))
     hR_pl, hR_pin = header(7.62, [2.54, 0, -2.54, -5.08, -7.62])
     hL_pl, hL_pin = header(-7.62, [0, -2.54, -5.08, -7.62])
-    # J3 on the PCB top, outside the Atom at the +y edge (opening at y=+19.3): body z -2.5..+0.9
-    j3 = (box(-4.3, 4.3, 12.9, 19.3, -2.5, 0.9).cut(box(-3.7, 3.7, 15.8, 19.4, -2.0, 0.3))
-          .union(box(-5.5, -3.4, 15.2, 18.2, -2.5, -2.2)).union(box(3.4, 5.5, 15.2, 18.2, -2.5, -2.2)))
+    # J3 on the PCB top, outside the Atom at the +y edge (opening at y=+19.3): its courtyard (build_pcb.py prints it),
+    # z -2.5..+0.9. The courtyard covers the real Molex model (x +-5.08, y +13.6..+18.8), so the check errs on the safe side
+    j3 = box(-5.98, 5.98, 12.5, 19.3, -2.5, 0.9)
     plug = box(-3.7, 3.7, 19.3, 25.7, -1.9, 0.2).union(box(-2.8, 2.8, 25.7, 27.7, -1.4, -0.3))
     screw = (cq.Workplane('XY').workplane(offset=-8.3).circle(1.0).extrude(11.3)
              .union(cq.Workplane('XY').workplane(offset=-9.6).circle(1.9).extrude(1.3)))
