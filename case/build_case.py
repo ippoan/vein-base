@@ -57,10 +57,14 @@ cup = cup.union(box(-SLV_OUT / 2, SLV_OUT / 2, -SLV_OUT / 2, SLV_OUT / 2, LEDGE_
 cup = cup.cut(rrect(CAV, CAV_Y1 + CAV / 2, R_IN, ztop, 0.0 + 1e-3, cy=(CAV_Y1 - CAV / 2) / 2))          # PCB cavity
 cup = cup.cut(rrect(SLV_IN, SLV_IN, R_ATOM + SLV_CLR, 0.0, SLV_H + 1))                                 # sleeve
 cup = cup.cut(box(-6.0, 6.0, -SLV_OUT / 2 - 1, -SLV_IN / 2 + 1, 0.0, SLV_H + 1))                       # PORT.A
-# J3 plug (+y edge, above the PCB): a slot open to the top (not a window), so the cup can go on from below with the
-# vein cable already plugged in — a bar over a window would hit the plug on the way up. J3 (up to z=+0.9) sits right
-# behind the sleeve's +y wall, so the slot runs through that wall too. It stops 0.1 above the PCB top (z=-2.5)
-cup = cup.cut(box(-4.75, 4.75, SLV_IN / 2 - 1, Y_OUT + 1, PCB_BOT + 1.6 + 0.1, SLV_H + 1))
+# J3 and its plug (+y edge, above the PCB): a slot open to the top (not a window), so the cup can go on from below with
+# the vein cable already plugged in — a bar over a window would hit the plug on the way up. J3 (up to z=+0.9) sits right
+# behind the sleeve's +y wall, so the slot runs through that wall too. Width = J3's courtyard (x +-5.98, y +12.5..+19.3)
+# + 0.25: v0.11 cut only +-4.75, so the courtyard ran 1.2 into the sleeve wall (the real Molex model clears it, but the
+# preview showed J3 in the wall). It stops 0.1 above the PCB top (z=-2.5)
+J3_CRT_X = 5.98
+J3_SLOT_X = J3_CRT_X + 0.25
+cup = cup.cut(box(-J3_SLOT_X, J3_SLOT_X, SLV_IN / 2 - 1, Y_OUT + 1, PCB_BOT + 1.6 + 0.1, SLV_H + 1))
 cup = cup.union(cq.Workplane('XY').workplane(offset=ztop).circle(BOSS_R).extrude(PCB_BOT - ztop))       # boss -> PCB
 for sx in (-1, 1):   # PCB rails, run into the wall so no slit is left between them
     cup = cup.union(box(9.2 if sx > 0 else -CAV / 2 - 0.5, CAV / 2 + 0.5 if sx > 0 else -9.2, -9.6, 18.8, ztop, PCB_BOT))
