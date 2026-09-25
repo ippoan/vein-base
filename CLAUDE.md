@@ -20,7 +20,7 @@ edit shared parts there.
 ## Repo-specific invariants
 
 - 座標系: 原点 = Atom 中心(M2 ネジ)、+y = USB-C / PORT.A と反対側、基板の F 面が Atom 側。`build_pcb.py` / `build_case.py` / `build_viewer.py` の 3 本で共通。
-- VoiceS3R の USB-C と PORT.A は同じ辺(−y)。J3 の差し込み口もこの辺に向ける。
+- VoiceS3R の USB-C と PORT.A は同じ辺(−y)。J3 は高さ 3.4 でヘッダー樹脂のすき間 2.54 に入らないので、基板を +y へ Atom の外まで伸ばし、表面(F)の Atom の外に置いて差し込み口を +y 端に向ける(USB-C / PORT.A のプラグを避ける)。
 - Ext.Pin の 2 列は **−y 端(y=−7.62)で揃う**。J1(x=+7.62)は +2.54 から 3V3,G5,G6,G7,G8、J2(x=−7.62)は 0 から G39,G38,5V,GND。実機の底面シルクで確認済み。ヘッダー位置を動かすときは基板・ケースのスロット・viewer の 3 か所を必ず一緒に直す。
 - 版番号は `VERSION` だけで管理する。出力ファイル名(`vein_base_v<版>_*`)、Artifacts 名(`vein-base-v<版>-fab`)、基板裏シルクはここから入る。形状や配線を変えたら上げる。
 - 生成物(STL / STEP / PDF / gerber zip / CPL)は git に入れない(`.gitignore` 済み)。古い生成物を発注しかけた事故があったため。取得は常に CI の Artifacts から。
@@ -71,7 +71,7 @@ Common auto-merge / `Refs #N` rules are in user memory. Only repo-specific value
 ## 発注と原寸確認
 
 - 原寸確認は `vein_base_v<版>_fitcheck_1to1_seen_from_below.pdf` を 100% で印刷し、**回さずに**「USB-C / cable side」を PORT.A 側に向けて VoiceS3R 底面に当てる。`fitcheck_1to1.pdf`(上から見た図)を回して当てると、見かけ上合ってしまう。
-- 基板と実装は JLCPCB の Standard PCBA。SMT は Bottom 面(J3)、J1/J2 は THT 実装。実装プレビューで、J3 が裏面にあって開口が USB-C 側を向いているか確認する。
+- 基板と実装は JLCPCB の Economic PCBA(片面のみ対応)。全部品(J1/J2 = THT、J3 = SMD)が Top 面にあり、1 回で付く。自分ではんだ付けする部品は無い。実装プレビューで、J3 が表面にあって開口が +y 端(USB-C と反対)を向いているか確認する。
 - ケースの本番材料は DMM.make の「PA12｜MJF」(グレー、磨きなし)。形の確認だけなら SLA のエコノミーレジンでよい(肉厚は 1.0 mm 以上)。基板と同じ荷物にするなら JLC3DP の MJF PA12(JLCPCB のカートでまとめられる)。
 - 決済・ログインは人が行う。Claude はファイルの用意と確認まで。
 
