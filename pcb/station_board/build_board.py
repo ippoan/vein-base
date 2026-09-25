@@ -38,14 +38,14 @@ mm = pcbnew.FromMM
 # outline (board coords): the VoiceS3R and, beside it on -x, the DB9 on the -y edge (the station's back wall)
 X0, X1, Y0, Y1 = -48.0, 12.0, -11.0, 24.0
 J3_EDGE = Y1                 # J3 stays on the r10 front edge in both outlines
-# r11: M3 holes in board coords, all outside the r10 area (>= 5.5 from its tracks); station coords in the comments
-# (x_st = 41 - x, ys = 14.2 + y). NFC 4..28 × 2.6..50.6, vein 28.5..87.5 × 41..67 in station coords (0.5 apart).
+# r11: M3 holes in board coords, all outside the r10 area (>= 5.5 from its tracks). The same list is in
+# station/build_station_pf.py (case coords there: x = -6.0 - x_board, y = -26.7 + y_board), keep the two together.
 HOLES = []
 if PF:
     X1, Y1 = 38.0, 52.8
-    HOLES = [(33.0, -6.6), (17.0, -6.6), (33.0, 31.4), (17.0, 31.4),    # H1..H4 NFC corners (8/24, 7.6/45.6)
-             (8.5, 31.8), (-42.5, 31.8), (8.5, 47.8), (-42.5, 47.8),    # H5..H8 vein corners (32.5/83.5, 46/62)
-             (-44.5, 16.5)]                                            # H9 beside the DB9 (85.5, 30.7)
+    HOLES = [(32.5, -6.3), (16.5, -6.3), (32.5, 31.7), (16.5, 31.7),    # H1..H4 under the Unit NFC's corners
+             (8.0, 32.1), (-43.0, 32.1), (8.0, 48.1), (-43.0, 48.1),    # H5..H8 under the vein module's corners
+             (-44.5, 16.5)]                                            # H9 beside the DB9
 
 
 def P(x, y):
