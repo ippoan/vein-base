@@ -44,7 +44,7 @@ jobs:
           kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts --mirror -o ${N}_fitcheck_1to1_seen_from_below.pdf pcb/vein_base.kicad_pcb
           kicad-cli pcb export step --subst-models -o ${N}_pcb.step pcb/vein_base.kicad_pcb
           (cd fab/gerber && zip -q ../vein_base_v${VER}_gerbers.zip *)
-          python3 tools/make_jlc_cpl.py
+          python3 tools/make_jlc_cpl.py --corrections pcb/jlc_cpl_corrections.csv
 
       - name: DRC
         run: python3 tools/check_drc.py
