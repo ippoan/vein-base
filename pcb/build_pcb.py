@@ -80,6 +80,7 @@ VARIANTS = [
     dict(out='vein_base_atomic.kicad_pcb', thickness=1.0, outline=atomic_outline(),
          # the ATOMIC-TYPE-A center hole, 4.2 non-plated
          hole='MountingHole_4.2mm_NPTH', j3y=33.2 - 3.1, routes=atomic_routes,
+         j1ref=(5.2, 2.54),  # the default spot above pin 1 runs into the post notch
          silk=[('GND', -4.6, -7.0, 'F'), ('USB-C / cable side', 0, -8.2, 'F'),
                ('J3 1RX 2TX 3V3 4G', 0, 24.0, 'B'), (f'vein-base atomic v{VER}', 0, 16.0, 'B')]),
 ]
@@ -152,6 +153,8 @@ def build(v):
     J1.SetReference('J1'); J1.SetValue('Hdr 1x5 2.54 (3V3,G5,G6,G7,G8)'); J1.SetPosition(P(7.62, 2.54))
     for pad, n in zip(sorted(J1.Pads(), key=lambda p: int(p.GetNumber())), ['3V3', 'G5_TX', 'G6_RX', 'G7', 'G8']):
         pad.SetNet(nets[n])
+    if 'j1ref' in v:
+        J1.Reference().SetPosition(P(*v['j1ref']))
 
     J2 = load('Connector_PinHeader_2.54mm.pretty', 'PinHeader_1x04_P2.54mm_Vertical')
     J2.SetReference('J2'); J2.SetValue('Hdr 1x4 2.54 (G39,G38,5V,GND)'); J2.SetPosition(P(-7.62, 0))
