@@ -57,7 +57,8 @@ jobs:
           kicad-cli pcb export drill --format excellon --excellon-separate-th -o fab/station/gerber/ pcb/station_board/station_board.kicad_pcb
           kicad-cli pcb export pos --format csv --units mm --side both -o fab/station/pos.csv pcb/station_board/station_board.kicad_pcb
           (cd fab/station/gerber && zip -q ../station_board_v${VER}_gerbers.zip *)
-          python3 tools/make_jlc_cpl.py --pos fab/station/pos.csv --bom pcb/station_board/jlc_bom.csv --prefix station_board_v --outdir fab/station
+          python3 tools/make_jlc_cpl.py --pos fab/station/pos.csv --bom pcb/station_board/jlc_bom.csv --prefix station_board_v --outdir fab/station \
+            --corrections pcb/station_board/jlc_cpl_corrections.csv
 
       - name: Vein Station board DRC
         # silk_edge_clearance: the DB9 footprint's outline silk runs off the board edge; only this board is exempt.
