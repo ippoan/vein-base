@@ -1,9 +1,9 @@
 """vein-base enclosure: one part, no top lid (CUP).
-A tray under the VoiceS3R: floor with the screw boss and two PCB rails, walls around the PCB that rise to the
-VoiceS3R's bottom face, then a sleeve that wraps the Atom's lower 3 mm (0.25 clearance) so the header gap is hidden and
-the Atom is located by the cup. The -y side of the sleeve is cut away for PORT.A (0-4 mm up the Atom's side).
+A tray under the VoiceS3R, like M5's Atomic bases: floor with the screw boss and two PCB rails, and walls around the PCB
+that stop 0.25 under the VoiceS3R's bottom face (z=0), so they hide the header gap without touching the Atom. The
+VoiceS3R just sits on the header pins; since v0.13 there is no sleeve around its lower edge (and no PORT.A cut-out).
 Since v0.11 the PCB runs out past the Atom's +y edge (to y=+19.3) with J3 (MX1.25 4P) on its top face; the cup
-follows it in +y, and the +y wall has a slot open to the top for the J3 plug, so the cup goes on with the cable
+follows it in +y, and the +y wall has a slot open to the top for J3 and its plug, so the cup goes on with the cable
 plugged in.
 Coords: x,y = board coords (origin = Atom center / M2 screw); z=0 = VoiceS3R bottom face.
 PCB top z=-2.5 (the header plastic spaces it from the Atom), PCB bottom z=-4.1.
@@ -11,7 +11,7 @@ One M2x12 screw from the bottom clamps CUP -> PCB -> VoiceS3R.
 Every wall is at least 1.4 thick in every direction (resin SLA minimum is 1.0; DMM rejected v0.6 for a 0.3 counterbore
 floor and 0.87 corners, and flagged v0.8 for 0.5 between the counterbore rim and the boss foot). The PCB cavity is
 unchanged from v0.6 in x and -y (the PCB's -y edge sits right on it) and runs to y=+19.5 for the v0.11 PCB; the outer
-corners are square.
+corners are square, and the outline is just the cavity + 1.4 walls.
 """
 import os
 import cadquery as cq
@@ -31,13 +31,7 @@ PCB_BOT = -4.1
 # counterbore rim and the corner where the boss meets the floor (seen in a section view, missed by a normal-ray check)
 CB_R, CB_D = 2.2, 1.2
 BOSS_R = 3.6                  # sqrt((3.6-2.2)^2 + 0.3^2) = 1.43
-# sleeve around the VoiceS3R
-ATOM, R_ATOM = 24.0, 3.0      # VoiceS3R outline (photo measurement, same as tools/build_viewer.py)
-SLV_CLR, SLV_H = 0.25, 3.0
-SLV_IN = ATOM + 2 * SLV_CLR   # 24.5
-SLV_OUT = SLV_IN + 2 * WALL   # 27.3, square corners
-LEDGE_Z = -WALL               # the ledge carries the sleeve over the narrower lower walls
-
+Z_TOP = -0.25                 # wall top: 0.25 under the VoiceS3R's bottom face (the walls reach under its edge)
 
 def rrect(w, h, r, z0, z1, cx=0.0, cy=0.0):
     return (cq.Workplane('XY').workplane(offset=z0).center(cx, cy)
@@ -49,22 +43,14 @@ def box(x0, x1, y0, y1, z0, z1):
 
 
 ztop = Z_BOT + FLOOR_T
-cup = box(-SIZE / 2, SIZE / 2, -SIZE / 2, Y_OUT, Z_BOT, LEDGE_Z)
-# past the sleeve's +y face the lower part is as wide as the sleeve, so the sleeve's side ledges end on a wall instead
-# of on a knife edge (0.58 at x=+-12.2, y=13.65)
-cup = cup.union(box(-SLV_OUT / 2, SLV_OUT / 2, SLV_OUT / 2, Y_OUT, Z_BOT, LEDGE_Z))
-cup = cup.union(box(-SLV_OUT / 2, SLV_OUT / 2, -SLV_OUT / 2, SLV_OUT / 2, LEDGE_Z, SLV_H))
-cup = cup.cut(rrect(CAV, CAV_Y1 + CAV / 2, R_IN, ztop, 0.0 + 1e-3, cy=(CAV_Y1 - CAV / 2) / 2))          # PCB cavity
-cup = cup.cut(rrect(SLV_IN, SLV_IN, R_ATOM + SLV_CLR, 0.0, SLV_H + 1))                                 # sleeve
-cup = cup.cut(box(-6.0, 6.0, -SLV_OUT / 2 - 1, -SLV_IN / 2 + 1, 0.0, SLV_H + 1))                       # PORT.A
+cup = box(-SIZE / 2, SIZE / 2, -SIZE / 2, Y_OUT, Z_BOT, Z_TOP)
+cup = cup.cut(rrect(CAV, CAV_Y1 + CAV / 2, R_IN, ztop, Z_TOP + 1, cy=(CAV_Y1 - CAV / 2) / 2))           # PCB cavity
 # J3 and its plug (+y edge, above the PCB): a slot open to the top (not a window), so the cup can go on from below with
-# the vein cable already plugged in — a bar over a window would hit the plug on the way up. J3 (up to z=+0.9) sits right
-# behind the sleeve's +y wall, so the slot runs through that wall too. Width = J3's courtyard (x +-5.98, y +12.5..+19.3)
-# + 0.25: v0.11 cut only +-4.75, so the courtyard ran 1.2 into the sleeve wall (the real Molex model clears it, but the
-# preview showed J3 in the wall). It stops 0.1 above the PCB top (z=-2.5)
+# the vein cable already plugged in — a bar over a window would hit the plug on the way up. Width = J3's courtyard
+# (x +-5.98, y +12.5..+19.3) + 0.25 (v0.12). It stops 0.1 above the PCB top (z=-2.5)
 J3_CRT_X = 5.98
 J3_SLOT_X = J3_CRT_X + 0.25
-cup = cup.cut(box(-J3_SLOT_X, J3_SLOT_X, SLV_IN / 2 - 1, Y_OUT + 1, PCB_BOT + 1.6 + 0.1, SLV_H + 1))
+cup = cup.cut(box(-J3_SLOT_X, J3_SLOT_X, CAV_Y1 - 1, Y_OUT + 1, PCB_BOT + 1.6 + 0.1, Z_TOP + 1))
 cup = cup.union(cq.Workplane('XY').workplane(offset=ztop).circle(BOSS_R).extrude(PCB_BOT - ztop))       # boss -> PCB
 for sx in (-1, 1):   # PCB rails, run into the wall so no slit is left between them
     cup = cup.union(box(9.2 if sx > 0 else -CAV / 2 - 0.5, CAV / 2 + 0.5 if sx > 0 else -9.2, -9.6, 18.8, ztop, PCB_BOT))
