@@ -31,6 +31,14 @@ VoiceS3R(Ext.Pin メス)
 - UART は 57600 bps。
 - NFC(M5Stack Unit NFC U216)は本体の PORT.A を使用(I2C:SDA=G2、SCL=G1)。
 
+## ATOMIC Proto Kit 版(`vein_base_atomic`)
+
+3D プリントのカップの代わりに、市販の M5Stack ATOMIC Proto Kit(A077)のケースに入れる版。基板の外形は M5 公式の ATOMIC-TYPE-A([M5_Hardware](https://github.com/m5stack/M5_Hardware) の `Common/Atomic_Type_A/Structures/Atomic_Type_A.dxf`、20 × 43.8 mm)をそのまま使い、中心の穴は φ4.2(メッキなし)。部品・配線表はカップ版と同じで、J3 は +y 端(ケース端面の開口側)に置く。両側の半円の切り欠き(ケースの柱よけ)のあいだは幅 8.6 mm しかないので、配線はそこを x −3.8〜+3.8 の中だけで通る。
+
+- **発注対象は `fab/atomic/vein_base_atomic_v<版>_*`**(ガーバー zip・BOM・CPL)。カップ版の `vein_base_v<版>_*` と取り違えない。
+- **JLCPCB では板厚 1.0 mm を選ぶ**(カップ版は 1.6 mm)。
+- 手で確かめる項目: J3 に挿したプラグがケース端面の開口 16 × 9.3 mm を通るか、ケースの柱 φ4.84 が基板の切り欠きに入るか。
+
 ## Vein Station(一体筐体・案)
 
 VoiceS3R(vein-base の基板のみ。ケースは使わない)・指静脈モジュール・NFC ユニットを上向きに並べて収める卓上筐体の案。`station/build_station.py`(CadQuery)が筐体(ケース上部・底蓋)の STEP / STL と 3D プレビュー(https://ippoan.github.io/vein-base/station/)を作り、モジュール・プラグ・USB ケーブルとの干渉をチェックする。指静脈モジュールは採寸待ちのため仮の箱。基板は `pcb/station_board/`(r10)が生成する 60 × 35 mm の 1 枚基板で、VoiceS3R の Ext.Pin・指静脈 J3(G5/G6)・MAX3232(G7=送信 / G8=受信)・DIP(1+2 = Passthrough、3+4 = Cross)・DB9 オス RA をまとめ、接続口はすべて奥の壁に出す。
