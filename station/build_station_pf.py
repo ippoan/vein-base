@@ -2,7 +2,7 @@
 instead of a printed enclosure. Nothing is printed: the station board r11 (pcb/station_board, `build_board.py pf`)
 stands on stock M3 hex spacers, and the modules stand on spacers on the board.
 Run from the repository root:  python3 station/build_station_pf.py
-Writes the hole drawings for Takachi's machining service (station/vein_station_pf<N>_{top,panel,floor}.dxf) and the
+Writes the hole drawings for Takachi's machining service (station/vein_station_pf<N>_{top,floor}.dxf) and the
 3D preview site/station-pf/index.html, and fails if the case collides with a module, plug, spacer or the board, or
 two of those collide with each other.
 
@@ -19,13 +19,16 @@ The model is conservative (it holds the STP's material in the space the parts us
 
 Stack (z): floor -1.5 | M3 spacer 12 (female-female, M3 flat-head screw from below through a countersunk floor hole)
 | board 10.5..12.1 | VoiceS3R 14.6..31.4 on the Ext.Pin (0.6 under the panel-groove ledge; its button is not used)
-| vein module on 6 mm spacers, pressed 0.1 against the top plate lip | Unit NFC on 12 mm spacers, 24.1..32.1, under a
-window with a 1.0 lip.
+| vein module on 6 mm spacers, pressed 0.1 against the top plate lip | Unit NFC on 12 mm spacers, 24.1..32.1, stuck to the
+top plate's underside with foam tape (gap 0.2..0.9), no window: it reads through the 3 mm ABS. Flush in a window
+would not work: its Grove plug would then sit in the top plate.
 Every vein corner and the NFC's left corners have a floor spacer right under the module spacer (male-female through
 the board hole), so pressing a finger on the module goes straight down to the floor and does not bend the board.
 Layout: back row VoiceS3R + DB9 on the board (the DB9 posts are 0.1 from the panel guides, the row cannot move right);
-the NFC at the front left (its Grove plug inside, the cable leaves through the back panel to PORT.A outside), right of
+the NFC at the front left (its Grove plug inside, the cable leaves through the open back to PORT.A outside), right of
 the left PCB bosses; the vein module on the right, behind the right front PCB boss (both bosses stay).
+The back panel is left off: every connection is on that side, so there is nothing to machine there (no D-sub cutout,
+no counterbore). The DB9 plug's push goes into the board and its floor spacers instead of the panel.
 """
 import base64, json, os
 import numpy as np
@@ -87,7 +90,7 @@ base = (rbox(-62.5, 62.5, -42.5, 42.5, -4.0, FLOOR, 17.0).union(sym(lambda sx, s
         .union(box(12.4, 29.7, -24.9, -20.0, FLOOR, FLOOR + 0.2)).union(box(14.0, 28.1, 23.3, 25.6, FLOOR, FLOOR + 0.2))
         .union(box(15.3, 27.2, 17.5, 20.1, FLOOR, FLOOR + 0.2)))                                   # moulded marks
 panel = box(-PANEL_X, PANEL_X, -PANEL_OUT, -PANEL_IN, -0.5, CEIL).union(box(-PANEL_X, PANEL_X, -PANEL_IN, -38.7, 32.4, CEIL))
-front_panel = panel.mirror('XZ')
+front_panel = panel.mirror('XZ')                 # the back panel (on -y) is left off
 
 # ---- board r11 and its parts (board coords of pcb/station_board: x_case = VXP - bx, y_case = VYP + by) --------
 VXP, VYP = -6.0, -26.7         # VoiceS3R centre = board origin
@@ -159,7 +162,7 @@ for i, (bx, by) in enumerate(HOLES, 1):
     for p in parts:
         spacers = p if spacers is None else spacers.union(p)
 
-# plugs outside the back panel (the PORT.A <-> NFC Grove cable loops outside, as in build_station.py)
+# plugs at the open back (the PORT.A <-> NFC Grove cable loops outside, as in build_station.py)
 YB = VOICE[2]
 usb_plug = box(VXP - 6, VXP + 6, YB - 24.2, YB - 6.5, Z_ATOM + 4.0, Z_ATOM + 11.0).union(
     box(VXP - 4.2, VXP + 4.2, YB - 6.5, YB, Z_ATOM + 6.0, Z_ATOM + 9.0))
@@ -168,41 +171,22 @@ NFC_TOP = ZBT + SP_NFC + 8.0
 nfc_plug = box(NX - 4.0, NX + 4.0, NFC[2] - 8.2, NFC[2], NFC_TOP - 5.2, NFC_TOP - 0.4)   # inside the case
 DB9_X0, DB9_X1 = DB9_XC - 15.4, DB9_XC + 15.4
 DB9_Z0, DB9_Z1 = Z_ATOM - 3.5, Z_ATOM + 11.0
-CB = 1.0                                            # counterbore from outside so the D shell engages the plug
-db9_plug = box(DB9_X0 + 0.25, DB9_X1 - 0.25, -80, -PANEL_OUT + CB - 0.2, DB9_Z0 + 0.25, DB9_Z1 - 0.25)
+# the plug stops 0.8 short of the flange, outside the panel guides (it still takes 5.2 of the 6 mm D shell)
+db9_plug = box(DB9_X0 + 0.25, DB9_X1 - 0.25, -80, -PANEL_IN - 0.1, DB9_Z0 + 0.25, DB9_Z1 - 0.25)
 
 # ---- machining (what Takachi cuts) -------------------------------------------------------------------------
 # top plate: vein window with a 1.0 lip, VoiceS3R window with a 1.2 lip; no NFC window
 VEIN_WIN = (VEIN[0] + 1, VEIN[1] - 1, VEIN[2] + 1, VEIN[3] - 1, 1.5)
-NFC_TOPWIN = (NFC[0] + 1, NFC[1] - 1, NFC[2] + 1, NFC[3] - 1, 1.0)
 VOICE_WIN = (VOICE[0] + 1.2, VOICE[1] - 1.2, VOICE[2] + 1.2, VOICE[3] - 1.2, 1.8)
-# back panel (x, z): NFC Grove, VoiceS3R side (PORT.A under USB-C), DB9 D + post holes, DB9 counterbore
-NFC_WIN = (NX - 5.5, NX + 5.5, 20.0, 28.0)                        # the NFC's Grove cable out to PORT.A
-VOICE_SIDE = (VXP - 7.0, VXP + 7.0, Z_ATOM - 0.5, Z_ATOM + 12.0)
-DB9_D = (DB9_XC - 8.65, DB9_XC + 8.65, Z_ATOM - 0.8, Z_ATOM + 8.3)
-DB9_BAR = (DB9_XC - 12.5, DB9_XC + 12.5, DB9_ZC - 2.8, DB9_ZC + 2.8)
-DB9_CB = (DB9_X0, DB9_X1, DB9_Z0, DB9_Z1)
 FLOOR_HOLES = [at(*HOLES[i - 1]) for i in FLOOR_H]               # M3 countersunk (flat head from below)
-
-
-def panel_cut(r, y0, y1):
-    return box(r[0], r[1], y0, y1, r[2], r[3])
-
-
 cover = cover.cut(rbox(*VEIN_WIN[:4], CEIL - 1, TOP + 1, VEIN_WIN[4]))
-cover = cover.cut(rbox(*NFC_TOPWIN[:4], CEIL - 1, TOP + 1, NFC_TOPWIN[4]))
 cover = cover.cut(rbox(*VOICE_WIN[:4], CEIL - 1, TOP + 1, VOICE_WIN[4]))
-for r in (NFC_WIN, VOICE_SIDE, DB9_D, DB9_BAR):
-    panel = panel.cut(panel_cut(r, -PANEL_OUT - 1, -PANEL_IN + 1))
-for s in (-1, 1):
-    panel = panel.cut(cyl_y(DB9_XC + s * 12.5, -PANEL_OUT - 1, -PANEL_IN + 1, DB9_ZC, 2.8))
-panel = panel.cut(panel_cut(DB9_CB, -PANEL_OUT - 1, -PANEL_OUT + CB))
 for x, y in FLOOR_HOLES:
     base = base.cut(cyl_z(x, y, 1.7, -5, 0)).cut(cq.Workplane('XY').workplane(offset=-4.0).center(x, y)
                                                  .circle(3.15).workplane(offset=1.5).circle(1.65).loft())
 
 # ---- interference ----------------------------------------------------------------------------------------
-case = cover.union(base).union(panel).union(front_panel)
+case = cover.union(base).union(front_panel)
 checks = [('VoiceS3R', atom), ('指静脈', vein), ('NFC', nfc), ('board', pcb), ('header plastic', hdr_plastic),
           ('header pins', hdr_pins), ('J3', j3), ('J3 plug', j3_plug), ('MAX3232', u1), ('caps', caps), ('DIP', sw1),
           ('DB9 body', db9_body), ('DB9 flange', db9_flange), ('DB9 shell', db9_shell), ('DB9 posts', db9_posts),
@@ -258,25 +242,7 @@ def draw_top(msp):
     # seen from above, origin = case centre (x across 125, y across 85, back panel at the bottom)
     rrect(msp, -62.5, 62.5, -42.5, 42.5, 17.0, 'OUTLINE')
     rrect(msp, *VEIN_WIN, 'CUT')
-    rrect(msp, *NFC_TOPWIN, 'CUT')
     rrect(msp, *VOICE_WIN, 'CUT')
-
-
-def draw_panel(msp):
-    # seen from outside, origin = panel's lower left corner (panel 89.04 x 33.51; the case's z -0.51 = 0 here)
-    ox, oz = PANEL_X, 0.51
-    rrect(msp, 0, 2 * PANEL_X, 0, 33.51, 0, 'OUTLINE')
-    for r in (NFC_WIN, VOICE_SIDE):
-        rrect(msp, r[0] + ox, r[1] + ox, r[2] + oz, r[3] + oz, 0, 'CUT')
-    # DB9: D opening joined to the two post holes (r 2.8) by a 5.6 bar, drawn as one outline
-    # (built flat in x, y = panel x, z, then cut at z = 0)
-    d = (box(DB9_D[0], DB9_D[1], DB9_D[2], DB9_D[3], -1, 1).union(box(DB9_BAR[0], DB9_BAR[1], DB9_BAR[2], DB9_BAR[3], -1, 1))
-         .union(cyl_z(DB9_XC - 12.5, DB9_ZC, 2.8, -1, 1)).union(cyl_z(DB9_XC + 12.5, DB9_ZC, 2.8, -1, 1)))
-    for f in d.section(0).faces().vals():
-        for w in f.Wires():
-            pts = [(p.x + ox, p.y + oz) for p in (w.positionAt(t / 400.0) for t in range(400))]
-            msp.add_lwpolyline(pts, close=True, dxfattribs={'layer': 'CUT'})
-    rrect(msp, DB9_CB[0] + ox, DB9_CB[1] + ox, DB9_CB[2] + oz, DB9_CB[3] + oz, 0, 'COUNTERBORE')
 
 
 def draw_floor(msp):
@@ -289,11 +255,9 @@ def draw_floor(msp):
 
 dxfs = [
     sheet('top', 'PF13-4-9 cover (top plate) - seen from above, origin = case centre, back panel side = -y',
-          ['CUT: through (3 windows: vein, VoiceS3R, NFC; corner R as drawn)', 'unit mm'], draw_top,
+          ['CUT: through (2 windows: vein, VoiceS3R; corner R as drawn)', 'no window for the NFC unit',
+           'the back panel is not used (no machining)', 'unit mm'], draw_top,
           -62.5, -50),
-    sheet('panel', 'PF13-4-9 panel (back) - seen from outside, origin = lower left corner of the panel',
-          ['CUT: through', f'COUNTERBORE: {CB:.1f} deep from the outside (DB9 plug hood)', 'unit mm'], draw_panel,
-          0, -8),
     sheet('floor', 'PF13-4-9 base (floor) - seen from BELOW, origin = case centre',
           [f'CUT: dia 3.4 through x {len(FLOOR_HOLES)}', 'CSK: 90 deg countersink dia 6.3 for M3 flat head, from below', 'unit mm'],
           draw_floor, -62.5, -50),
@@ -308,8 +272,8 @@ def tri(shape):
 
 parts = [
     ('shell', 'カバー+前後パネル(タカチ PF13-4-9、実測からの簡略形状)', '#3d6fb6', 0.45, 'shell',
-     cover.union(panel).union(front_panel)),
-    ('nfc', 'NFC Unit 48×24×8(天板の窓、返し 1.0)', '#f2f2ee', 1, 'mods', nfc),
+     cover.union(front_panel)),
+    ('nfc', 'NFC Unit 48×24×8(天板の裏に両面テープ、窓なし)', '#f2f2ee', 1, 'mods', nfc),
     ('vein', '指静脈モジュール(外形は公式値、コネクタ位置は未確定)', '#2e3538', 1, 'mods', vein),
     ('atom', 'VoiceS3R', '#1fa49a', 1, 'mods', atom),
     ('pcb', 'Station 基板 r11(86 × 71)', '#1f7a4d', 1, 'mods', pcb),
@@ -334,8 +298,8 @@ SUB = ('既製ケース タカチ PF13-4-9 に、基板 r11 と市販の M3 ス�
        '(印刷部品なし、穴はタカチの穴加工)。ドラッグで回転、ホイール/ピンチで拡大。')
 DIMS = [('ケース', 'タカチ PF13-4-9(125 × 40 × 85、ABS)'), ('内側', '117 × 79 × 34.5、天板 3.0、パネル 2.0'),
         ('基板', 'r11 86 × 71、床から M3 スペーサー 12(皿ネジ × 7)'),
-        ('モジュール', 'NFC 12 / 指静脈 6 の M3 スペーサーの上(指静脈の四隅は床まで重ねる)'), ('天板の穴', '指静脈・NFC(返し 1.0)・VoiceS3R(返し 1.2)'),
-        ('背面パネル', 'NFC の Grove ケーブル ・ VoiceS3R 側面 ・ DB9(外側 1.0 座ぐり)'), ('NFC', '手前左、天板の窓(返し 1.0)')]
+        ('モジュール', 'NFC 12 / 指静脈 6 の M3 スペーサーの上(指静脈の四隅は床まで重ねる)'), ('天板の穴', '指静脈(返し 1.0)・VoiceS3R(返し 1.2)'),
+        ('背面', 'パネルを付けない(USB-C / PORT.A ・ DB9 ・ NFC の Grove ケーブルをそのまま出す)'), ('NFC', '手前左、天板の裏に付ける(窓なし、3 mm 越しに読む)')]
 NOTE = ('ケースはタカチ公式 STP を実測した数値からの簡略形状です(STP は再配布しない)。モジュールの外形は公式値、'
         'DB9 と基板上の部品は KiCad のフットプリント寸法からの簡略形状、指静脈のコネクタ位置は未確定。単位 mm。')
 dims = ''.join(f'        <tr><td>{k}</td><td>{v}</td></tr>\n' for k, v in DIMS)
