@@ -11,22 +11,41 @@
 Board coords are vein-base's: origin = Atom centre, +y = away from the USB-C / PORT.A edge, F faces the Atom.
 The station turns the board 180° (USB-C side to the back): x_st = VX - x, ys_st = VYS + y (station/build_station.py).
 
+Two outlines of the same circuit (same parts, same routing):
+  r10            60 × 35, for the printed enclosure (station/build_station.py) -> station_board.kicad_pcb
+  r11 ('pf')     86 × 63.8, for the Takachi PF13-4-9 off-the-shelf case -> station_board_pf.kicad_pcb.
+                 The outline grows under the Unit NFC (+x) and the vein module (+y) only, so the r10 area and its
+                 tracks stay as they are. Nine M3 holes (H1..H9) carry stock hex spacers instead of printed parts:
+                 floor -> board 12 mm (H1 H3 H7 H8 H9), board -> NFC 7 mm (H1..H4), board -> vein 6 mm (H5..H8).
+                 A floor spacer and a module spacer share a hole where both are listed (male-female through it).
+
 Routing comes from freerouting and is kept in station_board.ses (the board file itself is always generated):
     python3 build_board.py dsn     # placement only -> station_board.dsn (feed it to freerouting -> .ses)
-    python3 build_board.py         # placement + tracks/vias from station_board.ses -> station_board.kicad_pcb
+    python3 build_board.py [pf]    # placement + tracks/vias from station_board.ses -> station_board[_pf].kicad_pcb
 Run with KiCad's python from pcb/station_board/.
 """
 import os, re, sys
 import pcbnew
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REV = 'r10'
+PF = 'pf' in sys.argv[1:]
+REV = 'r11' if PF else 'r10'
+NAME = 'station_board_pf' if PF else 'station_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
 mm = pcbnew.FromMM
 
 # outline (board coords): the VoiceS3R and, beside it on -x, the DB9 on the -y edge (the station's back wall)
 X0, X1, Y0, Y1 = -48.0, 12.0, -11.0, 24.0
+J3_EDGE = Y1                 # J3 stays on the r10 front edge in both outlines
+# r11: M3 holes in board coords, all outside the r10 area (>= 5.5 from its tracks); station coords in the comments
+# (x_st = 41 - x, ys = 14.2 + y). NFC 4..28 × 2.6..50.6, vein 28.5..87.5 × 41..67 in station coords (0.5 apart).
+HOLES = []
+if PF:
+    X1, Y1 = 38.0, 52.8
+    HOLES = [(33.0, -6.6), (17.0, -6.6), (33.0, 31.4), (17.0, 31.4),    # H1..H4 NFC corners (8/24, 7.6/45.6)
+             (8.5, 31.8), (-42.5, 31.8), (8.5, 47.8), (-42.5, 47.8),    # H5..H8 vein corners (32.5/83.5, 46/62)
+             (-44.5, 16.5)]                                            # H9 beside the DB9 (85.5, 30.7)
 
 
 def P(x, y):
@@ -80,7 +99,7 @@ wire(J2, {'1': 'G39', '2': 'G38', '3': '5V', '4': 'GND'})
 
 # ---- J3 finger vein, on the +y edge (the station's front), opening towards the vein module
 J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal', 'J3',
-          'MX1.25-4P RA (Molex 53261-0471)', -30.0, Y1 - 3.1, rot=180)
+          'MX1.25-4P RA (Molex 53261-0471)', -30.0, J3_EDGE - 3.1, rot=180)
 wire(J3, {'1': 'G5', '2': 'G6', '3': '3V3', '4': 'GND', 'MP': 'GND'})
 
 # ---- MAX3232 + charge pump caps (0.1 uF at 3.3 V)
@@ -108,6 +127,10 @@ J4.Move(pcbnew.VECTOR2I(mm((-31.9 - 5.54) - px), -mm((Y0 + 7.70) - py)))
 wire(J4, {'2': 'D2', '3': 'D3', '5': 'GND', '0': 'GND'})
 print('J4 pin1', xy(p1.GetPosition()), 'pin5', xy([p for p in J4.Pads() if p.GetNumber() == '5'][0].GetPosition()))
 
+# ---- r11: M3 holes for the hex spacers (non-plated, no pad)
+for i, (x, y) in enumerate(HOLES, 1):
+    load('MountingHole.pretty', 'MountingHole_3.2mm_M3', f'H{i}', 'M3 spacer', x, y)
+
 # ---- outline
 for (a, c), (d, e) in [((X0, Y0), (X1, Y0)), ((X1, Y0), (X1, Y1)), ((X1, Y1), (X0, Y1)), ((X0, Y1), (X0, Y0))]:
     s = pcbnew.PCB_SHAPE(b); s.SetShape(pcbnew.SHAPE_T_SEGMENT)
@@ -126,7 +149,7 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 text('USB-C / PORT.A side', 0, -13.2, size=0.8)
 text('SW1 1+2 PASS(FC-1200) / 3+4 CROSS', -41.2, 14.0, size=0.8)
 text('J3 vein: 1RX 2TX 3V3 4G', -30.0, 16.2, size=0.8)
-text(f'vein-station board {REV}', -20.0, 18.0, layer=pcbnew.B_SilkS)
+text(f'vein-station board {REV}' + (' (PF13-4-9)' if PF else ''), -20.0, 18.0, layer=pcbnew.B_SilkS)
 
 # ---- routing (freerouting session file)
 LAY = {'F.Cu': pcbnew.F_Cu, 'B.Cu': pcbnew.B_Cu}
@@ -177,14 +200,14 @@ def import_ses(path):
 
 os.chdir(HERE)
 if len(sys.argv) > 1 and sys.argv[1] == 'dsn':
-    b.Save('station_board.kicad_pcb')
-    print('dsn', pcbnew.ExportSpecctraDSN(b, 'station_board.dsn'))
+    b.Save(f'{NAME}.kicad_pcb')
+    print('dsn', pcbnew.ExportSpecctraDSN(b, f'{NAME}.dsn'))
 else:
     import_ses('station_board.ses')
-    b.Save('station_board.kicad_pcb')
+    b.Save(f'{NAME}.kicad_pcb')
     # GND pour on B.Cu over the whole board (stitches the GND tracks, shields the RS232 lines).
     # Filled on a reloaded board: the filler crashes on a board built in memory without a connectivity graph.
-    b = pcbnew.LoadBoard('station_board.kicad_pcb')
+    b = pcbnew.LoadBoard(f'{NAME}.kicad_pcb')
     z = pcbnew.ZONE(b); z.SetLayer(pcbnew.B_Cu); z.SetNet(b.FindNet('GND'))
     ol = z.Outline(); ol.NewOutline()
     for x, y in ((X0 + 0.3, Y0 + 0.3), (X1 - 0.3, Y0 + 0.3), (X1 - 0.3, Y1 - 0.3), (X0 + 0.3, Y1 - 0.3)):
@@ -192,7 +215,8 @@ else:
     z.SetLocalClearance(mm(0.3)); z.SetMinThickness(mm(0.25))
     b.Add(z)
     pcbnew.ZONE_FILLER(b).Fill(b.Zones())
-    b.Save('station_board.kicad_pcb')
+    b.Save(f'{NAME}.kicad_pcb')
+LIBS['MountingHole'] = FP + 'MountingHole.pretty'   # the table is shared by both outlines
 with open('fp-lib-table', 'w') as f:
     f.write('(fp_lib_table\n  (version 7)\n')
     for nick, uri in sorted(LIBS.items()):
