@@ -2,8 +2,12 @@
 Board coords: origin = Atom center (M2 screw), +y = away from USB-C/PORT.A edge. Top (F) faces the Atom.
 Ext.Pin rows are bottom-aligned at the USB-C/PORT.A end (y=-7.62), checked against the VoiceS3R silkscreen:
 J1 (x=+7.62) 3V3,G5,G6,G7,G8 from y=+2.54 down; J2 (x=-7.62) G39,G38,5V,GND from y=0 down.
-J3 = MX1.25 4P RA SMD (bottom), mates with the included 9P->4P cable (9P side re-pinned: 1->5, 2->6).
+J3 = MX1.25 4P RA SMD, mates with the included 9P->4P cable (9P side re-pinned: 1->5, 2->6).
 J3 pin order: 1=module RXD (<- G5), 2=module TXD (-> G6), 3=VCC 3V3, 4=GND.
+Every part is on the top (F), so JLC's Economic PCBA (single side only) places them all in one pass.
+J3 is 3.4 tall and the header plastic leaves only 2.54 under the Atom, so the board runs out past the Atom's +y
+edge (Atom outline 24 x 24, +-12) and J3 sits there with its opening on the +y board edge. +y keeps it clear of the
+USB-C / PORT.A plugs on the -y side. Its courtyard starts at y=+12.5.
 """
 import os
 import pcbnew
@@ -58,14 +62,18 @@ for pad, n in zip(sorted(J2.Pads(), key=lambda p: int(p.GetNumber())), ['G39', '
 
 J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal')
 J3.SetReference('J3'); J3.SetValue('MX1.25-4P RA SMD (Molex 53261-0471)')
-J3.SetPosition(P(0, -10.6 + 3.1))
-J3.Flip(J3.GetPosition(), False)
+X0, X1, Y0, Y1 = -10, 10, -10.6, 19.3
+J3.SetPosition(P(0, Y1 - 3.1))   # opening on the +y edge, as on the station board
 J3.SetOrientationDegrees(180)
 for p in J3.Pads():
     n = p.GetNumber()
     if n != 'MP':
         p.SetNet(nets[{'1': 'G5_TX', '2': 'G6_RX', '3': '3V3', '4': 'GND'}[n]])
 print('J3 pads:', [(n, padpos(J3, n)) for n in '1234'])
+J3.BuildCourtyardCaches()
+cy = J3.GetCourtyard(pcbnew.F_CrtYd).BBox()
+print('J3 courtyard y', round(OY - pcbnew.ToMM(cy.GetBottom()), 3), '..', round(OY - pcbnew.ToMM(cy.GetY()), 3),
+      'x', round(pcbnew.ToMM(cy.GetX()) - OX, 3), '..', round(pcbnew.ToMM(cy.GetRight()) - OX, 3))
 
 # 2.4 mm loose-fit M2 hole from the project library (stock M2 is 2.2 mm)
 H1 = load('vein_base.pretty', 'MountingHole_2.4mm_M2', base='', uri_base='${KIPRJMOD}/')
@@ -86,20 +94,20 @@ def via(x, y, net):
 
 
 x1, x2, x3, x4 = (padpos(J3, n)[0] for n in '1234')
-yp = padpos(J3, '1')[1]            # -5.1 (connector opening faces -y, same side as USB-C / PORT.A)
-yr = yp + 0.8                      # rear end of the pads (toward +y)
-# G6 (J3-2): via -> F.Cu -> J1-3
-track([(x2, yp), (x2, -3.3)], 'G6_RX', 'B.Cu', 0.3); via(x2, -3.3, 'G6_RX')
-track([(x2, -3.3), (6.8, -3.3), (7.62, -2.54)], 'G6_RX', 'F.Cu', 0.3)
-# G5 (J3-1): B.Cu -> J1-2
-track([(x1, yp), (x1, -2.2), (3.0, -1.0), (6.0, -1.0), (7.62, 0.0)], 'G5_TX', 'B.Cu', 0.3)
-# 3V3 (J3-3): B.Cu around the left of the screw hole -> J1-1
-track([(x3, yp), (x3, -3.6), (-2.0, -2.2), (-2.0, 1.8), (-0.8, 3.0), (6.2, 3.0), (7.62, 2.54)], '3V3', 'B.Cu', 0.4)
-# GND (J3-4): B.Cu -> J2-4
-track([(x4, yp), (x4, -4.0), (-6.1, -4.0), (-6.1, -6.6), (-7.62, -7.62)], 'GND', 'B.Cu', 0.4)
+yp = padpos(J3, '1')[1]            # +13.8, the pads' Atom-side end is 0.8 lower
+yv = yp - 1.8                      # G5 / G6 vias to B.Cu, just below the pads
+# G5 (J3-1): via -> B.Cu down the right of the screw hole -> J1-2
+track([(x1, yp), (x1, yv)], 'G5_TX', 'F.Cu', 0.3); via(x1, yv, 'G5_TX')
+track([(x1, yv), (5.5, yv - 5.5 + x1), (5.5, 0.8), (6.8, 0.8), (7.62, 0.0)], 'G5_TX', 'B.Cu', 0.3)
+# G6 (J3-2): via -> B.Cu, parallel inside G5 -> J1-3
+track([(x2, yp), (x2, yv)], 'G6_RX', 'F.Cu', 0.3); via(x2, yv, 'G6_RX')
+track([(x2, yv), (4.3, yv - 4.3 + x2), (4.3, -1.7), (6.8, -1.7), (7.62, -2.54)], 'G6_RX', 'B.Cu', 0.3)
+# 3V3 (J3-3): F.Cu under the G5 / G6 vias -> J1-1
+track([(x3, yp), (x3, 10.5), (6.5, 10.5), (7.62, 9.38), (7.62, 2.54)], '3V3', 'F.Cu', 0.4)
+# GND (J3-4): F.Cu down the left of the screw hole -> J2-4
+track([(x4, yp), (x4, 12.0), (-5.5, 8.375), (-5.5, -6.0), (-7.62, -7.62)], 'GND', 'F.Cu', 0.4)
 print('pads', x1, x2, x3, x4, yp)
 
-X0, X1, Y0, Y1 = -10, 10, -10.6, 9.3
 for (a, c), (d, e) in [((X0, Y0), (X1, Y0)), ((X1, Y0), (X1, Y1)), ((X1, Y1), (X0, Y1)), ((X0, Y1), (X0, Y0))]:
     s = pcbnew.PCB_SHAPE(b); s.SetShape(pcbnew.SHAPE_T_SEGMENT)
     s.SetStart(P(a, c)); s.SetEnd(P(d, e)); s.SetLayer(pcbnew.Edge_Cuts); s.SetWidth(mm(0.1)); b.Add(s)
