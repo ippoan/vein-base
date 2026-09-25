@@ -7,8 +7,20 @@ for the footprints listed (columns Footprint,Rotation,OffsetX,OffsetY; Footprint
   - Rotation: JLC's footprint is KiCad's turned by -Rotation, so the CPL gets (Rot + Rotation) mod 360.
   - OffsetX/Y: where JLC's footprint origin sits in KiCad's footprint coordinates (0 deg, mm, +y down as in the
     footprint editor). KiCad's pos.csv gives the footprint origin (+y up), so the offset is turned by the part's
-    Rot and added to Mid X/Y. Bottom-side parts are not handled (raises).
-The values come from overlaying JLC's footprint (EasyEDA data on the part page) on KiCad's, pad by pad."""
+    Rot and added to Mid X/Y.
+The values come from overlaying JLC's footprint (EasyEDA data on the part page) on KiCad's, pad by pad.
+
+Bottom-side parts (the same table applies; JLC's footprints are drawn for the top side):
+  - Mid X/Y stay in top-view board coordinates, not mirrored. EasyEDA (JLC's own EDA), Export Pick and Place:
+    "Mirror the coordinates of the components on the bottom side(Some SMT manufacturer may need it, while JLCPCB
+    does not)" (https://docs.easyeda.com/en/PCB/Export-Coordinate/). kicad-cli 7 writes them unmirrored too.
+  - kicad-cli 7 writes Rot = the footprint's orientation as is. KiCad puts a part on the bottom by mirroring its
+    footprint top-to-bottom (footprint y) and then turning it by Rot counter-clockwise seen from the top, so the offset
+    gets its y mirrored before the turn; the result is where that point of the part physically sits.
+  - JLC's Rotation for the bottom is counter-clockwise seen from the bottom: (180 - Rot + Rotation) mod 360. JLC's help
+    only says "Positive values are counter clockwise"; this is what Bouni/kicad-jlcpcb-tools (fabrication.py) and KiKit
+    (discussion #664, checked on JLC's assembly preview) do. Check a bottom part in JLC's preview before ordering.
+  - A bottom-side part must be listed in the table (write 0,0,0 if the footprints already match), or the script raises."""
 import argparse, csv, math, os, shutil
 ap = argparse.ArgumentParser()
 ap.add_argument('--pos', default='fab/pos.csv')
@@ -26,16 +38,20 @@ fix = {c['Footprint']: c for c in csv.DictReader(open(a.corrections))} if a.corr
 def place(r):
     """(Mid X, Mid Y, Rotation) strings for one pos.csv row, corrected to JLC's footprint if listed."""
     c = fix.get(r['Package'])
+    bottom = r['Side'] != 'top'
     if not c:
+        if fix and bottom:
+            raise SystemExit(f"{r['Ref']}: bottom-side part {r['Package']} is not in the corrections table")
         return r['PosX'], r['PosY'], r['Rot']
-    if r['Side'] != 'top':
-        raise SystemExit(f"{r['Ref']}: correction for a bottom-side part is not supported")
     rot = float(r['Rot'])
     t = math.radians(rot)
     ox, oy = float(c['OffsetX']), -float(c['OffsetY'])  # footprint +y down -> pos.csv +y up
+    if bottom:
+        oy = -oy  # KiCad mirrors a bottom part's footprint top-to-bottom before turning it by Rot
     x = float(r['PosX']) + ox * math.cos(t) - oy * math.sin(t)
     y = float(r['PosY']) + ox * math.sin(t) + oy * math.cos(t)
-    return f'{x:.6f}', f'{y:.6f}', f"{(rot + float(c['Rotation'])) % 360:.6f}"
+    jrot = 180 - rot if bottom else rot  # JLC: bottom parts turn counter-clockwise seen from the bottom
+    return f'{x:.6f}', f'{y:.6f}', f"{(jrot + float(c['Rotation'])) % 360:.6f}"
 
 
 with open(cpl, 'w', newline='') as f:
