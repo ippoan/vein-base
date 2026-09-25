@@ -33,7 +33,7 @@ VoiceS3R(Ext.Pin メス)
 
 ## Vein Station(一体筐体・案)
 
-VoiceS3R(vein-base の基板のみ。ケースは使わない)・指静脈モジュール・NFC ユニットを上向きに並べて収める卓上筐体の案。`station/build_station.py`(CadQuery)が筐体(ケース上部・底蓋)の STEP / STL と 3D プレビュー(https://ippoan.github.io/vein-base/station/)を作り、モジュール・プラグ・USB ケーブルとの干渉をチェックする。指静脈モジュールは採寸待ちのため仮の箱。
+VoiceS3R(vein-base の基板のみ。ケースは使わない)・指静脈モジュール・NFC ユニットを上向きに並べて収める卓上筐体の案。`station/build_station.py`(CadQuery)が筐体(ケース上部・底蓋)の STEP / STL と 3D プレビュー(https://ippoan.github.io/vein-base/station/)を作り、モジュール・プラグ・USB ケーブルとの干渉をチェックする。指静脈モジュールは採寸待ちのため仮の箱。基板は `pcb/station_board/`(r10)が生成する 60 × 35 mm の 1 枚基板で、VoiceS3R の Ext.Pin・指静脈 J3(G5/G6)・MAX3232(G7=送信 / G8=受信)・DIP(1+2 = Passthrough、3+4 = Cross)・DB9 オス RA をまとめ、接続口はすべて奥の壁に出す。
 
 ### Vein Station SE(CoreS3 SE 版・案)
 
@@ -47,6 +47,7 @@ VoiceS3R(vein-base の基板のみ。ケースは使わない)・指静脈モジ
 | `VERSION` | 版番号。出力ファイル名(`vein_base_v<版>_*`)と基板裏のシルクに入る |
 | `case/` | ケース生成スクリプト(`build_case.py`、CadQuery) |
 | `pcb/jlc_bom.csv` | JLCPCB 用 BOM の元データ(LCSC 品番) |
+| `pcb/station_board/jlc_bom.csv` | station 基板の JLCPCB 用 BOM の元データ |
 | `fab/` | CI の出力先(git 管理外)。JLCPCB 発注用(ガーバー zip、BOM、CPL)、原寸の確認用 PDF、基板の STEP |
 | `tools/` | CI 用スクリプト(DRC チェック、JLC 用 CPL 変換、3D プレビュー生成と干渉チェック) |
 
