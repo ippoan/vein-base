@@ -13,10 +13,10 @@ The station turns the board 180° (USB-C side to the back): x_st = VX - x, ys_st
 
 Two outlines of the same circuit (same parts, same routing):
   r10            60 × 35, for the printed enclosure (station/build_station.py) -> station_board.kicad_pcb
-  r11 ('pf')     86 × 63.8, for the Takachi PF13-4-9 off-the-shelf case -> station_board_pf.kicad_pcb.
+  r11 ('pf')     86 × 71, for the Takachi PF13-4-9 off-the-shelf case -> station_board_pf.kicad_pcb.
                  The outline grows under the Unit NFC (+x) and the vein module (+y) only, so the r10 area and its
                  tracks stay as they are. Nine M3 holes (H1..H9) carry stock hex spacers instead of printed parts:
-                 floor -> board 12 mm (H1 H3 H7 H8 H9), board -> NFC 7 mm (H1..H4), board -> vein 6 mm (H5..H8).
+                 floor -> board 12 mm (H1 H3 H5..H9), board -> NFC 12 mm (H1..H4), board -> vein 6 mm (H5..H8).
                  A floor spacer and a module spacer share a hole where both are listed (male-female through it).
 
 Routing comes from freerouting and is kept in station_board.ses (the board file itself is always generated):
@@ -42,9 +42,9 @@ J3_EDGE = Y1                 # J3 stays on the r10 front edge in both outlines
 # station/build_station_pf.py (case coords there: x = -6.0 - x_board, y = -26.7 + y_board), keep the two together.
 HOLES = []
 if PF:
-    X1, Y1 = 38.0, 52.8
-    HOLES = [(32.5, -6.3), (16.5, -6.3), (32.5, 31.7), (16.5, 31.7),    # H1..H4 under the Unit NFC's corners
-             (8.0, 32.1), (-43.0, 32.1), (8.0, 48.1), (-43.0, 48.1),    # H5..H8 under the vein module's corners
+    X1, Y1 = 38.0, 60.0
+    HOLES = [(30.9, 17.5), (14.9, 17.5), (30.9, 55.5), (14.9, 55.5),    # H1..H4 under the Unit NFC's corners
+             (5.2, 27.5), (-43.8, 27.5), (5.2, 42.5), (-43.8, 42.5),    # H5..H8 under the vein module's corners
              (-44.5, 16.5)]                                            # H9 beside the DB9
 
 
