@@ -18,8 +18,11 @@ Bottom-side parts (the same table applies; JLC's footprints are drawn for the to
     footprint top-to-bottom (footprint y) and then turning it by Rot counter-clockwise seen from the top, so the offset
     gets its y mirrored before the turn; the result is where that point of the part physically sits.
   - JLC's Rotation for the bottom is counter-clockwise seen from the bottom: (180 - Rot + Rotation) mod 360. JLC's help
-    only says "Positive values are counter clockwise"; this is what Bouni/kicad-jlcpcb-tools (fabrication.py) and KiKit
-    (discussion #664, checked on JLC's assembly preview) do. Check a bottom part in JLC's preview before ordering.
+    only says "Positive values are counter clockwise" (https://jlcpcb.com/help/article/pick-place-file-for-pcb-assembly);
+    this is what Bouni/kicad-jlcpcb-tools (fabrication.py, https://github.com/Bouni/kicad-jlcpcb-tools) and KiKit
+    (https://github.com/yaqwsx/KiKit/discussions/664, checked on JLC's assembly preview) do. The other reading, "mirror
+    left-right, then CCW seen from the top" = (180 + Rot + Rotation), gives the same angle for Rot 0/180 (vein_base J3).
+    Check a bottom part in JLC's preview before ordering.
   - A bottom-side part must be listed in the table (write 0,0,0 if the footprints already match), or the script raises."""
 import argparse, csv, math, os, shutil
 ap = argparse.ArgumentParser()
