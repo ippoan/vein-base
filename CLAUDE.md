@@ -60,12 +60,13 @@ Common auto-merge / `Refs #N` rules are in user memory. Only repo-specific value
   - 枠は折れないように短くする(天板下面から 2.25〜5.25)。
 - vein-base はケースを使わず基板だけ入れる。基板は Ext.Pin に挿さったまま、底蓋のレール(ピンヘッダーの足をよける)と中央ボス(J3 をよける)で VoiceS3R ごと押し上げる。基板の配置は `board()` で vein-base の基板座標から変換する。
 - 底蓋: 左端は爪、M3 × 3 を三角配置(手前左・奥の中ほど・右手前)。
-- 実測値(写真から、±1〜2):
+- 寸法(外形は公式値、細部は写真から ±1〜2):
+  - VoiceS3R(24 × 24 × 16.8)と NFC の外形は M5Stack 公式 STL: https://github.com/m5stack/M5_Hardware/blob/a240115c94b19ecf647f229c47fa9a8ce46ccdc4/Products/C126-ECHO_Atom_VoiceS3R/Structures/Atom_VoiceS3R.stl / https://github.com/m5stack/M5_Hardware/blob/a240115c94b19ecf647f229c47fa9a8ce46ccdc4/Products/U216_Unit_NFC/Structures/Unit_NFC.stl (MIT)。
   - VoiceS3R の側面は、下から PORT.A(Grove、底面から 0〜4)→ USB-C(その上)。上面ボタン・スピーカー穴は縁から 3 内側。
   - USB ケーブルはサンワ KU-CCP100KAW18BK(回転コネクタ)。L字にした頭は側面から 14、金属円筒 ⌀9、ケーブル ⌀3.5。
-  - NFC Unit は 48 × 23.5 × 8、Grove は短辺の中央、アンテナは表(「NFC」ラベル面)、裏にネジ頭 1(Grove 端から 12、幅の中央)。
+  - NFC Unit は 48 × 24 × 8 (公式 STL)、Grove は短辺の中央、アンテナは表(「NFC」ラベル面)、裏にネジ頭 1(Grove 端から 12、幅の中央)。
   - NFC → PORT.A の Grove は約 8 cm 必要(10 cm か手持ちの 20 cm を置き場にたたむ)。
-- 指静脈モジュールは採寸待ちで、59 × 26 × 15 の仮の箱。コネクタ位置と J3 からの経路は未確定。
+- 指静脈モジュールの外形は公式値 59 × 26 × 15 (取付厚 13.5、Waveshare 製品ページ https://www.waveshare.com/finger-vein-scanner-module-a.htm)。コネクタ位置と J3 からの経路は未確定。
 - 干渉チェックは筐体とモジュール・プラグ・ケーブルの間だけ。プラグ同士の重なりは参考形状なので検査しない。
 
 ## 発注と原寸確認

@@ -17,7 +17,14 @@ Every module is held the same way: supported from below by the lid, pressed agai
 located sideways by a frame (縁取り) hanging from the top plate. No screws in the modules.
 The shell goes on from above: a wall opening that something passes through is a slot open at the bottom of the wall,
 closed from below by a tongue on the lid (the DB9 D shell and its hex posts).
-Module sizes come from the photo measurements (±1–2 mm); the finger vein module is still a 59×26×15 block.
+Module outlines are official values: VoiceS3R 24 × 24 × 16.8 and Unit NFC 24 × 48 × 8 from M5Stack's official STL
+(m5stack/M5_Hardware, MIT)
+  https://github.com/m5stack/M5_Hardware/blob/a240115c94b19ecf647f229c47fa9a8ce46ccdc4/Products/C126-ECHO_Atom_VoiceS3R/Structures/Atom_VoiceS3R.stl
+  https://github.com/m5stack/M5_Hardware/blob/a240115c94b19ecf647f229c47fa9a8ce46ccdc4/Products/U216_Unit_NFC/Structures/Unit_NFC.stl
+and the finger vein module 59 × 26 × 15 (13.5 mounted) from Waveshare's product page
+  https://www.waveshare.com/finger-vein-scanner-module-a.htm
+Details the STL does not give (VoiceS3R top button / speaker holes, the screw head on the back of the NFC) and the
+cables come from photo measurements (±1–2 mm). The vein module's connector position is not known yet.
 """
 import base64, json, os
 import numpy as np
@@ -55,10 +62,10 @@ def rbox(x0, x1, ys0, ys1, z0, z1, r):
 BACK = WALL + FIT             # modules that show a side in the back wall start here
 NFC = (3, 27, BACK, BACK + 48)  # 24 × 48, Grove socket at the back
 VOICE = (29, 53, BACK, BACK + 24)  # 24 × 24, USB-C / PORT.A side at the back
-VEIN = (31, 90, 41, 67)       # 59 × 26, front
+VEIN = (31, 90, 41, 67)       # official 59 × 26 × 15 (Waveshare), front
 TOP_VOICE = 1.0               # top plate thinned around the VoiceS3R (1.0 = the SLA minimum)
 VOICE_LIP = 1.2
-Z_ATOM_BOT = -TOP_VOICE - 16.8  # -17.6
+Z_ATOM_BOT = -TOP_VOICE - 16.8  # -17.8
 NX = (NFC[0] + NFC[1]) / 2
 
 nfc = rbox(*NFC, -9.5, -1.5, 1.5)
@@ -240,7 +247,7 @@ def tri(shape):
 parts = [
     ('shell', 'ケース上部(天板+壁)', '#3d6fb6', 0.5, 'shell', shell),
     ('nfc', 'NFC Unit 48×24×8', '#f2f2ee', 1, 'mods', nfc),
-    ('vein', '指静脈モジュール(仮の箱)', '#2e3538', 1, 'mods', vein),
+    ('vein', '指静脈モジュール(外形は公式値、コネクタ位置は未確定)', '#2e3538', 1, 'mods', vein),
     ('atom', 'VoiceS3R', '#1fa49a', 1, 'mods', atom),
     ('pcb', 'Station 基板(1 枚)', '#1f7a4d', 1, 'mods', pcb),
     ('hdrpl', 'ピンヘッダー樹脂', '#2b2f33', 1, 'mods', hdr_plastic),
@@ -266,8 +273,9 @@ DIMS = [('外形', f'{W:g} × {D:g} × {-Z_BOT:g}'), ('壁 / 天板 / 底蓋', '
         ('DB9', 'D 部の中心で上下分割(下は底蓋の舌)、外側 1 mm の座ぐり'),
         ('基板', '60 × 35、VoiceS3R の下と DB9 の横'), ('RS232', 'MAX3232 + DIP でストレート/クロス切替'),
         ('底蓋', 'M3 × 2(対角)、爪なし'), ('VoiceS3R', '返し 1.2(天板 1.0)/ 縁取り')]
-NOTE = ('モジュールは写真からの実測(±1〜2 mm)による簡略形状です。指静脈モジュールは採寸待ちのため仮の箱、DB9 と基板上の部品は'
-        'KiCad のフットプリント寸法からの簡略形状です。DIP は底蓋を開けて設定します。単位 mm。')
+NOTE = ('VoiceS3R・NFC の外形は M5Stack 公式 STL(m5stack/M5_Hardware)、指静脈は Waveshare 製品ページの公式寸法'
+        '(59 × 26 × 15)です。上面ボタン・ネジ頭などの細部とケーブルは写真からの実測(±1〜2 mm)、指静脈のコネクタ位置は'
+        '未確定です。DB9 と基板上の部品は KiCad のフットプリント寸法からの簡略形状です。DIP は底蓋を開けて設定します。単位 mm。')
 dims = ''.join(f'        <tr><td>{k}</td><td>{v}</td></tr>\n' for k, v in DIMS)
 tpl = open(os.path.join(ROOT, 'tools/station_template.html'), encoding='utf-8').read()
 os.makedirs(os.path.join(ROOT, 'site/station'), exist_ok=True)
