@@ -33,21 +33,28 @@ jobs:
           pip install --break-system-packages cadquery numpy trimesh scipy rtree
 
       - name: Build PCB (KiCad)
+        # both variants: the cup board (pcb/vein_base -> fab/) and the ATOMIC Proto Kit board (pcb/vein_base_atomic -> fab/atomic/)
         run: |
-          N=fab/vein_base_v$VER
           cd pcb && python3 build_pcb.py && cd ..
-          mkdir -p fab/gerber
-          kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o fab/gerber/ pcb/vein_base.kicad_pcb
-          kicad-cli pcb export drill --format excellon --excellon-separate-th -o fab/gerber/ pcb/vein_base.kicad_pcb
-          kicad-cli pcb export pos --format csv --units mm --side both -o fab/pos.csv pcb/vein_base.kicad_pcb
-          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o ${N}_fitcheck_1to1.pdf pcb/vein_base.kicad_pcb
-          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts --mirror -o ${N}_fitcheck_1to1_seen_from_below.pdf pcb/vein_base.kicad_pcb
-          kicad-cli pcb export step --subst-models -o ${N}_pcb.step pcb/vein_base.kicad_pcb
-          (cd fab/gerber && zip -q ../vein_base_v${VER}_gerbers.zip *)
-          python3 tools/make_jlc_cpl.py --corrections pcb/jlc_cpl_corrections.csv
+          fab() {  # $1 = board name, $2 = output dir
+            local B=pcb/$1.kicad_pcb N=$2/$1_v$VER
+            mkdir -p $2/gerber
+            kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o $2/gerber/ $B
+            kicad-cli pcb export drill --format excellon --excellon-separate-th -o $2/gerber/ $B
+            kicad-cli pcb export pos --format csv --units mm --side both -o $2/pos.csv $B
+            kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o ${N}_fitcheck_1to1.pdf $B
+            kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts --mirror -o ${N}_fitcheck_1to1_seen_from_below.pdf $B
+            kicad-cli pcb export step --subst-models -o ${N}_pcb.step $B
+            (cd $2/gerber && zip -q ../$1_v${VER}_gerbers.zip *)
+            python3 tools/make_jlc_cpl.py --pos $2/pos.csv --prefix $1_v --outdir $2 --corrections pcb/jlc_cpl_corrections.csv
+          }
+          fab vein_base fab
+          fab vein_base_atomic fab/atomic
 
       - name: DRC
-        run: python3 tools/check_drc.py
+        run: |
+          python3 tools/check_drc.py
+          python3 tools/check_drc.py --board pcb/vein_base_atomic.kicad_pcb --report fab/atomic/drc.rpt
 
       - name: Build Vein Station board (KiCad)
         run: |
@@ -84,7 +91,9 @@ jobs:
           name: vein-base-v${{ env.VER }}-fab
           path: |
             pcb/vein_base.kicad_pcb
+            pcb/vein_base_atomic.kicad_pcb
             fab/vein_base_v*
+            fab/atomic/*
             case/vein_base_v*
             station/vein_station_*
             fab/station/*
