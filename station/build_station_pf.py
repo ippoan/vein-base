@@ -18,6 +18,8 @@ here is a simplified model written from numbers measured on it (PF13-4-9 D.stp, 
   corner screw bosses (±51, ±31) with ribs (|x| >= 46.3 and |y| >= 26.3, full height);
   PCB bosses 87 × 47 (±43.5, ±23.5), r 2.4: on the floor up to z 3.5, from the top plate down to z 28.
 The model is conservative (it holds the STP's material in the space the parts use); checked against the STP locally.
+The preview shows the VoiceS3R and the Unit NFC from M5Stack's official STL (station/m5_cad.py); the checks use their
+outline boxes.
 
 Stack (z): floor PCB bosses (top 3.5) | Takachi TPS-M2.3-7 tapping spacers (hex 5, 7 long, M2.3 tapping stud 4 into
 the boss, M2.3 female 5 deep) | board 10.5..12.1, M2.3 × 5 pan head screws on top | VoiceS3R 14.6..31.4 on the Ext.Pin
@@ -39,12 +41,13 @@ import base64, json, os
 import numpy as np
 import cadquery as cq
 import ezdxf
+from m5_cad import stl_tris
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'pf7'
+REV = 'pf8'
 
 # ---- helpers ---------------------------------------------------------------------------------------------
 def box(x0, x1, y0, y1, z0, z1):
@@ -350,12 +353,19 @@ def tri(shape):
     return v[np.array(ts)].reshape(-1).astype(np.float32)
 
 
+def stl_at(key, x, y, z):
+    """An official M5Stack STL moved to (x, y, z), not turned: both have their ports / Grove on -y (the back) and
+    the top (the label face) on +z, as placed here."""
+    return (stl_tris(key) + np.float32([x, y, z - TOP])).reshape(-1).astype(np.float32)
+
+
 parts = [
     ('shell', 'カバー+前後パネル(タカチ PF13-4-9、実測からの簡略形状)', '#3d6fb6', 0.45, 'shell',
      cover.union(front_panel)),
-    ('nfc', 'NFC Unit 48×24×8(天板の裏に両面テープ、窓なし)', '#f2f2ee', 1, 'mods', nfc),
+    ('nfc', 'NFC Unit(公式 CAD、天板の裏に両面テープ、窓なし)', '#f2f2ee', 1, 'mods',
+     stl_at('nfc', NX, (NFC[2] + NFC[3]) / 2, ZBT + SP_NFC + 2.8)),   # CAD z -2.8..5.2
     ('vein', '指静脈モジュール(外形は公式値、コネクタ位置は未確定)', '#2e3538', 1, 'mods', vein),
-    ('atom', 'VoiceS3R', '#1fa49a', 1, 'mods', atom),
+    ('atom', 'VoiceS3R(公式 CAD)', '#1fa49a', 1, 'mods', stl_at('voice', VXP, VYP, Z_ATOM)),   # CAD z 0..16.8
     ('pcb', 'Station 基板 r12(92 × 71)', '#1f7a4d', 1, 'mods', pcb),
     ('hdrpl', 'ピンヘッダー樹脂', '#2b2f33', 1, 'mods', hdr_plastic),
     ('hdrpin', 'ピン', '#d8b25a', 1, 'mods', hdr_pins),
@@ -372,7 +382,8 @@ parts = [
     ('nfcplug', 'NFC 側 Grove プラグ(箱の中、ケーブルは背面パネルから外へ)', '#c47f0e', 1, 'mods', nfc_plug),
     ('lid', 'ベース(床、加工なし)', '#8fa09c', 0.9, 'lid', base),
 ]
-model = [dict(key=k, label=l, color=c, opacity=o, group=g, data=base64.b64encode(tri(s).tobytes()).decode())
+model = [dict(key=k, label=l, color=c, opacity=o, group=g,
+               data=base64.b64encode((s if isinstance(s, np.ndarray) else tri(s)).tobytes()).decode())
          for k, l, c, o, g, s in parts]
 SUB = ('既製ケース タカチ PF13-4-9 に、基板 r12 と市販の M3 スペーサーで VoiceS3R・指静脈・NFC・DB9 を収める版'
        '(印刷部品なし、天板の窓 2 つだけ加工: 試作は型紙で手加工、量産はタカチの穴加工)。ドラッグで回転、ホイール/ピンチで拡大。')
@@ -380,7 +391,9 @@ DIMS = [('ケース', 'タカチ PF13-4-9(125 × 40 × 85、ABS)'), ('内側', '
         ('基板', 'r12 92 × 71、ケースの基板用ボスに TPS-M2.3-7 と M2.3 ねじ'),
         ('モジュール', 'NFC 12 / 指静脈 12(上面に VHB テープ)の M3 オスメスの上(基板の下でナット止め)'), ('天板の穴', '指静脈(外形 + 0.2、4.1 突き出して横を押さえる)・VoiceS3R(返し 1.2)'),
         ('背面', 'パネルを付けない(USB-C / PORT.A ・ DB9 ・ NFC の Grove ケーブルをそのまま出す)'), ('NFC', '手前左、天板の裏に付ける(窓なし、3 mm 越しに読む)')]
-NOTE = ('ケースはタカチ公式 STP を実測した数値からの簡略形状です(STP は再配布しない)。モジュールの外形は公式値、'
+NOTE = ('ケースはタカチ公式 STP を実測した数値からの簡略形状です(STP は再配布しない)。VoiceS3R と NFC Unit の形は '
+        'M5Stack 公式 STL(m5stack/M5_Hardware、Copyright (c) 2021 M5Stack、MIT License)をそのまま表示、'
+        '干渉チェックはその外形の箱で行う。指静脈の外形は公式値、'
         'DB9 と基板上の部品は KiCad のフットプリント寸法からの簡略形状、指静脈のコネクタ位置は未確定。単位 mm。')
 dims = ''.join(f'        <tr><td>{k}</td><td>{v}</td></tr>\n' for k, v in DIMS)
 site = os.path.join(ROOT, 'site/station-pf')
