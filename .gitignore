@@ -5,6 +5,7 @@ case/*.stl
 station/*.step
 station/*.stl
 station/*.dxf
+station/*.pdf
 __pycache__/
 *.kicad_prl
 station/cad/

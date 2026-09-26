@@ -30,7 +30,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends kicad kicad-footprints
-          pip install --break-system-packages cadquery numpy trimesh scipy rtree
+          pip install --break-system-packages cadquery numpy trimesh scipy rtree matplotlib
 
       - name: Build PCB (KiCad)
         # both variants: the cup board (pcb/vein_base -> fab/) and the ATOMIC Proto Kit board (pcb/vein_base_atomic -> fab/atomic/)
