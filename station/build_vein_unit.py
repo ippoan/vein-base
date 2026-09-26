@@ -6,8 +6,9 @@ Two cases, one run each:
   python3 station/build_vein_unit.py sic   SIC5-9-2B 45 × 90 × 20 (¥270): a board as large as the inside on the
                                            four M2 bosses carries the module, the Grove socket and the LDO; the
                                            module's cable runs along its side to J1 (MX1.25 4P) beside its middle
-Each writes the 3D preview site/vein-unit-<variant>/index.html and fails if the case collides with the module or the
-parts inside.
+Each writes the 3D preview site/vein-unit-<variant>/index.html with a 1:1 A4 paper template for cutting the cover
+window and the end hole by hand (station/vein_unit_<REV>_<variant>_template_1to1.pdf), and fails if the case collides
+with the module or the parts inside.
 
 Coordinates: x along the case (the module's cable end at -x), y across, z = 0 on the desk; origin = centre.
 Cases: simplified from numbers measured on Takachi's STP (CS75N-B.stp, SIC5-9-2B.stp, takachi-el.co.jp, 2026-09;
@@ -20,11 +21,12 @@ into J1 on the board (sic). For cs the kit's cable 6 (9P to 2.54, 200 mm) is cut
 four wires are soldered to the Grove cable. 5 V from the Grove goes through a 3.3 V LDO and RXD / TXD go to the
 Grove's G5 / G6.
 """
-import sys
-from shapes import box, rbox, cyl_z, union, vein_parts, write_page
+import os, sys
+from shapes import ROOT, box, rbox, cyl_z, union, vein_parts, write_page
+from template import vein_unit_template
 import cadquery as cq
 
-REV = 'vu12'
+REV = 'vu13'
 VARIANT = sys.argv[1] if len(sys.argv) > 1 else 'cs'
 VEIN = (-29.5, 29.5, -13.0, 13.0)                 # 59 × 26, centred (sic moves it, see there)
 
@@ -58,6 +60,13 @@ if VARIANT == 'cs':
     grove_cable = cyl_x(0.0, 5.5, 2.3, -L / 2 - 15.0, -IX + 0.2)
     hole = cyl_x(0.0, 5.5, 2.6, -L / 2 - 1, -IX + 0.5)
     body = body.cut(hole)
+    OUT_R = 3.0
+    END = dict(side=-1, h=ZC, hole=('circle', 0.0, 5.5, 2.6), label='BODY, cable end (-x) wall, seen from outside')
+    TOP = ('CABLE END (-x)', 'far end', 'side', 'side')
+    TPL_NOTES = ['Cover: lay the sheet face up on the cover and line up the grey outline (75 x 35, R3).',
+                 'The window also cuts the cover\'s locating pegs along its long edges: trim them flush with the window.',
+                 'Body: the round hole in the end wall on the module\'s cable (plug) side, for the Grove cable.',
+                 'Red = cut through; + = drill centres (corners: dia 4.4 or less). Unit mm.']
     inner = [('plug', 'MX1.25 9P プラグ(付属ケーブル)', '#e7e1cf', plug),
              ('splice', '4 本の線 + LDO 3.3V をはんだ付けして熱収縮チューブ(端のすき間)', '#3a4046', splice),
              ('grovecable', 'Grove ケーブル(直付け、PortABC の PORT.C へ)', '#c47f0e', grove_cable)]
@@ -115,6 +124,15 @@ else:
                   box(-35.0, -5.5, JC - 1.4, JC + 1.4, *zr))                     # straight along the gap into J1
     hole = box(IX - 0.5, L / 2 + 1, -4.6, 4.6, Z_BT - 0.4, Z_BT + 6.2)
     body = body.cut(hole)
+    OUT_R = 12.5
+    END = dict(side=1, h=ZC, hole=('rect', -4.6, 4.6, Z_BT - 0.4, Z_BT + 6.2),
+               label='BODY, Grove end (+x) wall, seen from outside')
+    TOP = ('module cable end (-x)', 'GROVE END (+x)', 'side (-y)', 'J1 side (+y): the window is off centre toward -y')
+    TPL_NOTES = ['Cover: lay the sheet face up on the cover and line up the grey outline (90 x 45, R12.5),',
+                 'GROVE END to the right. The window is 3.5 off centre, away from J1: check the side before cutting.',
+                 'Body: the Grove socket hole in the end wall at the Grove end (the flat face between the dashed lines).',
+                 'Red = cut through; + = drill centres (window corners: dia 4.4 or less; end hole: 2 holes, then file square).',
+                 'Unit mm.']
     inner = [('plug', 'MX1.25 9P プラグ(付属ケーブル)', '#e7e1cf', plug),
              ('cable', '付属ケーブル④(9P → 4P、9P 側の端子を 3・4・5・6 に差し替え)、指静脈の脇を通す', '#3a4046', cable),
              ('j1', 'J1 MX1.25 4P 横向き(Molex 53261-0471、金具込み 7.95 幅、指静脈の脇の真ん中、口は -x)', '#f1efe8', j1),
@@ -158,8 +176,13 @@ parts = [('shell', f'蓋(タカチ {NAME}、指静脈の窓)', '#2b2f33', 0.45, 
     [('lid', f'本体(タカチ {NAME})', '#3a3f44', 0.55, 'lid', body)]
 NOTE = ('ケースはタカチ公式 STP を実測した数値からの簡略形状(STP は再配布しない)。指静脈の外形は公式値、細部は製品写真を見て描いた'
         'イメージ、ケーブルは写真どおり平らな窓の側の端面から水平に出る。ピン配置は Waveshare の Wiki による。基板と部品は仮の形。単位 mm。')
+tpl = vein_unit_template(os.path.join(ROOT, 'station', f'vein_unit_{REV}_{VARIANT}_template_1to1.pdf'),
+                         f'Vein Unit {REV} - Takachi {NAME} cutting template, 1:1', (L, W, OUT_R), TOP, VEIN_WIN, END,
+                         TPL_NOTES)
 write_page(f'vein-unit-{VARIANT}', f'指静脈 Unit {REV} {NAME}', parts, SUB + 'ドラッグで回転、ホイール/ピンチで拡大。', DIMS, NOTE,
-           VEIN_Z0 + 15.0, tz='-10')
+           VEIN_Z0 + 15.0, downloads=[('加工の型紙(PDF、A4 原寸 — 拡大縮小なしで印刷、蓋の窓と端の穴)', tpl)],
+           extra='<p>型紙を貼って手で開ける: 窓は角を ⌀4 でドリル → 糸のこ/ピラニアソーで線の内側を切る → やすりで線まで。'
+                 '端の穴はドリルで開けてからやすりで形を出す。</p>', tz='-10')
 
 if bad:
     raise SystemExit('interference: ' + ', '.join(bad))

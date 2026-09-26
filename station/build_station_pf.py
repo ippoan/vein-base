@@ -41,9 +41,7 @@ import os
 import numpy as np
 import ezdxf
 from shapes import box, rbox, cyl_z, cyl_y, sym, quad, stl_at, vein_parts, write_page
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+from template import rrect_xy, a4, cross, ruler, notes_block, save
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REV = 'pf9'
@@ -242,27 +240,11 @@ def draw_top(msp):
         rrect(msp, *w, 'CUT')
 
 
-def rrect_xy(x0, x1, y0, y1, r, n=16):
-    """The same rounded rectangle as rrect(), as a closed point list for the PDF."""
-    pts = []
-    for cx, cy, a0 in ((x1 - r, y0 + r, -90), (x1 - r, y1 - r, 0), (x0 + r, y1 - r, 90), (x0 + r, y0 + r, 180)):
-        a = np.radians(np.linspace(a0, a0 + 90, n + 1))
-        pts += list(zip(cx + r * np.cos(a), cy + r * np.sin(a)))
-    return np.array(pts + pts[:1])
-
-
 def top_template(name):
     """A4 portrait, 1 mm on paper = 1 mm: the cover's outline and the two windows seen from above, to lay face up
     on the cover and cut the windows by hand. Same geometry as the DXF (draw_top)."""
-    W, H = 210.0, 297.0
-    fig = plt.figure(figsize=(W / 25.4, H / 25.4))
-    ax = fig.add_axes([0, 0, 1, 1])
-    ax.set_xlim(-W / 2, W / 2)
-    ax.set_ylim(-190, H - 190)   # the case centre sits 107 below the top of the sheet
-    ax.set_aspect('equal')
-    ax.axis('off')
+    fig, ax, txt = a4(107)   # the case centre sits 107 below the top of the sheet
     x0c, x1c, y0c, y1c, _ = TOP_OUTLINE
-    txt = lambda x, y, s, **k: ax.text(x, y, s, fontsize=k.pop('fs', 7), family=k.pop('family', 'DejaVu Sans'), **k)
     ax.plot(*rrect_xy(*TOP_OUTLINE).T, color='0.35', lw=0.6)
     ax.plot([x0c + 4, x1c - 4], [0, 0], color='0.6', lw=0.3, ls='-.')
     ax.plot([0, 0], [y0c + 4, y1c - 4], color='0.6', lw=0.3, ls='-.')
@@ -273,19 +255,13 @@ def top_template(name):
     for label, (x0, x1, y0, y1, r) in TOP_WINS:
         ax.plot(*rrect_xy(x0, x1, y0, y1, r).T, color='#d0021b', lw=0.5)
         for cx, cy in ((x0 + r, y0 + r), (x1 - r, y0 + r), (x1 - r, y1 - r), (x0 + r, y1 - r)):   # corner drills
-            ax.plot([cx - 1.2, cx + 1.2], [cy, cy], color='#d0021b', lw=0.25)
-            ax.plot([cx, cx], [cy - 1.2, cy + 1.2], color='#d0021b', lw=0.25)
+            cross(ax, cx, cy)
         txt((x0 + x1) / 2, (y0 + y1) / 2 + 1.5, label, ha='center', va='center', fs=7, weight='bold', color='#d0021b')
         txt((x0 + x1) / 2, (y0 + y1) / 2 - 2.5, f'{x1 - x0:.1f} x {y1 - y0:.1f}  R{r:g}', ha='center', va='center',
             fs=6, color='#d0021b')
         rows.append(f'{label:9s} {x1 - x0:5.1f} x {y1 - y0:4.1f}  R{r:<4g} left {x0 - x0c:5.1f}  right {x1c - x1:5.1f}'
                     f'  back {y0 - y0c:5.1f}  front {y1c - y1:5.1f}   drill at the + marks, dia {2 * r:.1f} or less')
-    # 50 mm check ruler
-    ry = -72
-    ax.plot([-25, 25], [ry, ry], color='k', lw=0.6)
-    for i in range(6):
-        ax.plot([-25 + 10 * i] * 2, [ry, ry + (3 if i in (0, 5) else 1.8)], color='k', lw=0.4)
-    txt(0, ry - 4.5, '50 mm: measure this line. If it is not 50 mm, reprint.', ha='center', fs=7)
+    ruler(ax, txt, -72)
     notes = [f'Vein Station {REV} - PF13-4-9 cover (top plate) cutting template, 1:1, seen from above',
              'PRINT AT 100% / ACTUAL SIZE (no "fit to page", no scaling).',
              'Lay the sheet face up on the cover, BACK toward the open back (the back panel is not used),',
@@ -293,16 +269,8 @@ def top_template(name):
              'Red = cut through (windows); + = corner drill centres. Unit mm. Distances from the outline:',
              ''] + rows + ['', 'No window for the NFC unit (it reads through the 3 mm plate).',
                            'Same geometry as ' + f'vein_station_{REV}_top.dxf (for Takachi machining).']
-    y = -86
-    for i, t in enumerate(notes):
-        txt(-95, y, t, fs=6.2 if t in rows else 7, family='DejaVu Sans Mono' if t in rows else 'DejaVu Sans',
-            weight='bold' if i < 2 else 'normal')
-        y -= 5
-    path = os.path.join(out, f'vein_station_{REV}_{name}.pdf')
-    fig.savefig(path, metadata={'CreationDate': None})
-    plt.close(fig)
-    print('wrote', path)
-    return path
+    notes_block(ax, txt, -86, notes, mono=rows)
+    return save(fig, os.path.join(out, f'vein_station_{REV}_{name}.pdf'))
 
 
 downloads = [

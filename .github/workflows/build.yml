@@ -109,7 +109,7 @@ jobs:
       - name: Build Vein Station PF (Takachi PF13-4-9) hole drawings + 3D preview + interference check
         run: python3 station/build_station_pf.py
 
-      - name: Build Vein Unit (finger vein module alone in a small Takachi case) 3D previews + interference check
+      - name: Build Vein Unit (finger vein module alone in a small Takachi case) cutting templates + 3D previews + interference check
         run: python3 station/build_vein_unit.py cs && python3 station/build_vein_unit.py sic
 
       - name: Minimum wall thickness of the printed parts (DMM resin SLA needs 1.0 mm)
@@ -125,6 +125,7 @@ jobs:
             fab/atomic/*
             case/vein_base_v*
             station/vein_station_*
+            station/vein_unit_*
             fab/station/*
             fab/station_pf/*
             fab/vein_unit/*
