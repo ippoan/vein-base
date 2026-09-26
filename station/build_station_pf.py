@@ -17,13 +17,16 @@ here is a simplified model written from numbers measured on it (PF13-4-9 D.stp, 
   PCB bosses 87 × 47 (±43.5, ±23.5), r 2.4: on the floor up to z 3.5, from the top plate down to z 28.
 The model is conservative (it holds the STP's material in the space the parts use); checked against the STP locally.
 
-Stack (z): floor -1.5 | M3 spacer 12 (female-female, M3 flat-head screw from below through a countersunk floor hole)
-| board 10.5..12.1 | VoiceS3R 14.6..31.4 on the Ext.Pin (0.6 under the panel-groove ledge; its button is not used)
-| vein module on 6 mm spacers, pressed 0.1 against the top plate lip | Unit NFC on 12 mm spacers, 24.1..32.1, stuck to the
+Stack (z): floor -1.5 | M3 male-female spacer 6, female end down on an M3 flat-head screw from below (countersunk floor
+hole), male end up through the board and a nut on top
+| board 4.5..6.1 (1.0 over the floor's PCB bosses) | VoiceS3R 8.6..25.4 on the Ext.Pin (its button is not used)
+| vein module on 12 mm spacers, pressed 0.1 against the top plate lip | Unit NFC on 12 + 6 mm spacers stacked (the 12's
+female thread is 6 deep, so the 6's male end seats), 24.1..32.1, stuck to the
 top plate's underside with foam tape (gap 0.2..0.9), no window: it reads through the 3 mm ABS. Flush in a window
 would not work: its Grove plug would then sit in the top plate.
-Every vein corner and the NFC's left corners have a floor spacer right under the module spacer (male-female through
-the board hole), so pressing a finger on the module goes straight down to the floor and does not bend the board.
+Every spacer is male-female with a nut (no female-female, all stock on Amazon): the module spacers stand male end down
+through the board with a nut under it (H1..H8), the floor spacers have their own holes at the board's corners (H10..H12, 4.0 in from the edges; H9 stands in for the
+back right corner, where the DB9 and the DIP switch are) with the male end up.
 Layout: back row VoiceS3R + DB9 on the board (the DB9 posts are 0.1 from the panel guides, the row cannot move right);
 the NFC at the front left (its Grove plug inside, the cable leaves through the open back to PORT.A outside), right of
 the left PCB bosses; the vein module on the right, behind the right front PCB boss (both bosses stay).
@@ -36,7 +39,7 @@ import cadquery as cq
 import ezdxf
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'pf2'
+REV = 'pf3'
 
 # ---- helpers ---------------------------------------------------------------------------------------------
 def box(x0, x1, y0, y1, z0, z1):
@@ -94,15 +97,16 @@ front_panel = panel.mirror('XZ')                 # the back panel (on -y) is lef
 
 # ---- board r12 (pf outline) and its parts (board coords of pcb/station_board: x_case = VXP - bx, y_case = VYP + by) --------
 VXP, VYP = -6.0, -26.7         # VoiceS3R centre = board origin
-ZB = FLOOR + 12.0              # board bottom on 12 mm spacers
+ZB = FLOOR + 6.0               # board bottom on 6 mm spacers
 ZBT = ZB + 1.6
 Z_ATOM = ZBT + 2.5             # VoiceS3R bottom (header plastic 2.5)
 BX0, BX1, BY0, BY1 = -48.0, 38.0, -11.0, 60.0     # pf outline (build_board.py pf)
-# H1..H9 in board coords, the same list as build_board.py (keep them together)
-HOLES = [(30.9, 17.5), (14.9, 17.5), (30.9, 55.5), (14.9, 55.5), (5.2, 27.5), (-43.8, 27.5), (5.2, 42.5),
-         (-43.8, 42.5), (-44.5, 16.5)]
-FLOOR_H, NFC_H, VEIN_H = (1, 3, 5, 6, 7, 8, 9), (1, 2, 3, 4), (5, 6, 7, 8)
-SP_FLOOR, SP_NFC, SP_VEIN = 12.0, 12.0, 6.0
+# H1..H12 in board coords, the same list as build_board.py (keep them together)
+HOLES = [(27.0, 17.5), (14.9, 17.5), (27.0, 55.5), (14.9, 55.5), (5.2, 27.5), (-43.8, 27.5), (5.2, 42.5),
+         (-43.8, 42.5), (-44.5, 16.5), (34.0, -7.0), (34.0, 56.0), (-44.0, 56.0)]
+FLOOR_H, NFC_H, VEIN_H = (9, 10, 11, 12), (1, 2, 3, 4), (5, 6, 7, 8)
+MALE, NUT = 6.0, 2.4                                  # male thread length of the spacers, M3 nut height
+SP_FLOOR, SP_NFC, SP_VEIN = 6.0, 18.0, 12.0
 
 
 def at(bx, by):
@@ -145,22 +149,27 @@ NFC = (-40.9, -16.9, -14.2, 33.8)                                  # 0.2 right o
 VEIN = (-15.2, 43.8, -5.2, 20.8)                                   # 0.3 behind the right front PCB boss
 atom = rbox(*VOICE, Z_ATOM, Z_ATOM + 16.8, 3.0)
 nfc = rbox(*NFC, ZBT + SP_NFC, ZBT + SP_NFC + 8.0, 1.5)
-vein = rbox(*VEIN, CEIL - 15.0, CEIL, 2.0)                         # 6 mm spacers push it 0.1 against the lip
+vein = rbox(*VEIN, CEIL - 15.0, CEIL, 2.0)                         # 12 mm spacers push it 0.1 against the lip
 NX = (NFC[0] + NFC[1]) / 2
 
-# spacers: hex 5.5 across flats, modelled as r 3.2 cylinders
+# spacers: male-female, hex 5.5 across flats modelled as r 3.2 cylinders, male thread r 1.5, nut r 3.2 × 2.4
 spacers = None
 for i, (bx, by) in enumerate(HOLES, 1):
     x, y = at(bx, by)
-    parts = []
-    if i in FLOOR_H:
-        parts.append(cyl_z(x, y, 3.2, FLOOR, ZB))
-    if i in NFC_H:
-        parts.append(cyl_z(x, y, 3.2, ZBT, ZBT + SP_NFC))
-    if i in VEIN_H:
-        parts.append(cyl_z(x, y, 3.2, ZBT, CEIL - 15.0))
+    if i in FLOOR_H:      # female end down on the floor screw, male end up through the board, nut on top
+        parts = [cyl_z(x, y, 3.2, FLOOR, ZB), cyl_z(x, y, 1.5, ZB, ZB + MALE), cyl_z(x, y, 3.2, ZBT, ZBT + NUT)]
+    else:                 # module spacer: male end down through the board, nut under it
+        top = ZBT + SP_NFC if i in NFC_H else CEIL - 15.0
+        parts = [cyl_z(x, y, 3.2, ZBT, top), cyl_z(x, y, 1.5, ZBT - MALE, ZBT), cyl_z(x, y, 3.2, ZB - NUT, ZB)]
     for p in parts:
         spacers = p if spacers is None else spacers.union(p)
+
+# a spacer or nut on one side of the board and a spacer, nut or male end of the next hole must not meet: hex 5.5 across
+# flats is 6.35 across corners, so the holes stay >= 6.4 apart
+for i, (p0, q0) in enumerate(HOLES, 1):
+    for j, (p1, q1) in enumerate(HOLES[i:], i + 1):
+        if ((p0 - p1) ** 2 + (q0 - q1) ** 2) ** 0.5 < 6.4:
+            raise SystemExit(f'H{i} and H{j} are closer than 6.4')
 
 # plugs at the open back (the PORT.A <-> NFC Grove cable loops outside, as in build_station.py)
 YB = VOICE[2]
@@ -285,7 +294,7 @@ parts = [
     ('caps', 'C1〜C5 0.1µF', '#b8a27a', 1, 'mods', caps),
     ('sw1', 'SW1 ストレート/クロス DIP', '#c0392b', 1, 'mods', sw1),
     ('db9', 'J4 DB9 オス', '#8a8f96', 1, 'mods', db9_body.union(db9_flange).union(db9_shell).union(db9_posts)),
-    ('spacers', 'M3 六角スペーサー(床 12 / NFC 12 / 指静脈 6)', '#c9a227', 1, 'mods', spacers),
+    ('spacers', 'M3 オスメス六角スペーサー+ナット(床 6 / NFC 12+6 / 指静脈 12)', '#c9a227', 1, 'mods', spacers),
     ('db9plug', 'DB9 プラグ(FC-1200 へ)', '#5c6166', 1, 'mods', db9_plug),
     ('usbplug', 'USB-C プラグ(Windows PC へ)', '#24292d', 1, 'mods', usb_plug),
     ('portaplug', 'PORT.A Grove プラグ(外で NFC へ折り返し)', '#c47f0e', 1, 'mods', porta_plug),
@@ -297,8 +306,8 @@ model = [dict(key=k, label=l, color=c, opacity=o, group=g, data=base64.b64encode
 SUB = ('既製ケース タカチ PF13-4-9 に、基板 r12 と市販の M3 スペーサーで VoiceS3R・指静脈・NFC・DB9 を収める版'
        '(印刷部品なし、穴はタカチの穴加工)。ドラッグで回転、ホイール/ピンチで拡大。')
 DIMS = [('ケース', 'タカチ PF13-4-9(125 × 40 × 85、ABS)'), ('内側', '117 × 79 × 34.5、天板 3.0、パネル 2.0'),
-        ('基板', 'r12 86 × 71、床から M3 スペーサー 12(皿ネジ × 7)'),
-        ('モジュール', 'NFC 12 / 指静脈 6 の M3 スペーサーの上(指静脈の四隅は床まで重ねる)'), ('天板の穴', '指静脈(返し 1.0)・VoiceS3R(返し 1.2)'),
+        ('基板', 'r12 86 × 71、4 隅を床から M3 オスメス 6(皿ネジ × 4)'),
+        ('モジュール', 'NFC 12+6 / 指静脈 12 の M3 オスメスの上(基板の下でナット止め)'), ('天板の穴', '指静脈(返し 1.0)・VoiceS3R(返し 1.2)'),
         ('背面', 'パネルを付けない(USB-C / PORT.A ・ DB9 ・ NFC の Grove ケーブルをそのまま出す)'), ('NFC', '手前左、天板の裏に付ける(窓なし、3 mm 越しに読む)')]
 NOTE = ('ケースはタカチ公式 STP を実測した数値からの簡略形状です(STP は再配布しない)。モジュールの外形は公式値、'
         'DB9 と基板上の部品は KiCad のフットプリント寸法からの簡略形状、指静脈のコネクタ位置は未確定。単位 mm。')
