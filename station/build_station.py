@@ -31,7 +31,7 @@ import numpy as np
 import cadquery as cq
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'r13'
+REV = 'r14'
 
 W, D = 99.0, 70.0            # outer size (x, ys)
 WALL, TOP, LID = 2.0, 1.5, 2.0
@@ -97,7 +97,7 @@ u1 = board(-31.0, -21.0, 3.05, 6.95, -2.5, -0.75)                    # MAX3232 S
 caps = board(-31.3, -19.2, 10.3, 11.7, -2.5, -1.6).union(board(-19.2, -17.8, 3.6, 6.4, -2.5, -1.6))
 sw1 = board(-46.9, -35.5, 0.1, 12.5, -2.5, -0.5)                     # DIP 4, low profile
 # DB9 male RA on the board's -y edge: housing, flange on the edge, D shell and hex posts through the back wall
-DB9_BX = -31.9
+DB9_BX = -27.9                  # r12 board: 4.0 closer to the VoiceS3R (r10: -31.9)
 db9_body = board(DB9_BX - 15.0, DB9_BX + 15.0, BY0 + 0.5, BY0 + 10.5, -2.5, 10.0)
 db9_flange = board(DB9_BX - 15.4, DB9_BX + 15.4, BY0 - 1.0, BY0, -2.5, 10.0)
 db9_shell = board(DB9_BX - 8.5, DB9_BX + 8.5, BY0 - 7.0, BY0 - 1.0, -0.5, 8.0)
