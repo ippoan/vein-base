@@ -62,14 +62,14 @@ table{width:100%;border-collapse:collapse;font-size:12px}
 td{padding:4px 0;border-bottom:1px solid var(--line);vertical-align:top}
 td:last-child{text-align:right;font-family:var(--mono);white-space:nowrap;padding-left:8px}
 .note{font-size:12px;color:var(--muted);line-height:1.6;margin:0}
-.nav{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 12px;font-size:12px}.nav a{color:var(--accent)}
+.nav{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 14px;margin:0;font-size:12px}.nav a{color:var(--accent)}
 </style>
 <style>html{color-scheme:light}body{margin:0}</style>
 </head>
 <body>
 <div class="wrap">
   <header><h1>vein-base</h1><span class="sub">VoiceS3R の下に積むケース。上蓋なしの 1 部品のカップで、基板の下と周りだけを囲む(VoiceS3R はピンに刺して上に載せる)。ドラッグで回転、ホイール/ピンチで拡大。</span></header>
-  <nav class="nav"><a href="./">vein-base(単体)</a><a href="station/">Vein Station(印刷筐体)</a><a href="station-se/">Vein Station SE</a><a href="station-pf/">Vein Station PF(タカチ PF13-4-9)</a><a href="vein-unit/">指静脈 Unit(タカチ SW-75)</a></nav>
+  <nav class="nav"><a href="./">vein-base(単体)</a><a href="station/">Vein Station(印刷筐体)</a><a href="station-se/">Vein Station SE</a><a href="station-pf/">Vein Station PF(タカチ PF13-4-9)</a><a href="vein-unit/">指静脈 Unit</a></nav>
   <div class="stage" id="stage">
     <canvas id="c"></canvas>
     <div class="views">
