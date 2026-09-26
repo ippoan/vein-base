@@ -1,4 +1,4 @@
-"""Vein Unit board (u1): the board inside the Takachi SIC5-9-2B of the vein unit (station/build_vein_unit.py sic).
+"""Vein Unit board (u2): the board inside the Takachi SIC5-9-2B of the vein unit (station/build_vein_unit.py sic).
 The finger vein module sits on it with VHB tape; the board carries
   - J2: Grove (HY2.0 4P right angle, JST PH S4B-PH-SM4-TB footprint), opening to +x through a hole in the case's end
         wall, to the PortABC's PORT.C: 1 = G6 (yellow), 2 = G5 (white), 3 = 5V, 4 = GND
@@ -18,7 +18,7 @@ import os
 import pcbnew
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REV = 'u1'
+REV = 'u2'
 NAME = 'vein_unit_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
@@ -29,7 +29,8 @@ HOLES = [(sx * 33.0, sy * 12.5) for sx in (1, -1) for sy in (1, -1)]
 VEIN = (-29.5, 29.5, -16.5, 9.5)
 JC = 14.3                            # J1's centre across (pads 9.6..19.0, nails 10.3..18.3)
 XJ = 2.65                            # J1's origin: its front (the opening) at x = 0
-XG = BX - 4.45 - 0.7                 # J2's origin: its front 0.7 inside the edge (the MP pads keep 0.5 off it)
+XG = BX - 4.45 - 1.3                 # J2's origin: its footprint front 1.3 inside the edge; JLC's HY2.0 body stands
+                                     # 0.7 further out (assembly preview), so it ends 0.6 inside the edge, 1.2 off the case wall
 
 
 def P(x, y):
