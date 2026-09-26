@@ -3,8 +3,8 @@ is a Grove cable (to a PortABC PORT.C, 5 V) and the module's own cable stays ins
 Two cases, one run each:
   python3 station/build_vein_unit.py cs    CS75N-B  35 × 75 × 12 (¥190): the module fills the case between its four
                                            screw posts; no board, the wires are spliced in the end pocket
-  python3 station/build_vein_unit.py sic   SIC5-9-2B 45 × 90 × 20 (¥270): the module on stands, a small board with a
-                                           Grove socket in the other end
+  python3 station/build_vein_unit.py sic   SIC5-9-2B 45 × 90 × 20 (¥270): a board as large as the inside on the
+                                           four M2 bosses carries the module, the Grove socket, the LDO and J1
 Each writes the 3D preview site/vein-unit-<variant>/index.html and fails if the case collides with the module or the
 parts inside.
 
@@ -13,14 +13,15 @@ Cases: simplified from numbers measured on Takachi's STP (CS75N-B.stp, SIC5-9-2B
 nobody may redistribute them), with the inside taken a little smaller than measured (conservative).
 Module: 59 × 26 × 15 (Waveshare); its cable leaves the end face of the flat window's end, low and level (Waveshare's
 photo), with an MX1.25 9P plug; the far end of the supplied cable is Dupont female. UART use needs pins 3..6 only
-(3.3V, GND, RXD, TXD, wiki): those four wires are cut from the Dupont end and soldered (5 V from the Grove through a
-3.3 V LDO; RXD / TXD to the Grove's G5 / G6).
+(3.3V, GND, RXD, TXD, wiki): the cable is cut about 3 cm from the plug and those four wires are soldered to the Grove
+cable (cs) or crimped into an MX1.25 4P for J1 on the board (sic); 5 V from the Grove goes through a 3.3 V LDO and
+RXD / TXD go to the Grove's G5 / G6.
 """
 import sys
 from shapes import box, rbox, cyl_z, union, vein_parts, write_page
 import cadquery as cq
 
-REV = 'vu3'
+REV = 'vu4'
 VARIANT = sys.argv[1] if len(sys.argv) > 1 else 'cs'
 VEIN = (-29.5, 29.5, -13.0, 13.0)                 # 59 × 26, centred on both cases
 
@@ -75,36 +76,44 @@ else:
         rbox(-IX, IX, -IY, IY, 15.0, ZC, IR).cut(rbox(-IX + 1.0, IX - 1.0, -IY + 1.0, IY - 1.0, 14, ZC + 1, IR - 1.0)))
     bosses = union(*[cyl_z(sx * 33.0, sy * 12.5, 1.95, FLOOR, 6.0) for sx in (1, -1) for sy in (1, -1)])
     body = body.union(bosses)
-    VEIN_Z0 = H + 1.6 - 15.0                      # 6.6: top 21.6, 1.6 proud
-    STAND = union(*[cyl_z(sx * 22.0, sy * 7.0, 4.0, FLOOR, VEIN_Z0) for sx in (1, -1) for sy in (1, -1)])
-    # the board sits in the +x end between the two bosses; the four wires come round the module's side
-    BRD = (31.4, 39.2, -10.3, 10.3)
-    Z_BRD = FLOOR + 0.5
-    Z_BT = Z_BRD + 1.6
-    board = box(*BRD, Z_BRD, Z_BT)
-    grove = box(BRD[1] - 7.0, BRD[1], -4.0, 4.0, Z_BT, Z_BT + 5.8)
-    grove_plug = box(BRD[1], L / 2 + 10.0, -3.9, 3.9, Z_BT + 0.4, Z_BT + 5.4)
-    ldo = box(33.0, 35.0, -8.2, -6.0, Z_BT, Z_BT + 1.2)
+    # a board as large as the inside, screwed onto the four M2 bosses: the module on it with VHB, the Grove socket and
+    # the LDO in the +x end, J1 (MX1.25 4P, top entry) right next to the module's plug in the -x end
+    BRD_T = 1.6
+    Z_BRD, Z_BT = 6.0, 6.0 + BRD_T                # on the boss tops
+    board = rbox(-IX + 0.6, IX - 0.6, -IY + 0.6, IY - 0.6, Z_BRD, Z_BT, IR - 0.6)
+    screws = union(*[cyl_z(sx * 33.0, sy * 12.5, 1.9, Z_BT, Z_BT + 1.4) for sx in (1, -1) for sy in (1, -1)])
+    for sx in (1, -1):
+        for sy in (1, -1):
+            board = board.cut(cyl_z(sx * 33.0, sy * 12.5, 1.1, Z_BRD - 1, Z_BT + 1))
+    VEIN_Z0 = Z_BT + 0.5                          # on VHB 0.5: 8.1, top 23.1, 3.1 proud
+    STAND = None
+    GX1 = IX - 0.6
+    grove = box(GX1 - 7.0, GX1, -4.0, 4.0, Z_BT, Z_BT + 5.8)
+    grove_plug = box(GX1, L / 2 + 10.0, -3.9, 3.9, Z_BT + 0.4, Z_BT + 5.4)
+    ldo = box(33.0, 36.0, 5.5, 8.5, Z_BT, Z_BT + 1.2)
     Z_P = VEIN_Z0 + 1.5
     plug = box(VEIN[0] - 2.6, VEIN[0], -7.2, 7.2, Z_P, Z_P + 3.5)
-    zw = (Z_P + 0.8, Z_P + 2.6)
-    wires = union(box(-34.0, VEIN[0] - 2.6, -1.0, 1.0, *zw), box(-35.0, -33.0, -1.0, 16.4, *zw),
-                  box(-35.0, 37.0, 14.6, 16.4, *zw), box(35.0, 37.0, 7.0, 16.4, *zw), box(35.0, 37.0, 7.0, 9.0, Z_BT, zw[1]))
+    j1 = box(-37.5, -33.5, -4.4, 4.4, Z_BT, Z_BT + 4.0)
+    j1_plug = box(-37.2, -33.8, -3.9, 3.9, Z_BT + 4.0, Z_BT + 7.0)
+    cable = box(-33.8, VEIN[0] - 2.6, -1.2, 1.2, Z_P + 1.0, Z_BT + 7.0)
     hole = box(IX - 0.5, L / 2 + 1, -4.6, 4.6, Z_BT - 0.4, Z_BT + 6.2)
     body = body.cut(hole)
     inner = [('plug', 'MX1.25 9P プラグ(付属ケーブル)', '#e7e1cf', plug),
-             ('wires', '付属ケーブルの 4 本(3.3V・GND・RXD・TXD、デュポン側を切って基板にはんだ付け)', '#3a4046', wires),
-             ('board', '中継基板(Grove 5V → LDO 3.3V、ボスの間)', '#1f7a4d', board),
+             ('cable', '付属ケーブル(3 cm に切って 4P に付け替え)', '#3a4046', cable),
+             ('j1', 'J1 MX1.25 4P(上向き、指静脈のプラグの隣)', '#f1efe8', j1),
+             ('j1plug', '4P に付け替えたプラグ', '#e7e1cf', j1_plug),
+             ('board', '基板(中いっぱい、M2 ボス 4 本にねじ止め、指静脈を VHB で載せる)', '#1f7a4d', board),
+             ('screws', 'M2 なべねじ × 4', '#9aa0a6', screws),
              ('grove', 'Grove ソケット(HY2.0 4P、横向き)', '#f1efe8', grove),
-             ('ldo', 'LDO 5V→3.3V', '#202326', ldo),
-             ('groveplug', 'Grove プラグ(PortABC の PORT.C へ)', '#c47f0e', grove_plug),
-             ('stand', '指静脈の台(高さ 4.6、VHB で床と指静脈に貼る)', '#c9a227', STAND)]
+             ('ldo', 'LDO 5V→3.3V とコンデンサ', '#202326', ldo),
+             ('groveplug', 'Grove プラグ(PortABC の PORT.C へ)', '#c47f0e', grove_plug)]
     DIMS = [('ケース', f'タカチ {NAME}({CASE}、ABS 光沢、はめ込み式、{PRICE})'),
-            ('中', '79.6 × 40.6 × 15.5(端は R10、STP の実測)、床のボス 4 本(高さ 4)'),
+            ('中', '79.6 × 40.6 × 15.5(端は R10、STP の実測)、床に M2 用ボス 4 本(66 × 25、高さ 4)'),
             ('加工', '蓋に指静脈の窓(外形 + 0.2)、端に Grove の穴 9.2 × 6.6'),
-            ('指静脈', '高さ 4.6 の台 4 つに VHB、蓋から 1.6 突き出す'),
-            ('配線', 'プラグは -x 端、4 本の線は指静脈の脇(すき間 7)を回して +x 端の基板へ')]
-    SUB = ('指静脈モジュールをタカチ SIC5-9-2B(45 × 90 × 20)に入れ、端の Grove ソケット 1 口で PortABC につなぐ案。')
+            ('基板', f'{2 * (IX - 0.6):.1f} × {2 * (IY - 0.6):.1f}(R{IR - 0.6:g})、ボスの上に M2 × 4 で留める、JLCPCB で実装'),
+            ('指静脈', '基板の上に VHB 0.5 で貼る、蓋から 3.1 突き出す'),
+            ('配線', '付属ケーブルを 3 cm に切り、3・4・5・6 を MX1.25 4P に付け替えて隣の J1 へ')]
+    SUB = ('指静脈モジュールをタカチ SIC5-9-2B(45 × 90 × 20)に入れ、中いっぱいの基板に載せて端の Grove ソケット 1 口で PortABC につなぐ案。')
 
 VEIN_WIN = (VEIN[0] - 0.2, VEIN[1] + 0.2, VEIN[2] - 0.2, VEIN[3] + 0.2, 2.2)
 cover = cover.cut(rbox(*VEIN_WIN[:4], FLOOR + 3, H + 2, VEIN_WIN[4]))
