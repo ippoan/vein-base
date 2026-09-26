@@ -37,49 +37,16 @@ the left PCB bosses; the vein module on the right, behind the right front PCB bo
 The back panel is left off: every connection is on that side, so there is nothing to machine there (no D-sub cutout,
 no counterbore). The DB9 plug's push goes into the board and the bosses instead of the panel.
 """
-import base64, json, os
+import os
 import numpy as np
-import cadquery as cq
 import ezdxf
-from m5_cad import stl_tris
+from shapes import box, rbox, cyl_z, cyl_y, sym, quad, stl_at, vein_parts, write_page
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REV = 'pf9'
-
-# ---- helpers ---------------------------------------------------------------------------------------------
-def box(x0, x1, y0, y1, z0, z1):
-    return cq.Workplane('XY').box(x1 - x0, y1 - y0, z1 - z0, centered=False).translate((x0, y0, z0))
-
-
-def rbox(x0, x1, y0, y1, z0, z1, r):
-    return box(x0, x1, y0, y1, z0, z1).edges('|Z').fillet(r)
-
-
-def cyl_z(x, y, r, z0, z1):
-    return cq.Workplane('XY').workplane(offset=z0).center(x, y).circle(r).extrude(z1 - z0)
-
-
-def cyl_y(x, y0, y1, z, r):
-    return cq.Workplane('XZ').workplane(offset=-y1).center(x, z).circle(r).extrude(y1 - y0)  # XZ normal is -Y
-
-
-def sym(f):
-    """Union of f(sx, sy) over the four quadrants."""
-    out = None
-    for sx in (1, -1):
-        for sy in (1, -1):
-            s = f(sx, sy)
-            out = s if out is None else out.union(s)
-    return out
-
-
-def quad(x0, x1, y0, y1, z0, z1):
-    """Box in the +x +y quadrant (x0..x1, y0..y1 > 0), mirrored to all four."""
-    return sym(lambda sx, sy: box(*sorted((sx * x0, sx * x1)), *sorted((sy * y0, sy * y1)), z0, z1))
-
 
 # ---- case (simplified from the measured STP) ---------------------------------------------------------------
 FLOOR, CEIL, TOP = -1.5, 33.0, 36.0
@@ -347,42 +314,13 @@ downloads = [
 ]
 
 # ---- 3D preview ------------------------------------------------------------------------------------------
-def tri(shape):
-    vs, ts = shape.val().tessellate(0.03, 0.15)
-    v = np.array([(p.x, p.y, p.z - TOP) for p in vs], dtype=np.float32)
-    return v[np.array(ts)].reshape(-1).astype(np.float32)
-
-
-def stl_at(key, x, y, z):
-    """An official M5Stack STL moved to (x, y, z), not turned: both have their ports / Grove on -y (the back) and
-    the top (the label face) on +z, as placed here."""
-    return (stl_tris(key) + np.float32([x, y, z - TOP])).reshape(-1).astype(np.float32)
-
-
-# the vein module as a picture only (Waveshare publishes no CAD): drawn by hand inside its 59 × 26 × 15 box after the
-# product photos, not measured. A finger scoop over the IR lens at +x, the flat dark window at -x, a channel across
-# the bottom and the MX1.25 9P socket in the +x end. The checks use the box `vein`.
-vx0, vx1, vy0, vy1 = VEIN
-vz1 = VEIN_Z0 + 15.0
-scoop = (cq.Workplane('XY').workplane(offset=vz1 - 9.0).center(vx1 - 19.0, (vy0 + vy1) / 2).rect(18.0, 9.0)
-         .workplane(offset=9.5).rect(31.0, 21.0).loft())
-vein_look = (rbox(*VEIN, VEIN_Z0, vz1, 2.0).edges('>Z').fillet(1.0).cut(scoop)
-             .cut(box(vx0 + 3.0, vx1 - 36.0, vy0 + 2.5, vy1 - 2.5, vz1 - 0.3, vz1 + 1))
-             .cut(box(vx0 + 26.0, vx0 + 36.0, vy0 - 1, vy1 + 1, VEIN_Z0 - 1, VEIN_Z0 + 1.5)))
-vein_win = box(vx0 + 3.0, vx1 - 36.0, vy0 + 2.5, vy1 - 2.5, vz1 - 0.3, vz1 - 0.05)
-vein_lens = cyl_z(vx1 - 19.0, (vy0 + vy1) / 2, 3.0, vz1 - 9.0, vz1 - 8.7)
-vein_socket = box(vx1 - 0.5, vx1 + 0.05, (vy0 + vy1) / 2 - 6.5, (vy0 + vy1) / 2 + 6.5, VEIN_Z0 + 1.5, VEIN_Z0 + 5.0)
-
 parts = [
     ('shell', 'カバー+前後パネル(タカチ PF13-4-9、実測からの簡略形状)', '#3d6fb6', 0.45, 'shell',
      cover.union(front_panel)),
     ('nfc', 'NFC Unit(公式 CAD、天板の裏に両面テープ、窓なし)', '#f2f2ee', 1, 'mods',
-     stl_at('nfc', NX, (NFC[2] + NFC[3]) / 2, ZBT + SP_NFC + 2.8)),   # CAD z -2.8..5.2
-    ('vein', '指静脈モジュール(外形は公式値、細部は写真からのイメージ、コネクタ位置は未確定)', '#23272a', 1, 'mods', vein_look),
-    ('veinwin', '指静脈の平らな窓(イメージ)', '#0b0e10', 1, 'mods', vein_win),
-    ('veinlens', '指静脈のレンズ(イメージ)', '#3b4d5e', 1, 'mods', vein_lens),
-    ('veinsock', '指静脈の MX1.25 9P(位置はイメージ)', '#f1efe8', 1, 'mods', vein_socket),
-    ('atom', 'VoiceS3R(公式 CAD)', '#1fa49a', 1, 'mods', stl_at('voice', VXP, VYP, Z_ATOM)),   # CAD z 0..16.8
+     stl_at('nfc', NX, (NFC[2] + NFC[3]) / 2, ZBT + SP_NFC + 2.8, TOP)),   # CAD z -2.8..5.2
+] + vein_parts(VEIN, VEIN_Z0) + [
+    ('atom', 'VoiceS3R(公式 CAD)', '#1fa49a', 1, 'mods', stl_at('voice', VXP, VYP, Z_ATOM, TOP)),   # CAD z 0..16.8
     ('pcb', 'Station 基板 r12(92 × 71)', '#1f7a4d', 1, 'mods', pcb),
     ('hdrpl', 'ピンヘッダー樹脂', '#2b2f33', 1, 'mods', hdr_plastic),
     ('hdrpin', 'ピン', '#d8b25a', 1, 'mods', hdr_pins),
@@ -399,9 +337,6 @@ parts = [
     ('nfcplug', 'NFC 側 Grove プラグ(箱の中、ケーブルは背面パネルから外へ)', '#c47f0e', 1, 'mods', nfc_plug),
     ('lid', 'ベース(床、加工なし)', '#8fa09c', 0.9, 'lid', base),
 ]
-model = [dict(key=k, label=l, color=c, opacity=o, group=g,
-               data=base64.b64encode((s if isinstance(s, np.ndarray) else tri(s)).tobytes()).decode())
-         for k, l, c, o, g, s in parts]
 SUB = ('既製ケース タカチ PF13-4-9 に、基板 r12 と市販の M3 スペーサーで VoiceS3R・指静脈・NFC・DB9 を収める版'
        '(印刷部品なし、天板の窓 2 つだけ加工: 試作は型紙で手加工、量産はタカチの穴加工)。ドラッグで回転、ホイール/ピンチで拡大。')
 DIMS = [('ケース', 'タカチ PF13-4-9(125 × 40 × 85、ABS)'), ('内側', '117 × 79 × 34.5、天板 3.0、パネル 2.0'),
@@ -412,22 +347,9 @@ NOTE = ('ケースはタカチ公式 STP を実測した数値からの簡略形
         'M5Stack 公式 STL(m5stack/M5_Hardware、Copyright (c) 2021 M5Stack、MIT License)をそのまま表示、'
         '干渉チェックはその外形の箱で行う。指静脈の外形は公式値(CAD が無いので、細部は製品写真を見て描いたイメージ)、'
         'DB9 と基板上の部品は KiCad のフットプリント寸法からの簡略形状、指静脈のコネクタ位置は未確定。単位 mm。')
-dims = ''.join(f'        <tr><td>{k}</td><td>{v}</td></tr>\n' for k, v in DIMS)
-site = os.path.join(ROOT, 'site/station-pf')
-os.makedirs(site, exist_ok=True)
-rows = []
-for label, p in downloads:
-    import shutil
-    shutil.copyfile(p, os.path.join(site, os.path.basename(p)))
-    rows.append(f'<a href="{os.path.basename(p)}" download>{label}<span>{os.path.basename(p)}</span></a>')
-rows.append('<p>試作は型紙を天板に貼って手で開ける(角をドリル → 糸のこ/カッター → やすり)。'
-            'まとめて作るときはタカチの穴加工(カスタム品 見積依頼)に DXF を添えて出す。</p>')
-tpl = open(os.path.join(ROOT, 'tools/station_template.html'), encoding='utf-8').read()
-page = os.path.join(site, 'index.html')
-open(page, 'w', encoding='utf-8').write(
-    tpl.replace('__MODEL__', json.dumps(model)).replace('__REV__', 'PF ' + REV).replace('__SUB__', SUB)
-    .replace('__DIMS__', dims).replace('__NOTE__', NOTE).replace('__TZ__', '-18').replace('__DOWNLOADS__', ''.join(rows)))
-print('wrote', page, os.path.getsize(page), 'bytes')
+write_page('station-pf', 'PF ' + REV, parts, SUB, DIMS, NOTE, TOP, downloads,
+           '<p>試作は型紙を天板に貼って手で開ける(角をドリル → 糸のこ/カッター → やすり)。'
+           'まとめて作るときはタカチの穴加工(カスタム品 見積依頼)に DXF を添えて出す。</p>')
 
 if bad:
     raise SystemExit('interference: ' + ', '.join(bad))
