@@ -24,7 +24,7 @@ import sys
 from shapes import box, rbox, cyl_z, union, vein_parts, write_page
 import cadquery as cq
 
-REV = 'vu10'
+REV = 'vu11'
 VARIANT = sys.argv[1] if len(sys.argv) > 1 else 'cs'
 VEIN = (-29.5, 29.5, -13.0, 13.0)                 # 59 × 26, centred (sic moves it, see there)
 
@@ -95,7 +95,7 @@ else:
             board = board.cut(cyl_z(sx * 33.0, sy * 12.5, 1.1, Z_BRD - 1, Z_BT + 1))
     VEIN_Z0 = Z_BT + 0.5                          # on VHB 0.5: 8.1, top 23.1, 3.1 proud
     STAND = None
-    GX1 = IX - 0.6 - 0.7                         # the Grove's front, 0.7 inside the board edge (as on the board)
+    GX1 = IX - 0.6 - 1.3 + 0.7                   # the Grove's body front: 0.6 inside the board edge (as on the board, u2)
     grove = box(GX1 - 7.0, GX1, -4.0, 4.0, Z_BT, Z_BT + 5.8)
     grove_plug = box(GX1, L / 2 + 10.0, -3.9, 3.9, Z_BT + 0.4, Z_BT + 5.4)
     ldo = box(9.5, 16.5, 16.0, 18.6, Z_BT, Z_BT + 1.2)                  # U1 + C1 / C2 beside J1 (as on the board)
