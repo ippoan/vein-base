@@ -5,7 +5,7 @@ Two cases, one run each:
                                            screw posts; no board, the wires are spliced in the end pocket
   python3 station/build_vein_unit.py sic   SIC5-9-2B 45 × 90 × 20 (¥270): a board as large as the inside on the
                                            four M2 bosses carries the module, the Grove socket and the LDO; the
-                                           module's cable runs along its side to J1 (MX1.25 4P) in the far end
+                                           module's cable runs along its side to J1 (MX1.25 4P) beside its middle
 Each writes the 3D preview site/vein-unit-<variant>/index.html and fails if the case collides with the module or the
 parts inside.
 
@@ -24,7 +24,7 @@ import sys
 from shapes import box, rbox, cyl_z, union, vein_parts, write_page
 import cadquery as cq
 
-REV = 'vu6'
+REV = 'vu7'
 VARIANT = sys.argv[1] if len(sys.argv) > 1 else 'cs'
 VEIN = (-29.5, 29.5, -13.0, 13.0)                 # 59 × 26, centred on both cases
 
@@ -81,8 +81,8 @@ else:
     body = body.union(bosses)
     # a board as large as the inside, screwed onto the four M2 bosses: the module on it with VHB, the Grove socket and
     # the LDO in the +x end; the module's cable (kit cable 4, 9P re-pinned to 3..6) turns from its plug at -x into the
-    # 7 wide gap beside the module and runs to J1 (MX1.25 4P, top entry) in the +x end (vu4 had J1 next to the plug:
-    # no room to bend; vu5 cut cable 6 and soldered it to pads)
+    # 7 wide gap beside the module and plugs into J1 (MX1.25 4P, top entry) in that gap beside the module's middle
+    # (vu4 had J1 next to the plug: no room to bend; vu6 at the +x end: the cable needed ~95 of its ~100)
     BRD_T = 1.6
     Z_BRD, Z_BT = 6.0, 6.0 + BRD_T                # on the boss tops
     board = rbox(-IX + 0.6, IX - 0.6, -IY + 0.6, IY - 0.6, Z_BRD, Z_BT, IR - 0.6)
@@ -98,17 +98,17 @@ else:
     ldo = box(33.0, 36.0, -8.5, -5.5, Z_BT, Z_BT + 1.2)
     Z_P = VEIN_Z0 + 1.5
     plug = box(VEIN[0] - 2.6, VEIN[0], -7.2, 7.2, Z_P, Z_P + 3.5)
-    j1 = box(35.0, 39.0, 5.0, 12.2, Z_BT, Z_BT + 4.0)                   # MX1.25 4P top entry, long side along y
-    j1_plug = box(35.3, 38.7, 5.4, 11.8, Z_BT + 4.0, Z_BT + 7.0)
+    j1 = box(-3.6, 3.6, 13.6, 18.0, Z_BT, Z_BT + 4.0)                   # MX1.25 4P top entry, long side along x
+    j1_plug = box(-3.3, 3.3, 13.9, 17.7, Z_BT + 4.0, Z_BT + 7.0)
     zc = (Z_P, Z_P + 2.8)                                               # the 4-wire cable, 2.8 × 1.8 on edge
-    cable = union(box(-35.0, VEIN[0] - 2.6, -1.4, 1.4, *zc), box(-35.0, -33.2, -1.4, 16.4, *zc),
-                  box(-35.0, 37.0, 14.6, 16.4, *zc), box(35.3, 37.0, 10.0, 16.4, zc[0], 14.9),   # under the lip (z 15)
-                  box(35.3, 37.0, 8.0, 12.0, Z_BT + 7.0, Z_BT + 8.4))                          # into the plug's top
+    zt = (Z_BT + 7.0, Z_BT + 8.8)                                       # over the plug, under the cover (17.5)
+    cable = union(box(-35.0, VEIN[0] - 2.6, -1.4, 1.4, *zc), box(-35.0, -33.2, -1.4, 17.0, zc[0], zt[1]),
+                  box(-35.0, 0.0, 14.4, 17.0, *zt))                     # along the gap, down into the plug's top
     hole = box(IX - 0.5, L / 2 + 1, -4.6, 4.6, Z_BT - 0.4, Z_BT + 6.2)
     body = body.cut(hole)
     inner = [('plug', 'MX1.25 9P プラグ(付属ケーブル)', '#e7e1cf', plug),
              ('cable', '付属ケーブル④(9P → 4P、9P 側の端子を 3・4・5・6 に差し替え)、指静脈の脇を通す', '#3a4046', cable),
-             ('j1', 'J1 MX1.25 4P(上向き、+x 端)', '#f1efe8', j1),
+             ('j1', 'J1 MX1.25 4P(上向き、指静脈の脇の真ん中)', '#f1efe8', j1),
              ('j1plug', '④ の 4P プラグ', '#e7e1cf', j1_plug),
              ('board', '基板(中いっぱい、M2 ボス 4 本にねじ止め、指静脈を VHB で載せる)', '#1f7a4d', board),
              ('screws', 'M2 なべねじ × 4', '#9aa0a6', screws),
@@ -120,7 +120,7 @@ else:
             ('加工', '蓋に指静脈の窓(外形 + 0.2)、端に Grove の穴 9.2 × 6.6'),
             ('基板', f'{2 * (IX - 0.6):.1f} × {2 * (IY - 0.6):.1f}(R{IR - 0.6:g})、ボスの上に M2 × 4 で留める、JLCPCB で実装'),
             ('指静脈', '基板の上に VHB 0.5 で貼る、蓋から 3.1 突き出す'),
-            ('配線', '付属ケーブル④(9P → 4P)の 9P 側の端子を 3・4・5・6 に差し替え、指静脈の脇(すき間 7)を通して +x 端の J1 へ(切らない)')]
+            ('配線', '付属ケーブル④(9P → 4P)の 9P 側の端子を 3・4・5・6 に差し替え、指静脈の脇(すき間 7)の真ん中の J1 へ(切らない)。J1 から LDO・Grove へは基板の配線')]
     SUB = ('指静脈モジュールをタカチ SIC5-9-2B(45 × 90 × 20)に入れ、中いっぱいの基板に載せて端の Grove ソケット 1 口で PortABC につなぐ案。')
 
 VEIN_WIN = (VEIN[0] - 0.2, VEIN[1] + 0.2, VEIN[2] - 0.2, VEIN[3] + 0.2, 2.2)
