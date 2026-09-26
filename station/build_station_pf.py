@@ -20,8 +20,9 @@ The model is conservative (it holds the STP's material in the space the parts us
 
 Stack (z): floor PCB bosses (top 3.5) | Takachi TPS-M2.3-7 tapping spacers (hex 5, 7 long, M2.3 tapping stud 4 into
 the boss, M2.3 female 5 deep) | board 10.5..12.1, M2.3 × 5 pan head screws on top | VoiceS3R 14.6..31.4 on the Ext.Pin
-(0.6 under the panel-groove ledge; its button is not used) | vein module on 6 mm spacers, pressed 0.1 against the top
-plate lip | Unit NFC on 12 mm spacers, 24.1..32.1, stuck to the top plate's underside with foam tape (gap 0.2..0.9), no
+(0.6 under the panel-groove ledge; its button is not used) | vein module on 12 mm spacers, 24.1..39.1: it stands 3.1
+proud of the top plate through a window of its outline + 0.3, so the 3 mm plate holds it sideways (its flange size is
+not needed; its bottom must be 8.9 + proud above the board, and J3 and its plug sit under it) | Unit NFC on 12 mm spacers, 24.1..32.1, stuck to the top plate's underside with foam tape (gap 0.2..0.9), no
 window: it reads through the 3 mm ABS (flush in a window would put its Grove plug into the top plate).
 The module spacers are stock M3 male-female, male end down through the board with a nut under it (H1..H8).
 The board is 92 wide (case x -46..46) to reach the bosses and stay clear of the corner screw bosses (|x| >= 46.3).
@@ -37,7 +38,7 @@ import cadquery as cq
 import ezdxf
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'pf4'
+REV = 'pf5'
 
 # ---- helpers ---------------------------------------------------------------------------------------------
 def box(x0, x1, y0, y1, z0, z1):
@@ -107,7 +108,7 @@ HOLES = [(27.0, 17.5), (14.9, 17.5), (27.0, 55.5), (14.9, 55.5), (5.2, 27.5), (-
 BOSSES = [(37.5, 3.2), (-49.5, 3.2), (37.5, 50.2), (-49.5, 50.2)]
 NFC_H, VEIN_H = (1, 2, 3, 4), (5, 6, 7, 8)
 MALE, NUT = 6.0, 2.4                                  # male thread length of the spacers, M3 nut height
-SP_NFC, SP_VEIN = 12.0, 6.0
+SP_NFC, SP_VEIN = 12.0, 12.0
 
 def at(bx, by):
     return VXP - bx, VYP + by
@@ -152,7 +153,8 @@ NFC = (-40.9, -16.9, -14.2, 33.8)                                  # 0.2 right o
 VEIN = (-15.2, 43.8, -5.2, 20.8)                                   # 0.3 behind the right front PCB boss
 atom = rbox(*VOICE, Z_ATOM, Z_ATOM + 16.8, 3.0)
 nfc = rbox(*NFC, ZBT + SP_NFC, ZBT + SP_NFC + 8.0, 1.5)
-vein = rbox(*VEIN, CEIL - 15.0, CEIL, 2.0)                         # 12 mm spacers push it 0.1 against the lip
+VEIN_Z0 = ZBT + SP_VEIN                                            # 24.1: top 39.1, 3.1 proud of the top plate
+vein = rbox(*VEIN, VEIN_Z0, VEIN_Z0 + 15.0, 2.0)
 NX = (NFC[0] + NFC[1]) / 2
 
 # spacers: M3 male-female, hex 5.5 across flats modelled as r 3.2 cylinders, male thread r 1.5, nut r 3.2 × 2.4,
@@ -160,7 +162,7 @@ NX = (NFC[0] + NFC[1]) / 2
 spacers = None
 for i, (bx, by) in enumerate(HOLES, 1):
     x, y = at(bx, by)
-    top = ZBT + SP_NFC if i in NFC_H else CEIL - 15.0
+    top = ZBT + SP_NFC if i in NFC_H else VEIN_Z0
     for p in (cyl_z(x, y, 3.2, ZBT, top), cyl_z(x, y, 1.5, ZBT - MALE, ZBT), cyl_z(x, y, 3.2, ZB - NUT, ZB)):
         spacers = p if spacers is None else spacers.union(p)
 for bx, by in BOSSES:
@@ -193,8 +195,8 @@ DB9_Z0, DB9_Z1 = Z_ATOM - 3.5, Z_ATOM + 11.0
 db9_plug = box(DB9_X0 + 0.25, DB9_X1 - 0.25, -80, -PANEL_IN - 0.1, DB9_Z0 + 0.25, DB9_Z1 - 0.25)
 
 # ---- machining (what Takachi cuts) -------------------------------------------------------------------------
-# top plate: vein window with a 1.0 lip, VoiceS3R window with a 1.2 lip; no NFC window
-VEIN_WIN = (VEIN[0] + 1, VEIN[1] - 1, VEIN[2] + 1, VEIN[3] - 1, 1.5)
+# top plate: vein window of its outline + 0.3 (it stands through), VoiceS3R window with a 1.2 lip; no NFC window
+VEIN_WIN = (VEIN[0] - 0.3, VEIN[1] + 0.3, VEIN[2] - 0.3, VEIN[3] + 0.3, 2.3)   # the module passes through
 VOICE_WIN = (VOICE[0] + 1.2, VOICE[1] - 1.2, VOICE[2] + 1.2, VOICE[3] - 1.2, 1.8)
 cover = cover.cut(rbox(*VEIN_WIN[:4], CEIL - 1, TOP + 1, VEIN_WIN[4]))
 cover = cover.cut(rbox(*VOICE_WIN[:4], CEIL - 1, TOP + 1, VOICE_WIN[4]))
@@ -288,7 +290,7 @@ parts = [
     ('caps', 'C1〜C5 0.1µF', '#b8a27a', 1, 'mods', caps),
     ('sw1', 'SW1 ストレート/クロス DIP', '#c0392b', 1, 'mods', sw1),
     ('db9', 'J4 DB9 オス', '#8a8f96', 1, 'mods', db9_body.union(db9_flange).union(db9_shell).union(db9_posts)),
-    ('spacers', 'タカチ TPS-M2.3-7(ボスの上)+ M3 オスメス+ナット(NFC 12 / 指静脈 6)', '#c9a227', 1, 'mods', spacers),
+    ('spacers', 'タカチ TPS-M2.3-7(ボスの上)+ M3 オスメス+ナット(NFC 12 / 指静脈 12)', '#c9a227', 1, 'mods', spacers),
     ('db9plug', 'DB9 プラグ(FC-1200 へ)', '#5c6166', 1, 'mods', db9_plug),
     ('usbplug', 'USB-C プラグ(Windows PC へ)', '#24292d', 1, 'mods', usb_plug),
     ('portaplug', 'PORT.A Grove プラグ(外で NFC へ折り返し)', '#c47f0e', 1, 'mods', porta_plug),
@@ -301,7 +303,7 @@ SUB = ('既製ケース タカチ PF13-4-9 に、基板 r12 と市販の M3 ス�
        '(印刷部品なし、穴はタカチの穴加工)。ドラッグで回転、ホイール/ピンチで拡大。')
 DIMS = [('ケース', 'タカチ PF13-4-9(125 × 40 × 85、ABS)'), ('内側', '117 × 79 × 34.5、天板 3.0、パネル 2.0'),
         ('基板', 'r12 92 × 71、ケースの基板用ボスに TPS-M2.3-7 と M2.3 ねじ'),
-        ('モジュール', 'NFC 12 / 指静脈 6 の M3 オスメスの上(基板の下でナット止め)'), ('天板の穴', '指静脈(返し 1.0)・VoiceS3R(返し 1.2)'),
+        ('モジュール', 'NFC 12 / 指静脈 12 の M3 オスメスの上(基板の下でナット止め)'), ('天板の穴', '指静脈(外形 + 0.3、3.1 突き出して横を押さえる)・VoiceS3R(返し 1.2)'),
         ('背面', 'パネルを付けない(USB-C / PORT.A ・ DB9 ・ NFC の Grove ケーブルをそのまま出す)'), ('NFC', '手前左、天板の裏に付ける(窓なし、3 mm 越しに読む)')]
 NOTE = ('ケースはタカチ公式 STP を実測した数値からの簡略形状です(STP は再配布しない)。モジュールの外形は公式値、'
         'DB9 と基板上の部品は KiCad のフットプリント寸法からの簡略形状、指静脈のコネクタ位置は未確定。単位 mm。')
