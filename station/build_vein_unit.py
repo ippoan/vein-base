@@ -9,15 +9,19 @@ SW-75 from Takachi's drawing (SW-75B.pdf, 2024-07-16): body 50 × 75 × 28 with 
 top (z 28..30) with a 1.6 lip 5 deep inside the body; usable inside 42.8 × 67.8 (the walls draw in towards the top,
 44.8 × 69.8 at the floor), which the model uses all the way up (conservative).
 Stack (z): floor 2 | M3 × 4 pan heads under the board (the feet, 2..4) | adapter board 1.6 (4..5.6): Grove socket
-(right angle, at the -x edge, behind a hole in the end wall), 5 V -> 3.3 V LDO, MX1.25 for the module's cable |
+(right angle, at the -x edge, behind a hole in the end wall), 5 V -> 3.3 V LDO, MX1.25 4P for the module's cable |
 M3 female-female spacers 10 (5.6..15.6) | VHB tape 1.0 | vein module 16.6..31.6: 1.6 proud of the cover, through a
 window of its outline + 0.2 cut in the cover, so the cover holds its top sideways and the tape its bottom.
+Module connector (MX1.25 9P, Waveshare wiki): 1 USB D+, 2 USB D-, 3 3.3V, 4 GND, 5 RXD, 6 TXD, 7 3.3V (main),
+8 WAKE-ON (touch wake-up out), 9 3.3V (always-on); UART use needs 3..6 only (wiki). The supplied 9P cable keeps its
+module end; its other end is re-crimped to an MX1.25 4P housing with 3, 4, 5, 6 (3.3V, GND, RXD, TXD, the order of
+J3 on the station board / vein-base) and the Grove lines go to 5 / 6 (G5 / G6 on PORT.C).
 Machining: the cover window and the Grove hole (9.2 × 6.6) in the -x end wall; nothing else.
 """
 import os
 from shapes import box, rbox, cyl_z, union, vein_parts, write_page
 
-REV = 'vu1'
+REV = 'vu2'
 L, W, H = 75.0, 50.0, 30.0        # SW-75 outside
 T, TC, LIP = 2.0, 2.0, 5.0        # wall / floor, cover, cover lip depth
 IX, IY = 67.8 / 2, 42.8 / 2       # usable inside (half)
@@ -36,7 +40,7 @@ spacers = union(*[cyl_z(x, y, 3.2, Z_BT, Z_BT + SP) for x, y in SPACERS])
 screws = union(*[cyl_z(x, y, 2.75, T, Z_BRD) for x, y in SPACERS])
 
 # ---- adapter board (Grove 5 V in -> LDO -> MX1.25 to the module) --------------------------------------------
-BRD = (-IX + 0.5, IX - 2.4, -IY + 2.4, IY - 2.4)
+BRD = (-IX + 0.5, IX - 0.5, -IY + 2.4, IY - 2.4)
 board = box(*BRD, Z_BRD, Z_BT)
 for x, y in SPACERS:
     board = board.cut(cyl_z(x, y, 1.6, Z_BRD - 1, Z_BT + 1))
@@ -45,9 +49,10 @@ grove = box(BRD[0], BRD[0] + 7.0, GROVE_Y - 4.0, GROVE_Y + 4.0, GROVE_Z, GROVE_Z
 grove_plug = box(-L / 2 - 10.0, BRD[0], GROVE_Y - 3.9, GROVE_Y + 3.9, GROVE_Z + 0.4, GROVE_Z + 5.4)
 ldo = box(-18.0, -15.0, 10.0, 11.6, Z_BT, Z_BT + 1.2).union(box(-13.0, -11.0, 9.8, 11.8, Z_BT, Z_BT + 1.0)) \
     .union(box(-21.0, -19.0, 9.8, 11.8, Z_BT, Z_BT + 1.0))
-j1 = box(26.0, 30.0, -5.0, 5.0, Z_BT, Z_BT + 4.0)                     # MX1.25, top entry, under the module's end
-j1_plug = box(26.3, 29.7, -4.6, 4.6, Z_BT + 4.0, Z_BT + 7.0)
-vein_plug = box(VEIN[1], VEIN[1] + 2.6, -6.0, 6.0, VEIN_Z0 + 1.5, VEIN_Z0 + 5.0)
+# MX1.25 4P, top entry, just past the module's end, clear of the spacers (the cable's board end is re-crimped to 4P)
+j1 = box(BRD[1] - 4.1, BRD[1] - 0.1, -4.4, 4.4, Z_BT, Z_BT + 4.0)
+j1_plug = box(BRD[1] - 3.8, BRD[1] - 0.4, -3.9, 3.9, Z_BT + 4.0, Z_BT + 7.0)
+vein_plug = box(VEIN[1], VEIN[1] + 2.6, -7.2, 7.2, VEIN_Z0 + 1.5, VEIN_Z0 + 5.0)
 cable = cyl_z(31.0, 0.0, 1.2, Z_BT + 7.0, VEIN_Z0 + 1.5).union(box(28.0, 31.0, -1.2, 1.2, Z_BT + 5.8, Z_BT + 7.0))
 
 # ---- case (Takachi SW-75, simplified from the drawing) ------------------------------------------------------
@@ -84,7 +89,7 @@ parts = [
     ('grove', 'Grove ソケット(HY2.0 4P、横向き)', '#f1efe8', 1, 'mods', grove),
     ('groveplug', 'Grove プラグ(PortABC の PORT.C へ)', '#c47f0e', 1, 'mods', grove_plug),
     ('ldo', 'LDO 5V→3.3V とコンデンサ', '#202326', 1, 'mods', ldo),
-    ('j1', 'J1 MX1.25(指静脈のケーブル)', '#f1efe8', 1, 'mods', j1),
+    ('j1', 'J1 MX1.25 4P(指静脈のケーブル、基板側を 4P に付け替え)', '#f1efe8', 1, 'mods', j1),
     ('j1plug', '指静脈ケーブルのプラグ', '#e7e1cf', 1, 'mods', j1_plug.union(vein_plug)),
     ('cable', '指静脈ケーブル(箱の中だけ、数 cm)', '#3a4046', 1, 'mods', cable),
     ('spacers', 'M3 メスメス 10(上面に VHB テープ)', '#c9a227', 1, 'mods', spacers),
@@ -97,9 +102,10 @@ DIMS = [('ケース', 'タカチ SW-75(50 × 75 × 30、ABS、はめ込み式の
         ('加工', 'カバーに指静脈の窓(外形 + 0.2、R2.2)、端面に Grove の穴 9.2 × 6.6'),
         ('指静脈', 'M3 メスメス 10 × 4 の上に VHB、カバーから 1.6 突き出す'),
         ('中継基板', f'{BRD[1] - BRD[0]:.1f} × {BRD[3] - BRD[2]:.1f}、M3 × 4 のなべ頭を足にして床に置く(床は加工なし)'),
-        ('電源', 'Grove の 5V を LDO で 3.3V に(指静脈は DC3.3V)')]
+        ('電源', 'Grove の 5V を LDO で 3.3V に(指静脈は DC3.3V ±3%、43 mA)'),
+        ('配線', '付属の 9P ケーブルの基板側を MX1.25 4P に付け替え(9P の 3 = 3.3V、4 = GND、5 RXD、6 TXD だけ使う、Wiki の UART 接続)。RXD / TXD は Grove の G5 / G6')]
 NOTE = ('ケースはタカチの図面(SW-75B.pdf)の寸法からの簡略形状、壁の抜き勾配は内側の有効寸法で代用。指静脈の外形は公式値、'
-        '細部は製品写真を見て描いたイメージで、コネクタの位置は未確定。中継基板と部品は仮の形。単位 mm。')
+        '細部は製品写真を見て描いたイメージで、コネクタの位置は未確定。ピン配置は Waveshare の Wiki による。中継基板と部品は仮の形。単位 mm。')
 write_page('vein-unit', '指静脈 Unit ' + REV, parts, SUB, DIMS, NOTE, Z_TOP, tz='-15')
 
 if bad:
