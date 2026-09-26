@@ -47,7 +47,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'pf8'
+REV = 'pf9'
 
 # ---- helpers ---------------------------------------------------------------------------------------------
 def box(x0, x1, y0, y1, z0, z1):
@@ -359,12 +359,29 @@ def stl_at(key, x, y, z):
     return (stl_tris(key) + np.float32([x, y, z - TOP])).reshape(-1).astype(np.float32)
 
 
+# the vein module as a picture only (Waveshare publishes no CAD): drawn by hand inside its 59 × 26 × 15 box after the
+# product photos, not measured. A finger scoop over the IR lens at +x, the flat dark window at -x, a channel across
+# the bottom and the MX1.25 9P socket in the +x end. The checks use the box `vein`.
+vx0, vx1, vy0, vy1 = VEIN
+vz1 = VEIN_Z0 + 15.0
+scoop = (cq.Workplane('XY').workplane(offset=vz1 - 9.0).center(vx1 - 19.0, (vy0 + vy1) / 2).rect(18.0, 9.0)
+         .workplane(offset=9.5).rect(31.0, 21.0).loft())
+vein_look = (rbox(*VEIN, VEIN_Z0, vz1, 2.0).edges('>Z').fillet(1.0).cut(scoop)
+             .cut(box(vx0 + 3.0, vx1 - 36.0, vy0 + 2.5, vy1 - 2.5, vz1 - 0.3, vz1 + 1))
+             .cut(box(vx0 + 26.0, vx0 + 36.0, vy0 - 1, vy1 + 1, VEIN_Z0 - 1, VEIN_Z0 + 1.5)))
+vein_win = box(vx0 + 3.0, vx1 - 36.0, vy0 + 2.5, vy1 - 2.5, vz1 - 0.3, vz1 - 0.05)
+vein_lens = cyl_z(vx1 - 19.0, (vy0 + vy1) / 2, 3.0, vz1 - 9.0, vz1 - 8.7)
+vein_socket = box(vx1 - 0.5, vx1 + 0.05, (vy0 + vy1) / 2 - 6.5, (vy0 + vy1) / 2 + 6.5, VEIN_Z0 + 1.5, VEIN_Z0 + 5.0)
+
 parts = [
     ('shell', 'カバー+前後パネル(タカチ PF13-4-9、実測からの簡略形状)', '#3d6fb6', 0.45, 'shell',
      cover.union(front_panel)),
     ('nfc', 'NFC Unit(公式 CAD、天板の裏に両面テープ、窓なし)', '#f2f2ee', 1, 'mods',
      stl_at('nfc', NX, (NFC[2] + NFC[3]) / 2, ZBT + SP_NFC + 2.8)),   # CAD z -2.8..5.2
-    ('vein', '指静脈モジュール(外形は公式値、コネクタ位置は未確定)', '#2e3538', 1, 'mods', vein),
+    ('vein', '指静脈モジュール(外形は公式値、細部は写真からのイメージ、コネクタ位置は未確定)', '#23272a', 1, 'mods', vein_look),
+    ('veinwin', '指静脈の平らな窓(イメージ)', '#0b0e10', 1, 'mods', vein_win),
+    ('veinlens', '指静脈のレンズ(イメージ)', '#3b4d5e', 1, 'mods', vein_lens),
+    ('veinsock', '指静脈の MX1.25 9P(位置はイメージ)', '#f1efe8', 1, 'mods', vein_socket),
     ('atom', 'VoiceS3R(公式 CAD)', '#1fa49a', 1, 'mods', stl_at('voice', VXP, VYP, Z_ATOM)),   # CAD z 0..16.8
     ('pcb', 'Station 基板 r12(92 × 71)', '#1f7a4d', 1, 'mods', pcb),
     ('hdrpl', 'ピンヘッダー樹脂', '#2b2f33', 1, 'mods', hdr_plastic),
@@ -393,7 +410,7 @@ DIMS = [('ケース', 'タカチ PF13-4-9(125 × 40 × 85、ABS)'), ('内側', '
         ('背面', 'パネルを付けない(USB-C / PORT.A ・ DB9 ・ NFC の Grove ケーブルをそのまま出す)'), ('NFC', '手前左、天板の裏に付ける(窓なし、3 mm 越しに読む)')]
 NOTE = ('ケースはタカチ公式 STP を実測した数値からの簡略形状です(STP は再配布しない)。VoiceS3R と NFC Unit の形は '
         'M5Stack 公式 STL(m5stack/M5_Hardware、Copyright (c) 2021 M5Stack、MIT License)をそのまま表示、'
-        '干渉チェックはその外形の箱で行う。指静脈の外形は公式値、'
+        '干渉チェックはその外形の箱で行う。指静脈の外形は公式値(CAD が無いので、細部は製品写真を見て描いたイメージ)、'
         'DB9 と基板上の部品は KiCad のフットプリント寸法からの簡略形状、指静脈のコネクタ位置は未確定。単位 mm。')
 dims = ''.join(f'        <tr><td>{k}</td><td>{v}</td></tr>\n' for k, v in DIMS)
 site = os.path.join(ROOT, 'site/station-pf')
