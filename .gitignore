@@ -9,3 +9,6 @@ station/*.pdf
 __pycache__/
 *.kicad_prl
 station/cad/
+pcb/vein_unit_board/*.kicad_pcb
+pcb/vein_unit_board/*.kicad_pro
+pcb/vein_unit_board/fp-lib-table
