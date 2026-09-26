@@ -66,7 +66,8 @@ def stl_at(key, x, y, z, z_top, turn=False):
 def vein_parts(rect, z0):
     """The vein module (x0, x1, y0, y1) standing on z0, long side along x, as a picture only (Waveshare publishes no
     CAD): drawn by hand inside its 59 × 26 × 15 box after the product photos, not measured. A finger scoop over the
-    IR lens at +x, the flat dark window at -x, a channel across the bottom and the MX1.25 9P socket in the +x end.
+    IR lens at +x, the flat dark window at -x, a channel across the bottom and the MX1.25 9P socket low in the -x end
+    (the flat window's end, where Waveshare's photo shows the cable leaving level).
     Interference checks use the plain box."""
     vx0, vx1, vy0, vy1 = rect
     vz1 = z0 + 15.0
@@ -81,7 +82,7 @@ def vein_parts(rect, z0):
              box(vx0 + 3.0, vx1 - 36.0, vy0 + 2.5, vy1 - 2.5, vz1 - 0.3, vz1 - 0.05)),
             ('veinlens', '指静脈のレンズ(イメージ)', '#3b4d5e', 1, 'mods', cyl_z(vx1 - 19.0, yc, 3.0, vz1 - 9.0, vz1 - 8.7)),
             ('veinsock', '指静脈の MX1.25 9P(位置はイメージ)', '#f1efe8', 1, 'mods',
-             box(vx1 - 0.5, vx1 + 0.05, yc - 6.5, yc + 6.5, z0 + 1.5, z0 + 5.0))]
+             box(vx0 - 0.05, vx0 + 0.5, yc - 6.5, yc + 6.5, z0 + 1.5, z0 + 5.0))]
 
 
 def write_page(sub_dir, rev, parts, sub, dims, note, z_top, downloads=(), extra='', tz='-18'):
