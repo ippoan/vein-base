@@ -7,7 +7,7 @@ and fails if the enclosure collides with a module, plug or cable.
 Coordinates are the same as build_station.py: x = left→right, `ys` = back→front (Y = -ys), z = 0 at the top surface,
 down is negative.
 
-CoreS3 SE and Unit NFC come from M5Stack's official STL (m5stack/M5_Hardware, MIT, pinned below; downloaded into
+CoreS3 SE and Unit NFC come from M5Stack's official STL (m5stack/M5_Hardware, MIT, pinned in m5_cad.py; downloaded into
 station/cad/ on first run). Port positions measured from them:
   CoreS3 SE 54 × 54 × 16.5. Screen landscape, touch buttons at the front. PWR / USB-C / PORT.A are all on the LEFT
   side (back → front); microSD and the reset button on the front; speaker on the right; M-Bus along the right half
@@ -23,15 +23,13 @@ The finger vein module is a 59 × 26 × 15 block of the official outline (Wavesh
 https://www.waveshare.com/finger-vein-scanner-module-a.htm); only its connector position is not known yet.
 Still provisional: RS232M (no official CAD; 54 × 54 × 13.2 block, DB9 side), the breakout PCB.
 """
-import base64, json, os, urllib.request
+import base64, json, os
 import numpy as np
 import cadquery as cq
+from m5_cad import stl_tris
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REV = 'se2'
-
-M5HW = 'https://raw.githubusercontent.com/m5stack/M5_Hardware/a240115c94b19ecf647f229c47fa9a8ce46ccdc4/Products/'
-CAD = {'core': 'K128-SE_CoreS3-SE/Structures/CoreS3-SE.stl', 'nfc': 'U216_Unit_NFC/Structures/Unit_NFC.stl'}
 
 W, D = 129.0, 65.0           # outer size (x, ys)
 WALL, TOP, LID = 2.0, 1.5, 2.0
@@ -190,22 +188,6 @@ for name, part in (('shell', shell), ('lid', lid)):
 
 
 # ---- 3D preview ------------------------------------------------------------------------------------------
-def stl_tris(key):
-    """Triangles (n, 3, 3) of the assembled copy in an official M5Stack STL (binary), downloaded once."""
-    rel = CAD[key]
-    path = os.path.join(ROOT, 'station', 'cad', os.path.basename(rel))
-    if not os.path.exists(path):
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        urllib.request.urlretrieve(M5HW + rel, path)
-    raw = open(path, 'rb').read()
-    n = int(np.frombuffer(raw, '<u4', 1, 80)[0])
-    rec = np.frombuffer(raw, np.dtype([('n', '<f4', 3), ('v', '<f4', (3, 3)), ('a', '<u2')]), n, 84)
-    t = rec['v']
-    # the files hold an assembled copy and an exploded copy; keep the assembled one by where it lies
-    c = t.mean(axis=1)
-    return t[c[:, 2] > -30] if key == 'core' else t[c[:, 0] < 15]
-
-
 def mesh_core(t):
     x, y, z = t[..., 0], t[..., 1], t[..., 2]
     return np.stack([CX + x, -(CYS + z), core_z(y)], axis=-1)
