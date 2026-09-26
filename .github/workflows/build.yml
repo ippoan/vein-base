@@ -80,6 +80,20 @@ jobs:
           python3 tools/check_drc.py --board pcb/station_board/station_board.kicad_pcb --report fab/station/drc.rpt --ignore silk_edge_clearance
           python3 tools/check_drc.py --board pcb/station_board/station_board_pf.kicad_pcb --report fab/station_pf/drc.rpt --ignore silk_edge_clearance
 
+      - name: Build Vein Unit board (KiCad) + DRC
+        run: |
+          cd pcb/vein_unit_board && python3 build_board.py && cd ../..
+          B=pcb/vein_unit_board/vein_unit_board.kicad_pcb; D=fab/vein_unit
+          mkdir -p $D/gerber
+          kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o $D/gerber/ $B
+          kicad-cli pcb export drill --format excellon --excellon-separate-th -o $D/gerber/ $B
+          kicad-cli pcb export pos --format csv --units mm --side both -o $D/pos.csv $B
+          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o $D/vein_unit_board_v${VER}_fitcheck_1to1.pdf $B
+          (cd $D/gerber && zip -q ../vein_unit_board_v${VER}_gerbers.zip *)
+          python3 tools/make_jlc_cpl.py --pos $D/pos.csv --bom pcb/vein_unit_board/jlc_bom.csv --prefix vein_unit_board_v --outdir $D \
+            --corrections pcb/vein_unit_board/jlc_cpl_corrections.csv
+          python3 tools/check_drc.py --board $B --report $D/drc.rpt
+
       - name: Build case (CadQuery)
         run: cd case && python3 build_case.py
 
@@ -113,6 +127,7 @@ jobs:
             station/vein_station_*
             fab/station/*
             fab/station_pf/*
+            fab/vein_unit/*
 
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'

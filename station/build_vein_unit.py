@@ -24,7 +24,7 @@ import sys
 from shapes import box, rbox, cyl_z, union, vein_parts, write_page
 import cadquery as cq
 
-REV = 'vu9'
+REV = 'vu10'
 VARIANT = sys.argv[1] if len(sys.argv) > 1 else 'cs'
 VEIN = (-29.5, 29.5, -13.0, 13.0)                 # 59 × 26, centred (sic moves it, see there)
 
@@ -72,7 +72,7 @@ else:
     # body 0..17.5 (floor 2.0, walls ~2.2, inside ±39.8 × ±20.3 with R10 ends), cover plate 17.5..20 with a 1.0
     # lip down to z 15 inside the walls; four PCB bosses r 1.95 at (±33, ±12.5), floor to z 6.
     NAME, CASE, PRICE = 'SIC5-9-2B', '45 × 90 × 20', '¥270'
-    VEIN = (-29.5, 29.5, -15.0, 11.0)             # 2.0 off centre: a 9.1 gap on +y for J1, 5.1 on -y
+    VEIN = (-29.5, 29.5, -16.5, 9.5)              # 3.5 off centre: a 10.0 gap on +y for J1 (board pcb/vein_unit_board)
     L, W, H, ZC, FLOOR = 90.0, 45.0, 20.0, 17.5, 2.0
     IX, IY, IR = 39.6, 20.1, 10.0
     body = rbox(-L / 2, L / 2, -W / 2, W / 2, 0, ZC, 12.5).cut(rbox(-IX, IX, -IY, IY, FLOOR, ZC + 1, IR))
@@ -95,17 +95,18 @@ else:
             board = board.cut(cyl_z(sx * 33.0, sy * 12.5, 1.1, Z_BRD - 1, Z_BT + 1))
     VEIN_Z0 = Z_BT + 0.5                          # on VHB 0.5: 8.1, top 23.1, 3.1 proud
     STAND = None
-    GX1 = IX - 0.6
+    GX1 = IX - 0.6 - 0.7                         # the Grove's front, 0.7 inside the board edge (as on the board)
     grove = box(GX1 - 7.0, GX1, -4.0, 4.0, Z_BT, Z_BT + 5.8)
     grove_plug = box(GX1, L / 2 + 10.0, -3.9, 3.9, Z_BT + 0.4, Z_BT + 5.4)
-    ldo = box(33.0, 36.0, -8.5, -5.5, Z_BT, Z_BT + 1.2)
+    ldo = box(9.5, 16.5, 16.0, 18.6, Z_BT, Z_BT + 1.2)                  # U1 + C1 / C2 beside J1 (as on the board)
     Z_P = VEIN_Z0 + 1.5
     YC = (VEIN[2] + VEIN[3]) / 2
     plug = box(VEIN[0] - 2.6, VEIN[0], YC - 7.2, YC + 7.2, Z_P, Z_P + 3.5)
-    # 53261-0471 is 7.95 wide over its metal fitting nails (3.75 + 4.2), which stand up the housing's ends: it needs
-    # the 9.1 gap the module's 2.0 offset leaves (the other side keeps 5.1)
-    J1Y = (VEIN[3] + 0.6, VEIN[3] + 0.6 + 7.95)
-    j1 = box(0.0, 5.5, *J1Y, Z_BT, Z_BT + 3.4)                          # opening at x = 0
+    # 53261-0471 is 7.95 wide over its metal fitting nails (3.75 + 4.2), which stand up the housing's ends, and its
+    # pads 9.4 (narrowed, pcb/vein_base.pretty): centred at y 14.3 as on the board (pcb/vein_unit_board/build_board.py)
+    JC0 = 14.3
+    J1Y = (JC0 - 3.975, JC0 + 3.975)
+    j1 = box(0.0, 4.3, *J1Y, Z_BT, Z_BT + 3.4)                          # opening at x = 0
     JC = (J1Y[0] + J1Y[1]) / 2
     j1_plug = box(-5.5, 0.0, JC - 2.5, JC + 2.5, Z_BT + 0.4, Z_BT + 3.0)
     zr = (Z_BT + 1.2, Z_BT + 4.0)                                       # the 4-wire cable in the gap, level
@@ -127,7 +128,7 @@ else:
             ('中', '79.6 × 40.6 × 15.5(端は R10、STP の実測)、床に M2 用ボス 4 本(66 × 25、高さ 4)'),
             ('加工', '蓋に指静脈の窓(外形 + 0.2)、端に Grove の穴 9.2 × 6.6'),
             ('基板', f'{2 * (IX - 0.6):.1f} × {2 * (IY - 0.6):.1f}(R{IR - 0.6:g})、ボスの上に M2 × 4 で留める、JLCPCB で実装'),
-            ('指静脈', '基板の上に VHB 0.5 で貼る、蓋から 3.1 突き出す。J1 の側へすき間 9.1 を空けるため中心から 2.0 ずらす'),
+            ('指静脈', '基板の上に VHB 0.5 で貼る、蓋から 3.1 突き出す。J1 の側へすき間 10.0 を空けるため中心から 3.5 ずらす'),
             ('配線', '付属ケーブル④(9P → 4P)の 9P 側の端子を 3・4・5・6 に差し替え、指静脈の脇(すき間 7)の真ん中の横向き J1 へまっすぐ挿す(切らない、曲げは -x 端の U ターンだけ)。J1 から LDO・Grove へは基板の配線')]
     SUB = ('指静脈モジュールをタカチ SIC5-9-2B(45 × 90 × 20)に入れ、中いっぱいの基板に載せて端の Grove ソケット 1 口で PortABC につなぐ案。')
 

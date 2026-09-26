@@ -1,0 +1,5 @@
+Comment,Designator,Footprint,LCSC Part #,Note
+Molex PicoBlade 53261-0471 (MX1.25 4P RA SMD),J1,Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal_NarrowMP,C696092,Top side; opening faces -x (the vein module's plug); MP pads narrowed in pcb/vein_base.pretty
+"HY2.0-4P right angle SMD (Grove), JST PH S4B-PH-SM4-TB footprint",J2,JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal,C722729,Top side; opening faces the +x edge; check the pads against JLC's footprint in the assembly preview
+XC6206P332MR-G (3.3 V LDO 200 mA SOT-23),U1,SOT-23,C5446,Basic part
+"1uF 25V X5R 0603","C1,C2",C_0603_1608Metric,C14664,C1 = 5 V in / C2 = 3.3 V out

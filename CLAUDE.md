@@ -24,7 +24,7 @@ edit shared parts there.
 - Ext.Pin の 2 列は **−y 端(y=−7.62)で揃う**。J1(x=+7.62)は +2.54 から 3V3,G5,G6,G7,G8、J2(x=−7.62)は 0 から G39,G38,5V,GND。実機の底面シルクで確認済み。ヘッダー位置を動かすときは基板・ケースのスロット・viewer の 3 か所を必ず一緒に直す。
 - 版番号は `VERSION` だけで管理する。出力ファイル名(`vein_base_v<版>_*`)、Artifacts 名(`vein-base-v<版>-fab`)、基板裏シルクはここから入る。形状や配線を変えたら上げる。
 - 生成物(STL / STEP / PDF / gerber zip / CPL)は git に入れない(`.gitignore` 済み)。古い生成物を発注しかけた事故があったため。取得は常に CI の Artifacts から。
-- BOM の元データは vein-base が `pcb/jlc_bom.csv`、station 基板が `pcb/station_board/jlc_bom.csv`(どちらも LCSC 品番入り)。`fab/` は CI の出力先。
+- BOM の元データは vein-base が `pcb/jlc_bom.csv`、station 基板が `pcb/station_board/jlc_bom.csv`、指静脈 Unit の基板が `pcb/vein_unit_board/jlc_bom.csv`(どれも LCSC 品番入り)。`fab/` は CI の出力先。
 - フットプリントは lib nickname 付きで置き、`build_pcb.py` がプロジェクトローカルの `fp-lib-table` を書き出す(DRC の lib_footprint_* 警告対策)。標準から変えたフットプリントは `pcb/vein_base.pretty/` に置く(例: 2.4 mm の M2 穴)。
 - `pcb/vein_base.kicad_pcb` は `build_pcb.py` の出力。手で編集せず、スクリプトを直す。
 
@@ -53,7 +53,7 @@ Common auto-merge / `Refs #N` rules are in user memory. Only repo-specific value
 
 `station/build_station.py` 1 本で、筐体(`shell` = 天板+壁、`lid` = 底蓋+台)の STEP / STL と `site/station/` の 3D プレビューを作る。変更のたびに `REV`(r1, r2, …)を上げ、1 変更 1 PR で出す。基板は `pcb/station_board/`(r12、`build_board.py`)が生成する 60 × 35 mm の 1 枚基板で、VoiceS3R の Ext.Pin・指静脈 J3(G5/G6)・MAX3232(G7=送信 / G8=受信)・DIP(1+2 = Passthrough、3+4 = Cross)・DB9 オス RA をまとめ、接続口はすべて奥の壁に出す。同じ回路・同じ配線で外形を広げた版(`build_board.py pf` → `station_board_pf`、92 × 71)は、既製ケースタカチ PF13-4-9 用(印刷部品なし)。基板はケースに元からある基板用ボス(87 × 47)にタカチ TPS-M2.3-7 と M2.3 ねじで留め、モジュールは M3 オスメス六角スペーサーとナットで基板に立てる。60 × 35 の範囲と配線は共通。ケース側は `station/build_station_pf.py`(ケースはタカチ公式 STP の実測値からの簡略形状、STP は入れない)が、干渉チェック・3D プレビュー(`site/station-pf/`)・タカチの穴加工に出す DXF と手加工用の原寸型紙 PDF(A4、どちらも天板の窓 2 つだけ、Pages の site/station-pf/ から取れる)を作る。接続口はすべて背面なので背面パネルは付けない。基板の穴(H1..H8、B1..B4)はこのスクリプトと `build_board.py` の 2 か所にあるので一緒に直す。正本は `build_board.py` / `build_station.py` の docstring。
 
-- 指静脈 Unit(`station/build_vein_unit.py cs|sic`、`site/vein-unit-cs/`・`site/vein-unit-sic/`、REV vu3〜): 指静脈モジュールだけを小さいタカチのケースに入れ、Grove 1 本(5V → LDO で 3.3V)で PortABC の PORT.C につなぐ案。机に並べて使う想定。`cs` = CS75N-B(35 × 75 × 12、ねじの柱の間にはめ込み、端のすき間で線を直付け)、`sic` = SIC5-9-2B(45 × 90 × 20、中いっぱいの基板を M2 ボス 4 本に留め、その上に指静脈、基板に Grove ソケット・LDO、付属ケーブル④(9P → 4P)の 9P 側の端子を 3〜6 に差し替え、指静脈の脇の真ん中の横向き J1(53261-0471)へまっすぐ挿す)。ケースはタカチ STP の実測値からの簡略形状(STP は入れない)。付属ケーブルは平らな窓の側の端面から水平に出る MX1.25 9P、反対側はデュポン。box ヘルパー・指静脈のイメージ形状・ページ出力は `station/shapes.py`(PF と共有)。
+- 指静脈 Unit(`station/build_vein_unit.py cs|sic`、`site/vein-unit-cs/`・`site/vein-unit-sic/`、REV vu3〜): 指静脈モジュールだけを小さいタカチのケースに入れ、Grove 1 本(5V → LDO で 3.3V)で PortABC の PORT.C につなぐ案。机に並べて使う想定。`cs` = CS75N-B(35 × 75 × 12、ねじの柱の間にはめ込み、端のすき間で線を直付け)、`sic` = SIC5-9-2B(45 × 90 × 20、中いっぱいの基板を M2 ボス 4 本に留め、その上に指静脈、基板に Grove ソケット・LDO、付属ケーブル④(9P → 4P)の 9P 側の端子を 3〜6 に差し替え、指静脈の脇の真ん中の横向き J1(53261-0471)へまっすぐ挿す)。基板は `pcb/vein_unit_board/build_board.py`(u1、78 × 39、M2 × 4、配線もスクリプトに直書き、CI で gerber / CPL / DRC → `fab/vein_unit/`)。指静脈の位置(y −16.5〜9.5)と J1 の位置は 3D と基板の 2 か所にあるので一緒に直す。ケースはタカチ STP の実測値からの簡略形状(STP は入れない)。付属ケーブルは平らな窓の側の端面から水平に出る MX1.25 9P、反対側はデュポン。box ヘルパー・指静脈のイメージ形状・ページ出力は `station/shapes.py`(PF と共有)。
 - 座標: x = 左→右、`ys` = 奥→手前(3D では Y = −ys)、z = 天面 0 で下向きが負。上面図(artifact のたたき台)と同じ数値で書く。
 - 配置(r9): 左端に NFC を縦置き(Grove 端子は手前)、その右の上段に指静脈、下段に VoiceS3R。VoiceS3R の USB-C / PORT.A / J3 の辺は右のケーブル置き場に向け、USB ケーブルは右の壁の下端から出す。外形 91 × 63 × 27.6。
 - 固定方法はどのモジュールも同じ: 底蓋の台で下から押し上げ、天板の返しに当て、天板から垂らした短い枠(縁取り)で横を固定。モジュールにネジは使わない。
