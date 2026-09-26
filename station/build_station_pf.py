@@ -1,9 +1,10 @@
 """Vein Station PF: the station in an off-the-shelf Takachi PF13-4-9 (125 × 40 × 85, ABS, front/back panels, ¥710)
 instead of a printed enclosure. Nothing is printed: the station board r12 (pcb/station_board, `build_board.py pf`)
 stands on the case's own PCB bosses (Takachi TPS-M2.3-7 tapping spacers), and the modules stand on stock M3
-male-female spacers on the board. Takachi machines only the two top plate windows.
+male-female spacers on the board. The only machining is the two top plate windows (cut by hand on the prototypes).
 Run from the repository root:  python3 station/build_station_pf.py
-Writes the hole drawing for Takachi's machining service (station/vein_station_pf<N>_top.dxf) and the
+Writes the hole drawing for Takachi's machining service (station/vein_station_pf<N>_top.dxf), a 1:1 paper
+template for cutting the same windows by hand (station/vein_station_pf<N>_top_template_1to1.pdf, A4) and the
 3D preview site/station-pf/index.html, and fails if the case collides with a module, plug, spacer or the board, or
 two of those collide with each other.
 
@@ -38,9 +39,12 @@ import base64, json, os
 import numpy as np
 import cadquery as cq
 import ezdxf
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'pf6'
+REV = 'pf7'
 
 # ---- helpers ---------------------------------------------------------------------------------------------
 def box(x0, x1, y0, y1, z0, z1):
@@ -257,18 +261,86 @@ def sheet(name, title, notes, draw, x0, y0):
     return path
 
 
+TOP_OUTLINE = (-62.5, 62.5, -42.5, 42.5, 17.0)   # the cover seen from above
+TOP_WINS = [('vein', VEIN_WIN), ('VoiceS3R', VOICE_WIN)]
+
+
 def draw_top(msp):
     # seen from above, origin = case centre (x across 125, y across 85, back panel at the bottom)
-    rrect(msp, -62.5, 62.5, -42.5, 42.5, 17.0, 'OUTLINE')
-    rrect(msp, *VEIN_WIN, 'CUT')
-    rrect(msp, *VOICE_WIN, 'CUT')
+    rrect(msp, *TOP_OUTLINE, 'OUTLINE')
+    for _, w in TOP_WINS:
+        rrect(msp, *w, 'CUT')
 
 
-dxfs = [
-    sheet('top', 'PF13-4-9 cover (top plate) - seen from above, origin = case centre, back panel side = -y',
+def rrect_xy(x0, x1, y0, y1, r, n=16):
+    """The same rounded rectangle as rrect(), as a closed point list for the PDF."""
+    pts = []
+    for cx, cy, a0 in ((x1 - r, y0 + r, -90), (x1 - r, y1 - r, 0), (x0 + r, y1 - r, 90), (x0 + r, y0 + r, 180)):
+        a = np.radians(np.linspace(a0, a0 + 90, n + 1))
+        pts += list(zip(cx + r * np.cos(a), cy + r * np.sin(a)))
+    return np.array(pts + pts[:1])
+
+
+def top_template(name):
+    """A4 portrait, 1 mm on paper = 1 mm: the cover's outline and the two windows seen from above, to lay face up
+    on the cover and cut the windows by hand. Same geometry as the DXF (draw_top)."""
+    W, H = 210.0, 297.0
+    fig = plt.figure(figsize=(W / 25.4, H / 25.4))
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(-W / 2, W / 2)
+    ax.set_ylim(-190, H - 190)   # the case centre sits 107 below the top of the sheet
+    ax.set_aspect('equal')
+    ax.axis('off')
+    x0c, x1c, y0c, y1c, _ = TOP_OUTLINE
+    txt = lambda x, y, s, **k: ax.text(x, y, s, fontsize=k.pop('fs', 7), family=k.pop('family', 'DejaVu Sans'), **k)
+    ax.plot(*rrect_xy(*TOP_OUTLINE).T, color='0.35', lw=0.6)
+    ax.plot([x0c + 4, x1c - 4], [0, 0], color='0.6', lw=0.3, ls='-.')
+    ax.plot([0, 0], [y0c + 4, y1c - 4], color='0.6', lw=0.3, ls='-.')
+    txt(0, y1c + 2.5, 'FRONT', ha='center', fs=8, weight='bold')
+    txt(0, y0c - 5.5, 'BACK  (back panel side, -y: USB-C / PORT.A / DB9 cables come out here)', ha='center', fs=8,
+        weight='bold')
+    rows = []
+    for label, (x0, x1, y0, y1, r) in TOP_WINS:
+        ax.plot(*rrect_xy(x0, x1, y0, y1, r).T, color='#d0021b', lw=0.5)
+        for cx, cy in ((x0 + r, y0 + r), (x1 - r, y0 + r), (x1 - r, y1 - r), (x0 + r, y1 - r)):   # corner drills
+            ax.plot([cx - 1.2, cx + 1.2], [cy, cy], color='#d0021b', lw=0.25)
+            ax.plot([cx, cx], [cy - 1.2, cy + 1.2], color='#d0021b', lw=0.25)
+        txt((x0 + x1) / 2, (y0 + y1) / 2 + 1.5, label, ha='center', va='center', fs=7, weight='bold', color='#d0021b')
+        txt((x0 + x1) / 2, (y0 + y1) / 2 - 2.5, f'{x1 - x0:.1f} x {y1 - y0:.1f}  R{r:g}', ha='center', va='center',
+            fs=6, color='#d0021b')
+        rows.append(f'{label:9s} {x1 - x0:5.1f} x {y1 - y0:4.1f}  R{r:<4g} left {x0 - x0c:5.1f}  right {x1c - x1:5.1f}'
+                    f'  back {y0 - y0c:5.1f}  front {y1c - y1:5.1f}   drill at the + marks, dia {2 * r:.1f} or less')
+    # 50 mm check ruler
+    ry = -72
+    ax.plot([-25, 25], [ry, ry], color='k', lw=0.6)
+    for i in range(6):
+        ax.plot([-25 + 10 * i] * 2, [ry, ry + (3 if i in (0, 5) else 1.8)], color='k', lw=0.4)
+    txt(0, ry - 4.5, '50 mm: measure this line. If it is not 50 mm, reprint.', ha='center', fs=7)
+    notes = [f'Vein Station {REV} - PF13-4-9 cover (top plate) cutting template, 1:1, seen from above',
+             'PRINT AT 100% / ACTUAL SIZE (no "fit to page", no scaling).',
+             'Lay the sheet face up on the cover, BACK toward the open back (the back panel is not used),',
+             'and line up the grey outline (125 x 85, R17) with the cover edges. Centre lines = case centre.',
+             'Red = cut through (windows); + = corner drill centres. Unit mm. Distances from the outline:',
+             ''] + rows + ['', 'No window for the NFC unit (it reads through the 3 mm plate).',
+                           'Same geometry as ' + f'vein_station_{REV}_top.dxf (for Takachi machining).']
+    y = -86
+    for i, t in enumerate(notes):
+        txt(-95, y, t, fs=6.2 if t in rows else 7, family='DejaVu Sans Mono' if t in rows else 'DejaVu Sans',
+            weight='bold' if i < 2 else 'normal')
+        y -= 5
+    path = os.path.join(out, f'vein_station_{REV}_{name}.pdf')
+    fig.savefig(path, metadata={'CreationDate': None})
+    plt.close(fig)
+    print('wrote', path)
+    return path
+
+
+downloads = [
+    ('穴加工図(DXF、タカチの穴加工用)', sheet('top', 'PF13-4-9 cover (top plate) - seen from above, origin = case centre, back panel side = -y',
           ['CUT: through (2 windows: vein, VoiceS3R; corner R as drawn)', 'no window for the NFC unit',
            'the back panel is not used (no machining)', 'unit mm'], draw_top,
-          -62.5, -50),
+          -62.5, -50)),
+    ('天板の型紙(PDF、A4 原寸 — 拡大縮小なしで印刷)', top_template('top_template_1to1')),
 ]
 
 # ---- 3D preview ------------------------------------------------------------------------------------------
@@ -303,7 +375,7 @@ parts = [
 model = [dict(key=k, label=l, color=c, opacity=o, group=g, data=base64.b64encode(tri(s).tobytes()).decode())
          for k, l, c, o, g, s in parts]
 SUB = ('既製ケース タカチ PF13-4-9 に、基板 r12 と市販の M3 スペーサーで VoiceS3R・指静脈・NFC・DB9 を収める版'
-       '(印刷部品なし、穴はタカチの穴加工)。ドラッグで回転、ホイール/ピンチで拡大。')
+       '(印刷部品なし、天板の窓 2 つだけ加工: 試作は型紙で手加工、量産はタカチの穴加工)。ドラッグで回転、ホイール/ピンチで拡大。')
 DIMS = [('ケース', 'タカチ PF13-4-9(125 × 40 × 85、ABS)'), ('内側', '117 × 79 × 34.5、天板 3.0、パネル 2.0'),
         ('基板', 'r12 92 × 71、ケースの基板用ボスに TPS-M2.3-7 と M2.3 ねじ'),
         ('モジュール', 'NFC 12 / 指静脈 12(上面に VHB テープ)の M3 オスメスの上(基板の下でナット止め)'), ('天板の穴', '指静脈(外形 + 0.2、4.1 突き出して横を押さえる)・VoiceS3R(返し 1.2)'),
@@ -314,11 +386,12 @@ dims = ''.join(f'        <tr><td>{k}</td><td>{v}</td></tr>\n' for k, v in DIMS)
 site = os.path.join(ROOT, 'site/station-pf')
 os.makedirs(site, exist_ok=True)
 rows = []
-for p in dxfs:
+for label, p in downloads:
     import shutil
     shutil.copyfile(p, os.path.join(site, os.path.basename(p)))
-    rows.append(f'<a href="{os.path.basename(p)}" download>穴加工図<span>{os.path.basename(p)}</span></a>')
-rows.append('<p>タカチの穴加工(カスタム品 見積依頼)に DXF を添えて出す。</p>')
+    rows.append(f'<a href="{os.path.basename(p)}" download>{label}<span>{os.path.basename(p)}</span></a>')
+rows.append('<p>試作は型紙を天板に貼って手で開ける(角をドリル → 糸のこ/カッター → やすり)。'
+            'まとめて作るときはタカチの穴加工(カスタム品 見積依頼)に DXF を添えて出す。</p>')
 tpl = open(os.path.join(ROOT, 'tools/station_template.html'), encoding='utf-8').read()
 page = os.path.join(site, 'index.html')
 open(page, 'w', encoding='utf-8').write(
