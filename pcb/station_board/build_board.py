@@ -14,12 +14,12 @@ The station turns the board 180° (USB-C side to the back): x_st = VX - x, ys_st
 
 Two outlines of the same circuit (same parts, same routing), both r12:
   printed        60 × 35, for the printed enclosure (station/build_station.py) -> station_board.kicad_pcb
-  'pf'           86 × 71, for the Takachi PF13-4-9 off-the-shelf case -> station_board_pf.kicad_pcb.
-                 The outline grows under the Unit NFC (+x) and the vein module (+y) only, so the 60 × 35 area and its
-                 tracks stay as they are. Twelve M3 holes carry stock male-female hex spacers + nuts instead of printed
-                 parts: board -> NFC 12 + 6 mm (H1..H4) and -> vein 12 mm (H5..H8), male end down with a nut under
-                 the board; floor -> board 6 mm at the board's corners (H10..H12, and H9 for the back right corner where
-                 the DB9 and SW1 are), male end up with a nut on top.
+  'pf'           92 × 71, for the Takachi PF13-4-9 off-the-shelf case -> station_board_pf.kicad_pcb.
+                 The outline grows around the 60 × 35 area only, so its parts and tracks stay as they are.
+                 The board stands on the case's own PCB bosses (87 × 47) on Takachi TPS-M2.3-7 tapping spacers and
+                 M2.3 screws (B1..B4, 2.6 cut-outs drawn on Edge.Cuts: a footprint's courtyard would overlap SW1's).
+                 The modules stand on stock M3 male-female hex spacers, male end down through the board with a nut
+                 under it: NFC 12 mm (H1..H4), vein 6 mm (H5..H8).
 
 Routing comes from freerouting and is kept in station_board.ses (the board file itself is always generated):
     python3 build_board.py dsn     # placement only -> station_board.dsn (feed it to freerouting -> .ses)
@@ -41,16 +41,15 @@ mm = pcbnew.FromMM
 X0, X1, Y0, Y1 = -48.0, 12.0, -11.0, 24.0
 J3_EDGE = Y1                 # J3 stays on the 60 × 35 front edge in both outlines
 DB9_BX = -27.9               # DB9 centre (r10: -31.9)
-# pf: M3 holes in board coords, all outside the 60 × 35 area (>= 5.5 from its tracks). The same list is in
-# station/build_station_pf.py (case coords there: x = -6.0 - x_board, y = -26.7 + y_board), keep the two together.
-HOLES = []
+# pf: holes in board coords, all outside the 60 × 35 area's tracks. The same lists are in station/build_station_pf.py
+# (case coords there: x = -6.0 - x_board, y = -26.7 + y_board), keep the two together.
+HOLES = []                   # M3, module spacers
+BOSSES = []                  # M2.3 screw into a TPS-M2.3-7 on the case's PCB boss (±43.5, ±23.5 in case coords)
 if PF:
-    X1, Y1 = 38.0, 60.0
-    HOLES = [(27.0, 17.5), (14.9, 17.5), (27.0, 55.5), (14.9, 55.5),    # H1..H4 under the Unit NFC (left pair 8 in,
-                                                                        # 7.0 from the H10 / H11 floor spacers)
-             (5.2, 27.5), (-43.8, 27.5), (5.2, 42.5), (-43.8, 42.5),    # H5..H8 under the vein module's corners
-             (-44.5, 16.5),                                            # H9 floor, beside the DB9
-             (34.0, -7.0), (34.0, 56.0), (-44.0, 56.0)]                # H10..H12 floor, board corners (4.0 in)
+    X0, X1, Y1 = -52.0, 40.0, 60.0          # case x -46..46: clear of the corner screw bosses (|x| >= 46.3)
+    HOLES = [(27.0, 17.5), (14.9, 17.5), (27.0, 55.5), (14.9, 55.5),    # H1..H4 under the Unit NFC's corners
+             (5.2, 27.5), (-43.8, 27.5), (5.2, 42.5), (-43.8, 42.5)]    # H5..H8 under the vein module's corners
+    BOSSES = [(37.5, 3.2), (-49.5, 3.2), (37.5, 50.2), (-49.5, 50.2)]
 
 
 def P(x, y):
@@ -132,9 +131,12 @@ J4.Move(pcbnew.VECTOR2I(mm((DB9_BX - 5.54) - px), -mm((Y0 + 7.70) - py)))
 wire(J4, {'2': 'D2', '3': 'D3', '5': 'GND', '0': 'GND'})
 print('J4 pin1', xy(p1.GetPosition()), 'pin5', xy([p for p in J4.Pads() if p.GetNumber() == '5'][0].GetPosition()))
 
-# ---- pf: M3 holes for the hex spacers (non-plated, no pad)
+# ---- pf: M3 holes for the hex spacers (non-plated, no pad) and the M2.3 holes over the case's bosses
 for i, (x, y) in enumerate(HOLES, 1):
     load('MountingHole.pretty', 'MountingHole_3.2mm_M3', f'H{i}', 'M3 spacer', x, y)
+for x, y in BOSSES:
+    c = pcbnew.PCB_SHAPE(b); c.SetShape(pcbnew.SHAPE_T_CIRCLE)
+    c.SetCenter(P(x, y)); c.SetEnd(P(x + 1.3, y)); c.SetLayer(pcbnew.Edge_Cuts); c.SetWidth(mm(0.1)); b.Add(c)
 
 # ---- outline
 for (a, c), (d, e) in [((X0, Y0), (X1, Y0)), ((X1, Y0), (X1, Y1)), ((X1, Y1), (X0, Y1)), ((X0, Y1), (X0, Y0))]:
