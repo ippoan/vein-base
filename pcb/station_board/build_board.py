@@ -16,9 +16,10 @@ Two outlines of the same circuit (same parts, same routing), both r12:
   printed        60 × 35, for the printed enclosure (station/build_station.py) -> station_board.kicad_pcb
   'pf'           86 × 71, for the Takachi PF13-4-9 off-the-shelf case -> station_board_pf.kicad_pcb.
                  The outline grows under the Unit NFC (+x) and the vein module (+y) only, so the 60 × 35 area and its
-                 tracks stay as they are. Nine M3 holes (H1..H9) carry stock hex spacers instead of printed parts:
-                 floor -> board 12 mm (H1 H3 H5..H9), board -> NFC 12 mm (H1..H4), board -> vein 6 mm (H5..H8).
-                 A floor spacer and a module spacer share a hole where both are listed (male-female through it).
+                 tracks stay as they are. Twelve M3 holes carry stock male-female hex spacers + nuts instead of printed
+                 parts: board -> NFC 12 + 6 mm (H1..H4) and -> vein 12 mm (H5..H8), male end down with a nut under
+                 the board; floor -> board 6 mm at the board's corners (H10..H12, and H9 for the back right corner where
+                 the DB9 and SW1 are), male end up with a nut on top.
 
 Routing comes from freerouting and is kept in station_board.ses (the board file itself is always generated):
     python3 build_board.py dsn     # placement only -> station_board.dsn (feed it to freerouting -> .ses)
@@ -45,9 +46,11 @@ DB9_BX = -27.9               # DB9 centre (r10: -31.9)
 HOLES = []
 if PF:
     X1, Y1 = 38.0, 60.0
-    HOLES = [(30.9, 17.5), (14.9, 17.5), (30.9, 55.5), (14.9, 55.5),    # H1..H4 under the Unit NFC's corners
+    HOLES = [(27.0, 17.5), (14.9, 17.5), (27.0, 55.5), (14.9, 55.5),    # H1..H4 under the Unit NFC (left pair 8 in,
+                                                                        # 7.0 from the H10 / H11 floor spacers)
              (5.2, 27.5), (-43.8, 27.5), (5.2, 42.5), (-43.8, 42.5),    # H5..H8 under the vein module's corners
-             (-44.5, 16.5)]                                            # H9 beside the DB9
+             (-44.5, 16.5),                                            # H9 floor, beside the DB9
+             (34.0, -7.0), (34.0, 56.0), (-44.0, 56.0)]                # H10..H12 floor, board corners (4.0 in)
 
 
 def P(x, y):
