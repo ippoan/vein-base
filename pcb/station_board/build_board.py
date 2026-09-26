@@ -1,4 +1,4 @@
-"""Vein Station board (r10): one PCB under the VoiceS3R that carries everything the station needs.
+"""Vein Station board (r12): one PCB under the VoiceS3R that carries everything the station needs.
   - J1/J2: VoiceS3R Ext.Pin (same positions as vein-base v0.6)
   - J3: finger vein module, MX1.25 4P (G5 -> module RXD, G6 <- module TXD, 3V3, GND; same pin order as vein-base)
   - U1 MAX3232 (3.3 V) + C1..C5: G7 -> T1IN, R1OUT -> G8 (UART to the FC-1200 alcohol checker, 9600 8N1)
@@ -7,14 +7,15 @@
                                                  with the RS232M Module 13.2 switch on passthrough, so ship 1+2 ON)
         SW1-3 TX -> DB9-2, SW1-4 RX <- DB9-3   (cross:    3+4 ON)
   - J4: DB9 male, right angle (the same gender as the RS232M Module 13.2), on the -y edge next to the VoiceS3R, so
-        the DB9 and the VoiceS3R's USB-C both leave through the station's back wall (pin 5 = GND, shell = GND)
+        the DB9 and the VoiceS3R's USB-C both leave through the station's back wall (pin 5 = GND, shell = GND).
+        r12 moved it 4.0 towards the VoiceS3R (flange 0.5 / body 0.9 from it) and re-routed with freerouting 1.9.0.
 Board coords are vein-base's: origin = Atom centre, +y = away from the USB-C / PORT.A edge, F faces the Atom.
 The station turns the board 180° (USB-C side to the back): x_st = VX - x, ys_st = VYS + y (station/build_station.py).
 
-Two outlines of the same circuit (same parts, same routing):
-  r10            60 × 35, for the printed enclosure (station/build_station.py) -> station_board.kicad_pcb
-  r11 ('pf')     86 × 71, for the Takachi PF13-4-9 off-the-shelf case -> station_board_pf.kicad_pcb.
-                 The outline grows under the Unit NFC (+x) and the vein module (+y) only, so the r10 area and its
+Two outlines of the same circuit (same parts, same routing), both r12:
+  printed        60 × 35, for the printed enclosure (station/build_station.py) -> station_board.kicad_pcb
+  'pf'           86 × 71, for the Takachi PF13-4-9 off-the-shelf case -> station_board_pf.kicad_pcb.
+                 The outline grows under the Unit NFC (+x) and the vein module (+y) only, so the 60 × 35 area and its
                  tracks stay as they are. Nine M3 holes (H1..H9) carry stock hex spacers instead of printed parts:
                  floor -> board 12 mm (H1 H3 H5..H9), board -> NFC 12 mm (H1..H4), board -> vein 6 mm (H5..H8).
                  A floor spacer and a module spacer share a hole where both are listed (male-female through it).
@@ -29,7 +30,7 @@ import pcbnew
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PF = 'pf' in sys.argv[1:]
-REV = 'r11' if PF else 'r10'
+REV = 'r12'
 NAME = 'station_board_pf' if PF else 'station_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
@@ -37,8 +38,9 @@ mm = pcbnew.FromMM
 
 # outline (board coords): the VoiceS3R and, beside it on -x, the DB9 on the -y edge (the station's back wall)
 X0, X1, Y0, Y1 = -48.0, 12.0, -11.0, 24.0
-J3_EDGE = Y1                 # J3 stays on the r10 front edge in both outlines
-# r11: M3 holes in board coords, all outside the r10 area (>= 5.5 from its tracks). The same list is in
+J3_EDGE = Y1                 # J3 stays on the 60 × 35 front edge in both outlines
+DB9_BX = -27.9               # DB9 centre (r10: -31.9)
+# pf: M3 holes in board coords, all outside the 60 × 35 area (>= 5.5 from its tracks). The same list is in
 # station/build_station_pf.py (case coords there: x = -6.0 - x_board, y = -26.7 + y_board), keep the two together.
 HOLES = []
 if PF:
@@ -120,14 +122,14 @@ wire(SW1, {'1': 'TXO', '8': 'D3', '2': 'RXI', '7': 'D2', '3': 'TXO', '6': 'D2', 
 # ---- DB9 male right angle on the -y edge; its flange sits on the board edge
 J4 = load('Connector_Dsub.pretty', 'DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm',
           'J4', 'DB9 male RA (to FC-1200)', 0, 0, rot=0)
-# local +y (towards the mating face) points to board -y; put the pin-1 row 7.70 inside the edge, centre at x=-31.9
+# local +y (towards the mating face) points to board -y; put the pin-1 row 7.70 inside the edge, centre at DB9_BX
 p1 = [p for p in J4.Pads() if p.GetNumber() == '1'][0]
 px, py = xy(p1.GetPosition())
-J4.Move(pcbnew.VECTOR2I(mm((-31.9 - 5.54) - px), -mm((Y0 + 7.70) - py)))
+J4.Move(pcbnew.VECTOR2I(mm((DB9_BX - 5.54) - px), -mm((Y0 + 7.70) - py)))
 wire(J4, {'2': 'D2', '3': 'D3', '5': 'GND', '0': 'GND'})
 print('J4 pin1', xy(p1.GetPosition()), 'pin5', xy([p for p in J4.Pads() if p.GetNumber() == '5'][0].GetPosition()))
 
-# ---- r11: M3 holes for the hex spacers (non-plated, no pad)
+# ---- pf: M3 holes for the hex spacers (non-plated, no pad)
 for i, (x, y) in enumerate(HOLES, 1):
     load('MountingHole.pretty', 'MountingHole_3.2mm_M3', f'H{i}', 'M3 spacer', x, y)
 

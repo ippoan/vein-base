@@ -1,5 +1,5 @@
 """Vein Station PF: the station in an off-the-shelf Takachi PF13-4-9 (125 × 40 × 85, ABS, front/back panels, ¥710)
-instead of a printed enclosure. Nothing is printed: the station board r11 (pcb/station_board, `build_board.py pf`)
+instead of a printed enclosure. Nothing is printed: the station board r12 (pcb/station_board, `build_board.py pf`)
 stands on stock M3 hex spacers, and the modules stand on spacers on the board.
 Run from the repository root:  python3 station/build_station_pf.py
 Writes the hole drawings for Takachi's machining service (station/vein_station_pf<N>_{top,floor}.dxf) and the
@@ -36,7 +36,7 @@ import cadquery as cq
 import ezdxf
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'pf1'
+REV = 'pf2'
 
 # ---- helpers ---------------------------------------------------------------------------------------------
 def box(x0, x1, y0, y1, z0, z1):
@@ -92,12 +92,12 @@ base = (rbox(-62.5, 62.5, -42.5, 42.5, -4.0, FLOOR, 17.0).union(sym(lambda sx, s
 panel = box(-PANEL_X, PANEL_X, -PANEL_OUT, -PANEL_IN, -0.5, CEIL).union(box(-PANEL_X, PANEL_X, -PANEL_IN, -38.7, 32.4, CEIL))
 front_panel = panel.mirror('XZ')                 # the back panel (on -y) is left off
 
-# ---- board r11 and its parts (board coords of pcb/station_board: x_case = VXP - bx, y_case = VYP + by) --------
+# ---- board r12 (pf outline) and its parts (board coords of pcb/station_board: x_case = VXP - bx, y_case = VYP + by) --------
 VXP, VYP = -6.0, -26.7         # VoiceS3R centre = board origin
 ZB = FLOOR + 12.0              # board bottom on 12 mm spacers
 ZBT = ZB + 1.6
 Z_ATOM = ZBT + 2.5             # VoiceS3R bottom (header plastic 2.5)
-BX0, BX1, BY0, BY1 = -48.0, 38.0, -11.0, 60.0     # r11 outline (build_board.py pf)
+BX0, BX1, BY0, BY1 = -48.0, 38.0, -11.0, 60.0     # pf outline (build_board.py pf)
 # H1..H9 in board coords, the same list as build_board.py (keep them together)
 HOLES = [(30.9, 17.5), (14.9, 17.5), (30.9, 55.5), (14.9, 55.5), (5.2, 27.5), (-43.8, 27.5), (5.2, 42.5),
          (-43.8, 42.5), (-44.5, 16.5)]
@@ -130,7 +130,7 @@ j3_plug = board(-33.0, -27.0, 24.0, 30.0, -2.2, 0.6)
 u1 = board(-31.0, -21.0, 3.05, 6.95, -2.5, -0.75)
 caps = board(-31.3, -19.2, 10.3, 11.7, -2.5, -1.6).union(board(-19.2, -17.8, 3.6, 6.4, -2.5, -1.6))
 sw1 = board(-46.9, -35.5, 0.1, 12.5, -2.5, -0.5)
-DB9_BX = -31.9
+DB9_BX = -27.9                  # r12 board: 4.0 closer to the VoiceS3R (r10: -31.9)
 db9_body = board(DB9_BX - 15.0, DB9_BX + 15.0, BY0 + 0.5, BY0 + 10.5, -2.5, 10.0)
 db9_flange = board(DB9_BX - 15.4, DB9_BX + 15.4, BY0 - 1.0, BY0, -2.5, 10.0)
 db9_shell = board(DB9_BX - 8.5, DB9_BX + 8.5, BY0 - 7.0, BY0 - 1.0, -0.5, 8.0)
@@ -276,7 +276,7 @@ parts = [
     ('nfc', 'NFC Unit 48×24×8(天板の裏に両面テープ、窓なし)', '#f2f2ee', 1, 'mods', nfc),
     ('vein', '指静脈モジュール(外形は公式値、コネクタ位置は未確定)', '#2e3538', 1, 'mods', vein),
     ('atom', 'VoiceS3R', '#1fa49a', 1, 'mods', atom),
-    ('pcb', 'Station 基板 r11(86 × 71)', '#1f7a4d', 1, 'mods', pcb),
+    ('pcb', 'Station 基板 r12(86 × 71)', '#1f7a4d', 1, 'mods', pcb),
     ('hdrpl', 'ピンヘッダー樹脂', '#2b2f33', 1, 'mods', hdr_plastic),
     ('hdrpin', 'ピン', '#d8b25a', 1, 'mods', hdr_pins),
     ('j3', 'J3 MX1.25 4P(指静脈)', '#f1efe8', 1, 'mods', j3),
@@ -294,10 +294,10 @@ parts = [
 ]
 model = [dict(key=k, label=l, color=c, opacity=o, group=g, data=base64.b64encode(tri(s).tobytes()).decode())
          for k, l, c, o, g, s in parts]
-SUB = ('既製ケース タカチ PF13-4-9 に、基板 r11 と市販の M3 スペーサーで VoiceS3R・指静脈・NFC・DB9 を収める版'
+SUB = ('既製ケース タカチ PF13-4-9 に、基板 r12 と市販の M3 スペーサーで VoiceS3R・指静脈・NFC・DB9 を収める版'
        '(印刷部品なし、穴はタカチの穴加工)。ドラッグで回転、ホイール/ピンチで拡大。')
 DIMS = [('ケース', 'タカチ PF13-4-9(125 × 40 × 85、ABS)'), ('内側', '117 × 79 × 34.5、天板 3.0、パネル 2.0'),
-        ('基板', 'r11 86 × 71、床から M3 スペーサー 12(皿ネジ × 7)'),
+        ('基板', 'r12 86 × 71、床から M3 スペーサー 12(皿ネジ × 7)'),
         ('モジュール', 'NFC 12 / 指静脈 6 の M3 スペーサーの上(指静脈の四隅は床まで重ねる)'), ('天板の穴', '指静脈(返し 1.0)・VoiceS3R(返し 1.2)'),
         ('背面', 'パネルを付けない(USB-C / PORT.A ・ DB9 ・ NFC の Grove ケーブルをそのまま出す)'), ('NFC', '手前左、天板の裏に付ける(窓なし、3 mm 越しに読む)')]
 NOTE = ('ケースはタカチ公式 STP を実測した数値からの簡略形状です(STP は再配布しない)。モジュールの外形は公式値、'
