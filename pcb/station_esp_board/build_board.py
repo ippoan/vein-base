@@ -69,6 +69,7 @@ UX = -5.5                      # USB-C centre, clear of the antenna keep-out (x 
 ASL = []                       # sw: Takachi ASL-12 stick-on snap spacers under the board (3.0 holes)
 POS = {}                       # sw / sw75: ref -> (x, y, rot), overriding the pf places below
 DB9_ROT, DB9_BY = 0, 0.0       # sw75: the DB9 on the +x side (turned 90) at y = DB9_BY
+NOTCH = None                   # sw75: (x0, x1, depth) cut into the -y edge for the vein cable
 if SW:
     # Takachi SW-85B (60 x 40 x 85, inside 52.8 x 77.8 x 32.7): board coords = case coords seen from above, origin =
     # case centre, the DB9 / USB-C end = -y. The same lists are in station/build_station_sw.py (keep them together).
@@ -108,6 +109,8 @@ if SW75:
     # The same lists are in station/build_station_sw75.py (keep them together).
     X0, X1, Y0, Y1 = -20.4, 20.4, -33.8, 34.3    # +y 0.5 longer: the Grove MP pads keep 0.5 to the edge
     DB9_ROT, DB9_BY = 90, 0.0
+    NOTCH = (-12.0, -6.0, 2.5)    # behind J3's plug, under the vein socket: the spare cable goes under the board
+                                  # (in the gap the routing leaves along the edge; the notch is not in the DSN)
     WX, WY = -7.65, 0.0
     HOLES = [(-6.3, -15.0), (1.2, -19.5), (-10.9, 20.5), (1.3, 20.5)]   # H1..H4 vein spacers; H1 / H4 also hold the
     BOSSES = []                                                          # board, into Takachi ASR-7 on the floor
@@ -334,7 +337,11 @@ for x, y in BOSSES:
     for i in range(16):
         ol.Append(mm(OX + x + 2.2 * math.cos(i * math.pi / 8)), mm(OY - y - 2.2 * math.sin(i * math.pi / 8)))
     b.Add(k)
-for (a, c), (d, e) in [((X0, Y0), (X1, Y0)), ((X1, Y0), (X1, Y1)), ((X1, Y1), (X0, Y1)), ((X0, Y1), (X0, Y0))]:
+EDGE = [(X0, Y0), (X1, Y0), (X1, Y1), (X0, Y1)]
+if NOTCH and 'dsn' not in sys.argv[1:]:
+    nx0, nx1, nd = NOTCH
+    EDGE = [(X0, Y0), (nx0, Y0), (nx0, Y0 + nd), (nx1, Y0 + nd), (nx1, Y0), (X1, Y0), (X1, Y1), (X0, Y1)]
+for (a, c), (d, e) in zip(EDGE, EDGE[1:] + EDGE[:1]):
     s = pcbnew.PCB_SHAPE(b); s.SetShape(pcbnew.SHAPE_T_SEGMENT)
     s.SetStart(P(a, c)); s.SetEnd(P(d, e)); s.SetLayer(pcbnew.Edge_Cuts); s.SetWidth(mm(0.1)); b.Add(s)
 
