@@ -19,7 +19,7 @@ through cut-outs in the walls. The speaker and the mic sit beside the vein modul
 import cadquery as cq
 from shapes import box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
 
-REV = 'sw75a'
+REV = 'sw75b'
 
 # ---- case (Takachi SW-75B, from the drawing) --------------------------------------------------------------
 OUT = (-25.0, 25.0, -37.5, 37.5)
@@ -29,20 +29,21 @@ body = rbox(*OUT, FLOOR, TOP, 2.0).cut(inside)
 
 # ---- board (pcb/station_esp_board, build_board.py sw75) and what stands on it: keep these lists together with it ----
 BX0, BX1, BY0, BY1 = -20.4, 20.4, -33.8, 34.3
-HOLES = [(-9.5, -16.3), (-3.6, -20.3), (-10.9, 20.5), (1.3, 20.5)]     # H1..H4 vein spacers
+HOLES = [(-6.3, -15.0), (1.2, -19.5), (-10.9, 20.5), (1.3, 20.5)]      # H1..H4 vein spacers
 ASR = (1, 4)                                                            # the ones on ASR-7 bosses
 DB9_BY = 0.0                                                            # DB9 on the +x edge
 USB = (17.35, 26.0)                                                     # opening +x
 WROOM = (-7.65, 0.0)                                                    # antenna to -x
-J3 = (-14.4, -30.0)                                                     # opening +y
+J3 = (-8.35, -22.5)                                                     # opening -y, under the vein socket
 GROVE = [('J6 NFC', -7.75, 29.2), ('J7 G38/G39', 5.45, 29.2)]           # openings +y (the end wall)
 SPK, MIC = (13.2, -24.0), (8.6, -11.8)                                  # speaker centre, mic sound port
-U1 = (-1.5, -29.8)
+U1 = (2.4, -28.4)                          # MAX3232, not turned
 
 ZB = 7.2                                   # ASR-7
 ZBT = ZB + 1.6
 SP_VEIN, TAPE = 6.0, 1.0
-VEIN = (-21.2, 4.8, -29.5, 29.5)           # 26 across, 59 along y, the socket end at -y
+VEIN = (-21.2, 4.8, -26.5, 32.5)           # 26 across, 59 along y, the socket end at -y, 8 from the end wall
+                                           # (the cable's C loop down to J3)
 VEIN_Z0 = ZBT + SP_VEIN + TAPE             # 15.8, top 30.8
 
 pcb = box(BX0, BX1, BY0, BY1, ZB, ZBT)
@@ -76,9 +77,16 @@ usb = on(UF - 7.3, UF, USB[1] - 4.47, USB[1] + 4.47, 0, 3.26)
 usb_plug = box(UF, UF + 6.5, USB[1] - 4.2, USB[1] + 4.2, UZ - 1.5, UZ + 1.5).union(
     box(UF + 6.5, UF + 24.2, USB[1] - 6.0, USB[1] + 6.0, UZ - 3.5, UZ + 3.5))
 
-j3 = on(J3[0] - 5.0, J3[0] + 5.0, J3[1] - 3.7, J3[1] + 3.1, 0, 3.4)
-j3_plug = on(J3[0] - 3.0, J3[0] + 3.0, J3[1] + 3.1, J3[1] + 9.1, 0.3, 3.1)
-u1 = on(U1[0] - 5.0, U1[0] + 5.0, U1[1] - 1.95, U1[1] + 1.95, 0, 1.75)
+j3 = on(J3[0] - 5.0, J3[0] + 5.0, J3[1] - 3.1, J3[1] + 3.7, 0, 3.4)
+j3_plug = on(J3[0] - 3.0, J3[0] + 3.0, J3[1] - 9.1, J3[1] - 3.1, 0.3, 3.1)
+# the vein cable (MX1.25 9P -> 4P, approx 3 × 1 flat bundle): level out of the module's socket at the -y end, one C loop
+# down in the gap before the end wall and back +y into J3's plug
+VCX = (J3[0] - 1.5, J3[0] + 1.5)
+YS, YP, YL = VEIN[2], J3[1] - 9.1, VEIN[2] - 7.0          # socket face, plug's back, the loop's far side
+ZS, ZP = VEIN_Z0 + 3.2, ZBT + 1.7                         # socket and plug centre heights
+vein_cable = (box(*VCX, YL, YS, ZS - 0.5, ZS + 0.5).union(box(*VCX, YL, YL + 1.0, ZP - 0.5, ZS + 0.5))
+              .union(box(*VCX, YL, YP, ZP - 0.5, ZP + 0.5)))
+u1 = on(U1[0] - 1.95, U1[0] + 1.95, U1[1] - 5.0, U1[1] + 5.0, 0, 1.75)
 wroom = on(WROOM[0] - 12.75, WROOM[0] + 12.75, WROOM[1] - 9.0, WROOM[1] + 9.0, 0, 3.1)
 spk = on(SPK[0] - 6.5, SPK[0] + 6.5, SPK[1] - 6.5, SPK[1] + 6.5, 0, 4.0)
 grove = grove_plugs = None
@@ -120,7 +128,7 @@ for _, x, _y in GROVE:
 case = body.cut(cover_cut).cut(wall_cut)
 
 # ---- interference ------------------------------------------------------------------------------------------
-checks = [('指静脈', vein), ('board', pcb), ('J3', j3), ('J3 plug', j3_plug), ('MAX3232', u1), ('WROOM', wroom),
+checks = [('指静脈', vein), ('vein cable', vein_cable), ('board', pcb), ('J3', j3), ('J3 plug', j3_plug), ('MAX3232', u1), ('WROOM', wroom),
           ('speaker', spk), ('USB-C', usb), ('Grove', grove), ('Grove plugs', grove_plugs), ('DB9 body', db9_body),
           ('DB9 flange', db9_flange), ('DB9 shell', db9_shell), ('DB9 posts', db9_posts), ('DB9 tails', db9_tails),
           ('spacers', spacers), ('ASR-7', asr), ('DB9 plug', db9_plug), ('USB plug', usb_plug)]
@@ -130,7 +138,7 @@ for name, obj in checks:
     print(f'interference case x {name:14s} = {v:.3f} mm3')
     if v > 0.01:
         bad.append(f'case/{name}')
-mutual = [('指静脈', vein), ('spacers', spacers), ('ASR-7', asr), ('J3 plug', j3_plug), ('WROOM', wroom),
+mutual = [('指静脈', vein), ('vein cable', vein_cable), ('spacers', spacers), ('ASR-7', asr), ('J3 plug', j3_plug), ('WROOM', wroom),
           ('speaker', spk), ('Grove', grove), ('Grove plugs', grove_plugs), ('DB9 body', db9_body),
           ('DB9 tails', db9_tails), ('DB9 plug', db9_plug), ('USB plug', usb_plug)]
 for i, (na, a) in enumerate(mutual):
@@ -155,6 +163,7 @@ parts = [
     ('spk', 'スピーカー 13 × 13(カバーの穴の下)', '#202326', 1, 'mods', spk),
     ('j3', 'J3 MX1.25 4P(指静脈)', '#f1efe8', 1, 'mods', j3),
     ('j3plug', 'J3 プラグ(指静脈ケーブル)', '#e7e1cf', 1, 'mods', j3_plug),
+    ('veincable', '指静脈のケーブル(-y 端で C 字、おおよその通り道)', '#b04a2f', 1, 'mods', vein_cable),
     ('u1', 'U1 MAX3232', '#202326', 1, 'mods', u1),
     ('usb', 'J5 USB-C', '#8a8f96', 1, 'mods', usb),
     ('grove', 'J6(NFC)/ J7(G38 / G39)Grove', '#f1efe8', 1, 'mods', grove),
@@ -171,7 +180,7 @@ SUB = ('別案(最小): NFC を外に出し、タカチ SW-75B(50 × 30 × 75)�
 DIMS = [('ケース', 'タカチ SW-75B(50 × 30 × 75、ABS、はめ込み式)。PF13-4-9 の約 1/3 の面積、高さ 30'),
         ('内側', '床 44.8 × 69.8 → 縁の下 42.8 × 67.8、高さ 23(図面の有効寸法)'),
         ('基板', 'ESP 基板 sw75 40.8 × 68.1、0402・片面実装。床に貼る ASR-7 × 2 にスペーサーのオス側でねじ込む(7.2)'),
-        ('指静脈', 'M3 × 6 の上に VHB テープ、カバーから 2.8 突き出す'),
+        ('指静脈', 'M3 × 6 の上に VHB テープ、カバーから 2.8 突き出す。ケーブルは -y 端で下へ C 字に曲げて J3(同じ -y 向き)へ'),
         ('NFC', '箱の外(Grove ケーブルで J6 へ)'),
         ('カバーの穴', '指静脈(外形 + 0.2)・スピーカー φ2 × 7・マイク φ1.5'),
         ('側面・端面', '+x の側面に DB9 の角穴と USB-C の穴、+y の端面に Grove × 2 の角穴')]
