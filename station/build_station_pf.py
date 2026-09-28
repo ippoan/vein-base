@@ -3,8 +3,8 @@ instead of a printed enclosure. Nothing is printed: the station board r12 (pcb/s
 stands on the case's own PCB bosses (Takachi TPS-M2.3-7 tapping spacers), and the modules stand on stock M3
 male-female spacers on the board. The only machining is the two top plate windows (cut by hand on the prototypes).
 Run from the repository root:  python3 station/build_station_pf.py
-Writes the hole drawing for Takachi's machining service (station/vein_station_pf<N>_top.dxf), a 1:1 paper
-template for cutting the same windows by hand (station/vein_station_pf<N>_top_template_1to1.pdf, A4) and the
+Writes the dimensioned hole drawing for Takachi's machining service (station/vein_station_pf<N>_top.dxf / .pdf),
+a 1:1 paper template for cutting the same windows by hand (station/vein_station_pf<N>_top_template_1to1.pdf, A4) and the
 3D preview site/station-pf/index.html, and fails if the case collides with a module, plug, spacer or the board, or
 two of those collide with each other.
 
@@ -40,11 +40,13 @@ no counterbore). The DB9 plug's push goes into the board and the bosses instead 
 import os
 import numpy as np
 import ezdxf
+from ezdxf.enums import TextEntityAlignment
+from ezdxf.addons.drawing import matplotlib as edm
 from shapes import box, rbox, cyl_z, cyl_y, sym, quad, stl_at, vein_parts, write_page
 from template import rrect_xy, a4, cross, ruler, notes_block, save
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'pf9'
+REV = 'pf10'
 
 # ---- case (simplified from the measured STP) ---------------------------------------------------------------
 FLOOR, CEIL, TOP = -1.5, 33.0, 36.0
@@ -214,8 +216,8 @@ def rrect(msp, x0, x1, y0, y1, r, layer):
 
 
 def sheet(name, title, notes, draw, x0, y0):
-    doc = ezdxf.new('R2010')
-    for ly, col in (('OUTLINE', 8), ('CUT', 1), ('COUNTERBORE', 5), ('CSK', 3), ('NOTE', 7)):
+    doc = ezdxf.new('R2010', setup=True)   # setup: the EZDXF dimension style
+    for ly, col in (('OUTLINE', 8), ('CUT', 1), ('COUNTERBORE', 5), ('CSK', 3), ('CENTER', 3), ('DIM', 5), ('NOTE', 7)):
         doc.layers.add(ly, color=col)
     msp = doc.modelspace()
     draw(msp)
@@ -226,18 +228,49 @@ def sheet(name, title, notes, draw, x0, y0):
     path = os.path.join(out, f'vein_station_{REV}_{name}.dxf')
     doc.saveas(path)
     print('wrote', path)
-    return path
+    # the same drawing as a PDF (Takachi asks for a dimensioned 2D drawing, DXF or PDF)
+    pdf = path[:-4] + '.pdf'
+    edm.qsave(msp, pdf, bg='#FFFFFF', size_inches=(11.69, 8.27))
+    print('wrote', pdf)
+    return path, pdf
 
 
 TOP_OUTLINE = (-62.5, 62.5, -42.5, 42.5, 17.0)   # the cover seen from above
 TOP_WINS = [('vein', VEIN_WIN), ('VoiceS3R', VOICE_WIN)]
+LABEL_AT = {'vein': lambda x0, x1, y0, y1: (x0, y1 + 12.5), 'VoiceS3R': lambda x0, x1, y0, y1: (x1 + 12, y0 + 5)}   # clear of the dims
+
+
+def dim(msp, base, p1, p2, angle=0):
+    msp.add_linear_dim(base=base, p1=p1, p2=p2, angle=angle, dimstyle='EZDXF', dxfattribs={'layer': 'DIM'},
+                       override={'dimlfac': 1, 'dimtxt': 2.5, 'dimasz': 2.0, 'dimdec': 1, 'dimexo': 1.0, 'dimexe': 1.5,
+                                 'dimtad': 1, 'dimzin': 8}).render()
 
 
 def draw_top(msp):
-    # seen from above, origin = case centre (x across 125, y across 85, back panel at the bottom)
+    # seen from above (outside), origin = case centre (x across 125, y across 85, back panel at the bottom).
+    # Takachi machines from the part's centre or corner, so every window is dimensioned centre to centre from the
+    # case centre, plus its size and corner R.
+    x0c, x1c, y0c, y1c, _ = TOP_OUTLINE
     rrect(msp, *TOP_OUTLINE, 'OUTLINE')
-    for _, w in TOP_WINS:
-        rrect(msp, *w, 'CUT')
+    msp.add_line((x0c - 4, 0), (x1c + 4, 0), dxfattribs={'layer': 'CENTER'})
+    msp.add_line((0, y0c - 4), (0, y1c + 4), dxfattribs={'layer': 'CENTER'})
+    for t, y in (('FRONT', y1c + 16), ('BACK (-y, back panel side)', y0c - 22)):
+        msp.add_text(t, height=3.0, dxfattribs={'layer': 'NOTE'}).set_placement((0, y), align=TextEntityAlignment.MIDDLE_CENTER)
+    dim(msp, (0, y1c + 8), (x0c, y1c - 17), (x1c, y1c - 17))                    # 125
+    dim(msp, (x1c + 8, 0), (x1c - 17, y0c), (x1c - 17, y1c), 90)                # 85
+    for i, (label, (x0, x1, y0, y1, r)) in enumerate(TOP_WINS):
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        rrect(msp, x0, x1, y0, y1, r, 'CUT')
+        msp.add_line((cx - 3, cy), (cx + 3, cy), dxfattribs={'layer': 'CENTER'})
+        msp.add_line((cx, cy - 3), (cx, cy + 3), dxfattribs={'layer': 'CENTER'})
+        dim(msp, (0, y1 + 4), (x0, y1), (x1, y1))                                # width
+        dim(msp, (x1 + 4, 0), (x1, y0), (x1, y1), 90)                            # height
+        dim(msp, (0, y0c - 8 - 7 * i), (0, 0), (cx, cy))                         # centre x from the case centre
+        dim(msp, (x0c - 8 - 7 * i, 0), (0, 0), (cx, cy), 90)                     # centre y from the case centre
+        lx, ly = LABEL_AT[label](x0, x1, y0, y1)
+        for k, t in enumerate((f'{label} window, through', f'{x1 - x0:.1f} x {y1 - y0:.1f}, 4-R{r:g}')):
+            msp.add_text(t, height=2.5, dxfattribs={'layer': 'NOTE'}).set_placement((lx, ly - 3.5 * k),
+                                                                                     align=TextEntityAlignment.LEFT)
 
 
 def top_template(name):
@@ -274,10 +307,12 @@ def top_template(name):
 
 
 downloads = [
-    ('穴加工図(DXF、タカチの穴加工用)', sheet('top', 'PF13-4-9 cover (top plate) - seen from above, origin = case centre, back panel side = -y',
-          ['CUT: through (2 windows: vein, VoiceS3R; corner R as drawn)', 'no window for the NFC unit',
-           'the back panel is not used (no machining)', 'unit mm'], draw_top,
-          -62.5, -50)),
+    *zip(('穴加工図(DXF、寸法入り、タカチの穴加工用)', '穴加工図(PDF、寸法入り、DXF と同じ図)'),
+         sheet('top', 'PF13-4-9W cover (top plate) - seen from OUTSIDE (above), origin = case centre, back panel side = -y',
+               ['CUT: 2 rectangular windows, through, corner R as dimensioned (vein, VoiceS3R)',
+                'dimensions: window centres from the case centre, window size, corner R', 'no window for the NFC unit',
+                'base, front panel, back panel: no machining (the back panel is not used)', 'unit mm'], draw_top,
+               -62.5, -75)),
     ('天板の型紙(PDF、A4 原寸 — 拡大縮小なしで印刷)', top_template('top_template_1to1')),
 ]
 
