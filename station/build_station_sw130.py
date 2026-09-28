@@ -1,9 +1,9 @@
 """Vein Station SW130 (slim): everything inside a Takachi SW-130B (40 × 25 × 130, ABS, snap-in cover, ¥360) in a row
 along it: the DB9 on the -y end, the vein module, the DIP and the MAX3232, and the Atom VoiceS3R at the +y end. The
 station board (pcb/station_board, `build_board.py sw130`, one-sided, Economic PCBA) fills the case floor; the VoiceS3R
-stands on it on its Ext.Pin (J1 / J2, stock pin headers), centred, its USB-C / PORT.A edge to +y (the USB-C through
-the +y end wall), its top 1.4 proud of the cover through a window. The Unit NFC plugs into the board's Grove J6 on the -x
-side by the DB9 (G38 / G39 as I2C), so NFC and USB leave on different faces; the VoiceS3R's PORT.A is not used. Its
+stands on it on its Ext.Pin (J1 / J2, stock pin headers), centred, its USB-C / PORT.A edge to +y (both through
+one hole in the +y end wall), its top 1.4 proud of the cover through a window. The Unit NFC plugs into the board's Grove J6 on the -x
+side by the DB9 (G38 / G39 as I2C), so NFC and USB leave on different faces; the VoiceS3R's PORT.A is spare, reachable through the USB hole. Its
 reset button (a U-shaped flap on the face left of the ports) faces the +x side, where a 6 × 8 hole takes a screwdriver.
 Run from the repository root:  python3 station/build_station_sw130.py
 Writes the 3D preview site/station-sw130/index.html, the dimensioned hole drawings of the four machined faces
@@ -27,7 +27,7 @@ from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
 from template import cut_template, edge_row
 from drawing import face, sheet
 
-REV = 'sw130c'
+REV = 'sw130d'
 
 # ---- case (Takachi SW-130B, from the drawing) ------------------------------------------------------------
 OUT = (-20.0, 20.0, -65.0, 65.0)
@@ -99,6 +99,7 @@ atom = rbox(AX - 12, AX + 12, AY - 12, AY + 12, Z_ATOM, Z_ATOM + 16.8, 3.0)
 YF = AY + 12                                                # the USB-C / PORT.A face
 usb_plug = box(AX - 6, AX + 6, YF + 6.5, YF + 24.2, Z_ATOM + 4.0, Z_ATOM + 11.0).union(
     box(AX - 4.2, AX + 4.2, YF, YF + 6.5, Z_ATOM + 6.0, Z_ATOM + 9.0))
+porta_plug = box(AX - 4.9, AX + 4.9, YF, YF + 10.2, Z_ATOM + 0.0, Z_ATOM + 4.0)   # PORT.A (spare) under the USB-C
 # J6: JLC's HY2.0 body runs ~2.1 further out than the footprint's (the vein unit board's measurement); JLC's assembly
 # preview shows its front ~0.5 past the board edge, so take 0.6 (into the wall; the Grove cut takes the whole body)
 GF = BX0 - 0.6                                              # its front, 0.6 outside the board edge
@@ -123,7 +124,7 @@ cover_cut = rbox(*VEIN_WIN[:4], CEIL - 1, TOP + 1, VEIN_WIN[4]).union(rbox(*ATOM
 SKIRT_FILE = box(-16.0, 16.0, IN[2] - 0.5, SK[2] + 0.2, SKIRT - 0.1, SKIRT + 0.8)   # the skirt filed back over the DB9
 # wall cut-outs as (along the wall 0, 1, z0, z1, R) in case coords: x on the ends, y on the +x side
 DB9_CUT = (-15.65, 15.65, ZBT - 1.5, CEIL, 0)                                            # DB9 hood (-y), open to the top
-USB_CUT = (AX - 4.8, AX + 4.8, Z_ATOM + 5.4, Z_ATOM + 9.6, 1.0)                          # USB-C plug (+y)
+USB_CUT = (AX - 5.3, AX + 5.3, Z_ATOM - 0.4, Z_ATOM + 9.6, 1.0)                          # USB-C over PORT.A (+y), one hole
 GROVE_CUT = (J6[1] - 6.3, J6[1] + 6.3, ZBT - 0.3, ZBT + 6.4, 0.5)                          # Grove body 12 × 6 (-x)
 # the reset: a U-shaped flap on the face left of the ports (official STL: 1.5..6.5 from the centre away from the
 # ports, 1.4..8.4 up), on the +x face here (the VoiceS3R turned half a turn); the hole takes a screwdriver
@@ -138,7 +139,7 @@ checks = [('指静脈', vein), ('vein cable', vein_cable), ('board', pcb), ('J3'
           ('caps', caps), ('SW1', sw1), ('DB9 body', db9_body), ('DB9 flange', db9_flange), ('DB9 shell', db9_shell),
           ('DB9 posts', db9_posts), ('DB9 tails', db9_tails), ('spacers', spacers), ('DB9 plug', db9_plug),
           ('headers', hdr_plastic.union(hdr_pins)), ('VoiceS3R', atom), ('USB plug', usb_plug), ('Grove', grove),
-          ('Grove plug', grove_plug)]
+          ('Grove plug', grove_plug), ('PORT.A plug', porta_plug)]
 bad = []
 for name, obj in checks:
     v = case.intersect(obj).val().Volume()
@@ -148,7 +149,7 @@ for name, obj in checks:
 mutual = [('指静脈', vein), ('vein cable', vein_cable), ('spacers', spacers), ('J3 plug', j3_plug), ('MAX3232', u1),
           ('caps', caps), ('SW1', sw1), ('DB9 body', db9_body), ('DB9 tails', db9_tails), ('DB9 plug', db9_plug),
           ('header plastic', hdr_plastic), ('VoiceS3R', atom), ('USB plug', usb_plug), ('Grove', grove),
-          ('Grove plug', grove_plug)]
+          ('Grove plug', grove_plug), ('PORT.A plug', porta_plug)]
 for i, (na, a) in enumerate(mutual):
     for nb, b in mutual[i + 1:]:
         v = a.intersect(b).val().Volume()
@@ -170,7 +171,7 @@ cover_cuts = [('vein', ('rect', *VEIN_WIN)), ('VoiceS3R', ('rect', *ATOM_WIN))]
 side_cuts = [('reset', ('rect', *RESET_CUT[:2], RESET_CUT[2] - FLOOR, RESET_CUT[3] - FLOOR, RESET_CUT[4]))]
 nfc_cuts = [('NFC', ('rect', -GROVE_CUT[1], -GROVE_CUT[0], GROVE_CUT[2] - FLOOR, GROVE_CUT[3] - FLOOR, GROVE_CUT[4]))]
 end_db9_cuts = [('DB9', ('rect', *DB9_CUT[:2], DB9_CUT[2] - FLOOR, DB9_CUT[3] - FLOOR, DB9_CUT[4]))]
-end_usb_cuts = [('USB', ('rect', -USB_CUT[1], -USB_CUT[0], USB_CUT[2] - FLOOR, USB_CUT[3] - FLOOR, USB_CUT[4]))]
+end_usb_cuts = [('USB / PORT.A', ('rect', -USB_CUT[1], -USB_CUT[0], USB_CUT[2] - FLOOR, USB_CUT[3] - FLOOR, USB_CUT[4]))]
 SIDE_NAMES, END_NAMES = ('-y end', '+y end', 'bottom', 'top'), ('left', 'right', 'bottom', 'top')
 BOTTOM = ('bottom edge = the floor\'s outside face (z -2.5), top edge = the cover\'s top (z 22.5)', (0, -29))
 out = os.path.join(ROOT, 'station')
@@ -220,7 +221,7 @@ def template():
     side = wall_view(SIDE_FACE, side_cuts, (22, 27), '+x SIDE (reset), seen from outside', '-y', '+y')
     side_nfc = wall_view(SIDE_FACE, nfc_cuts, (22, -9), '-x SIDE (NFC), seen from outside', '+y', '-y')
     end_db9 = wall_view(END_FACE, end_db9_cuts, (-5, -45), '-y END (DB9), from outside', '-x', '+x')
-    end_usb = wall_view(END_FACE, end_usb_cuts, (55, -45), '+y END (USB-C), from outside', '+x', '-x')
+    end_usb = wall_view(END_FACE, end_usb_cuts, (55, -45), '+y END (USB-C / PORT.A), from outside', '+x', '-x')
     rows = ([edge_row(n, c, COVER, ('-x', '+x', '-y', '+y')) for n, c in cover_cuts] + [''] +
             [edge_row(n, c, SIDE_FACE, SIDE_NAMES) for n, c in side_cuts] +
             [edge_row(n, c, SIDE_FACE, ('+y end', '-y end', 'bottom', 'top')) for n, c in nfc_cuts] +
@@ -258,12 +259,12 @@ for name, title, notes, draw, x0, y0 in (
          ['CUT: DB9 hood (square corners), open to the top of the body', 'heights from the bottom', 'unit mm'],
          wall_sheet(END_FACE, end_db9_cuts, '-y END seen from outside: -x left, +x right'), END_FACE[0], -36),
         ('end_usb', 'SW-130B body, +y end - seen from OUTSIDE, datum = bottom left (+x side, floor outside)',
-         ['CUT: USB-C (R1.0), through', 'heights from the bottom', 'unit mm'],
+         [f'CUT: USB-C over PORT.A, one hole, R{USB_CUT[4]:g}, through', 'heights from the bottom', 'unit mm'],
          wall_sheet(END_FACE, end_usb_cuts, '+y END seen from outside: +x left, -x right'), END_FACE[0], -36)):
     dxf[name] = sheet(os.path.join(out, f'vein_station_{REV}_{name}.dxf'), title, notes, draw, x0, y0)
 downloads = [('型紙(PDF、A4 原寸 — 拡大縮小なしで印刷。カバー・両側面・両端面)', template())]
 for name, label in (('cover', 'カバー'), ('side', '+x 側面(リセット)'), ('side_nfc', '−x 側面(NFC の Grove)'),
-                    ('end_db9', '−y 端面(DB9)'), ('end_usb', '+y 端面(USB-C)')):
+                    ('end_db9', '−y 端面(DB9)'), ('end_usb', '+y 端面(USB-C / PORT.A)')):
     downloads += [(f'加工図 {label}(DXF、寸法入り)', dxf[name][0]), (f'加工図 {label}(PDF、DXF と同じ図)', dxf[name][1])]
 
 # ---- 3D preview ------------------------------------------------------------------------------------------
@@ -288,20 +289,21 @@ parts = [
     ('spacers', 'M3 × 3(床に VHB)と M3 × 5(指静脈、上面に VHB)', '#c9a227', 1, 'mods', spacers),
     ('db9plug', 'DB9 プラグ(FC-1200 へ)', '#5c6166', 1, 'mods', db9_plug),
     ('usbplug', 'USB-C プラグ(Windows PC へ)', '#24292d', 1, 'mods', usb_plug),
+    ('portaplug', 'PORT.A Grove プラグ(予備、USB-C の下)', '#c47f0e', 1, 'mods', porta_plug),
     ('grove', 'J6 Grove(NFC、G38 / G39、−x の側面)', '#f1efe8', 1, 'mods', grove),
     ('groveplug', 'Grove プラグ(NFC へ)', '#c47f0e', 1, 'mods', grove_plug),
-    ('lid', 'ボディ(タカチ SW-130B、端面に DB9 と USB-C、−x の側面に NFC、+x の側面にリセットの穴)', '#8fa09c', 0.9, 'lid', shell),
+    ('lid', 'ボディ(タカチ SW-130B、端面に DB9 と USB-C / PORT.A、−x の側面に NFC、+x の側面にリセットの穴)', '#8fa09c', 0.9, 'lid', shell),
 ]
 SUB = ('細い案: タカチ SW-130B(40 × 25 × 130)に、DB9・指静脈・VoiceS3R を一列に全部入れる版(片面実装、NFC は '
-       '−x 側面の Grove、USB-C は +y の端面)。ドラッグで回転、ホイール/ピンチで拡大。')
+       '−x 側面の Grove、USB-C と PORT.A は +y の端面)。ドラッグで回転、ホイール/ピンチで拡大。')
 DIMS = [('ケース', 'タカチ SW-130B(40 × 25 × 130、ABS、はめ込み式、¥360)'),
         ('内側', '35.5 × 125.5、高さ 17(その上 20 まではカバーの縁で 32.8 × 122.8)。ボス・リブなし'),
         ('基板', 'station 基板 sw130(34.8 × 122.7)、部品は全部上面。床に VHB で貼った M3 × 3 の上(3.0)'),
-        ('VoiceS3R', '基板に Ext.Pin(J1 / J2、普通のピンヘッダー)で立てる。カバーの窓から 1.4 出る。USB-C は +y の端面から、リセットは +x の側面の穴からドライバーで。PORT.A は使わない'),
+        ('VoiceS3R', '基板に Ext.Pin(J1 / J2、普通のピンヘッダー)で立てる。カバーの窓から 1.4 出る。USB-C とその下の PORT.A(予備)は +y の端面の 1 つの穴から、リセットは +x の側面の穴からドライバーで'),
         ('NFC', '基板の Grove J6(−x の側面、DB9 の近く)。G38 = SDA / G39 = SCL(4.7k プルアップ)、ファームで I2C をこのピンで開く'),
         ('指静脈', 'M3 × 5 の上に VHB 0.7、カバーから 2.8 突き出す。J3 はその下、ケーブルは DB9 との間で折り返す'),
         ('DB9', '−y の端面(切り欠きはボディの上縁まで開いていて、基板を上から落とし込む)。カバーの縁をその上だけ 0.8 削る'),
-        ('加工', 'カバーに窓 2 つ、−y 端面に DB9、+y 端面に USB-C、−x 側面に NFC の Grove、+x 側面にリセットの穴 6 × 8')]
+        ('加工', 'カバーに窓 2 つ、−y 端面に DB9、+y 端面に USB-C / PORT.A(1 つの穴)、−x 側面に NFC の Grove、+x 側面にリセットの穴 6 × 8')]
 NOTE = ('ケースはタカチの外形図(SW-130□)からの簡略形状です。VoiceS3R と NFC Unit の形は M5Stack 公式 STL'
         '(m5stack/M5_Hardware、Copyright (c) 2021 M5Stack、MIT License)、干渉チェックは VoiceS3R の外形の箱で行う。'
         'リセットボタンの位置は公式 STL から読んだ値。指静脈の外形は公式値(細部は写真からのイメージ)、基板上の部品は '
