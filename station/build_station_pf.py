@@ -39,11 +39,9 @@ no counterbore). The DB9 plug's push goes into the board and the bosses instead 
 """
 import os
 import numpy as np
-import ezdxf
-from ezdxf.enums import TextEntityAlignment
-from ezdxf.addons.drawing import matplotlib as edm
 from shapes import box, rbox, cyl_z, cyl_y, sym, quad, stl_at, vein_parts, write_page
-from template import rrect_xy, a4, cross, ruler, notes_block, save
+from template import cut_template, edge_row
+from drawing import face, sheet
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REV = 'pf10'
@@ -205,96 +203,26 @@ print('parts among themselves: ' + ('ok' if not any('/' in b and not b.startswit
 
 # ---- hole drawings for Takachi (DXF, mm, one sheet per face) -----------------------------------------------
 out = os.path.join(ROOT, 'station')
-
-
-def rrect(msp, x0, x1, y0, y1, r, layer):
-    """Rounded rectangle as one closed polyline (bulge 0.4142 = 90° arc)."""
-    b = 0.41421356
-    pts = [(x0 + r, y0, 0), (x1 - r, y0, b), (x1, y0 + r, 0), (x1, y1 - r, b), (x1 - r, y1, 0), (x0 + r, y1, b),
-           (x0, y1 - r, 0), (x0, y0 + r, b)] if r else [(x0, y0, 0), (x1, y0, 0), (x1, y1, 0), (x0, y1, 0)]
-    msp.add_lwpolyline(pts, format='xyb', close=True, dxfattribs={'layer': layer})
-
-
-def sheet(name, title, notes, draw, x0, y0):
-    doc = ezdxf.new('R2010', setup=True)   # setup: the EZDXF dimension style
-    for ly, col in (('OUTLINE', 8), ('CUT', 1), ('COUNTERBORE', 5), ('CSK', 3), ('CENTER', 3), ('DIM', 5), ('NOTE', 7)):
-        doc.layers.add(ly, color=col)
-    msp = doc.modelspace()
-    draw(msp)
-    y = y0
-    for t in [title] + notes:
-        msp.add_text(t, height=2.0, dxfattribs={'layer': 'NOTE'}).set_placement((x0, y))
-        y -= 3.5
-    path = os.path.join(out, f'vein_station_{REV}_{name}.dxf')
-    doc.saveas(path)
-    print('wrote', path)
-    # the same drawing as a PDF (Takachi asks for a dimensioned 2D drawing, DXF or PDF)
-    pdf = path[:-4] + '.pdf'
-    edm.qsave(msp, pdf, bg='#FFFFFF', size_inches=(11.69, 8.27))
-    print('wrote', pdf)
-    return path, pdf
-
-
 TOP_OUTLINE = (-62.5, 62.5, -42.5, 42.5, 17.0)   # the cover seen from above
 TOP_WINS = [('vein', VEIN_WIN), ('VoiceS3R', VOICE_WIN)]
 LABEL_AT = {'vein': lambda x0, x1, y0, y1: (x0, y1 + 12.5), 'VoiceS3R': lambda x0, x1, y0, y1: (x1 + 12, y0 + 5)}   # clear of the dims
-
-
-def dim(msp, base, p1, p2, angle=0):
-    msp.add_linear_dim(base=base, p1=p1, p2=p2, angle=angle, dimstyle='EZDXF', dxfattribs={'layer': 'DIM'},
-                       override={'dimlfac': 1, 'dimtxt': 2.5, 'dimasz': 2.0, 'dimdec': 1, 'dimexo': 1.0, 'dimexe': 1.5,
-                                 'dimtad': 1, 'dimzin': 8}).render()
 
 
 def draw_top(msp):
     # seen from above (outside), origin = case centre (x across 125, y across 85, back panel at the bottom).
     # Takachi machines from the part's centre or corner, so every window is dimensioned centre to centre from the
     # case centre, plus its size and corner R.
-    x0c, x1c, y0c, y1c, _ = TOP_OUTLINE
-    rrect(msp, *TOP_OUTLINE, 'OUTLINE')
-    msp.add_line((x0c - 4, 0), (x1c + 4, 0), dxfattribs={'layer': 'CENTER'})
-    msp.add_line((0, y0c - 4), (0, y1c + 4), dxfattribs={'layer': 'CENTER'})
-    for t, y in (('FRONT', y1c + 16), ('BACK (-y, back panel side)', y0c - 22)):
-        msp.add_text(t, height=3.0, dxfattribs={'layer': 'NOTE'}).set_placement((0, y), align=TextEntityAlignment.MIDDLE_CENTER)
-    dim(msp, (0, y1c + 8), (x0c, y1c - 17), (x1c, y1c - 17))                    # 125
-    dim(msp, (x1c + 8, 0), (x1c - 17, y0c), (x1c - 17, y1c), 90)                # 85
-    for i, (label, (x0, x1, y0, y1, r)) in enumerate(TOP_WINS):
-        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-        rrect(msp, x0, x1, y0, y1, r, 'CUT')
-        msp.add_line((cx - 3, cy), (cx + 3, cy), dxfattribs={'layer': 'CENTER'})
-        msp.add_line((cx, cy - 3), (cx, cy + 3), dxfattribs={'layer': 'CENTER'})
-        dim(msp, (0, y1 + 4), (x0, y1), (x1, y1))                                # width
-        dim(msp, (x1 + 4, 0), (x1, y0), (x1, y1), 90)                            # height
-        dim(msp, (0, y0c - 8 - 7 * i), (0, 0), (cx, cy))                         # centre x from the case centre
-        dim(msp, (x0c - 8 - 7 * i, 0), (0, 0), (cx, cy), 90)                     # centre y from the case centre
-        lx, ly = LABEL_AT[label](x0, x1, y0, y1)
-        for k, t in enumerate((f'{label} window, through', f'{x1 - x0:.1f} x {y1 - y0:.1f}, 4-R{r:g}')):
-            msp.add_text(t, height=2.5, dxfattribs={'layer': 'NOTE'}).set_placement((lx, ly - 3.5 * k),
-                                                                                     align=TextEntityAlignment.LEFT)
+    face(msp, TOP_OUTLINE, [dict(cut=('rect', *w), at=LABEL_AT[label](*w[:4]),
+                                 text=(f'{label} window, through', f'{w[1] - w[0]:.1f} x {w[3] - w[2]:.1f}, 4-R{w[4]:g}'))
+                            for label, w in TOP_WINS],
+         titles=[('FRONT', (0, TOP_OUTLINE[3] + 16)), ('BACK (-y, back panel side)', (0, TOP_OUTLINE[2] - 22))])
 
 
 def top_template(name):
     """A4 portrait, 1 mm on paper = 1 mm: the cover's outline and the two windows seen from above, to lay face up
     on the cover and cut the windows by hand. Same geometry as the DXF (draw_top)."""
-    fig, ax, txt = a4(107)   # the case centre sits 107 below the top of the sheet
     x0c, x1c, y0c, y1c, _ = TOP_OUTLINE
-    ax.plot(*rrect_xy(*TOP_OUTLINE).T, color='0.35', lw=0.6)
-    ax.plot([x0c + 4, x1c - 4], [0, 0], color='0.6', lw=0.3, ls='-.')
-    ax.plot([0, 0], [y0c + 4, y1c - 4], color='0.6', lw=0.3, ls='-.')
-    txt(0, y1c + 2.5, 'FRONT', ha='center', fs=8, weight='bold')
-    txt(0, y0c - 5.5, 'BACK  (back panel side, -y: USB-C / PORT.A / DB9 cables come out here)', ha='center', fs=8,
-        weight='bold')
-    rows = []
-    for label, (x0, x1, y0, y1, r) in TOP_WINS:
-        ax.plot(*rrect_xy(x0, x1, y0, y1, r).T, color='#d0021b', lw=0.5)
-        for cx, cy in ((x0 + r, y0 + r), (x1 - r, y0 + r), (x1 - r, y1 - r), (x0 + r, y1 - r)):   # corner drills
-            cross(ax, cx, cy)
-        txt((x0 + x1) / 2, (y0 + y1) / 2 + 1.5, label, ha='center', va='center', fs=7, weight='bold', color='#d0021b')
-        txt((x0 + x1) / 2, (y0 + y1) / 2 - 2.5, f'{x1 - x0:.1f} x {y1 - y0:.1f}  R{r:g}', ha='center', va='center',
-            fs=6, color='#d0021b')
-        rows.append(f'{label:9s} {x1 - x0:5.1f} x {y1 - y0:4.1f}  R{r:<4g} left {x0 - x0c:5.1f}  right {x1c - x1:5.1f}'
-                    f'  back {y0 - y0c:5.1f}  front {y1c - y1:5.1f}   drill at the + marks, dia {2 * r:.1f} or less')
-    ruler(ax, txt, -72)
+    rows = [edge_row(label, ('rect', *w), TOP_OUTLINE) for label, w in TOP_WINS]
     notes = [f'Vein Station {REV} - PF13-4-9 cover (top plate) cutting template, 1:1, seen from above',
              'PRINT AT 100% / ACTUAL SIZE (no "fit to page", no scaling).',
              'Lay the sheet face up on the cover, BACK toward the open back (the back panel is not used),',
@@ -302,13 +230,19 @@ def top_template(name):
              'Red = cut through (windows); + = corner drill centres. Unit mm. Distances from the outline:',
              ''] + rows + ['', 'No window for the NFC unit (it reads through the 3 mm plate).',
                            'Same geometry as ' + f'vein_station_{REV}_top.dxf (for Takachi machining).']
-    notes_block(ax, txt, -86, notes, mono=rows)
-    return save(fig, os.path.join(out, f'vein_station_{REV}_{name}.pdf'))
+    top = dict(outline=TOP_OUTLINE, holes=[('rect', *w, label) for label, w in TOP_WINS],
+               lines=[([x0c + 4, x1c - 4], [0, 0], dict(color='0.6', lw=0.3, ls='-.')),
+                      ([0, 0], [y0c + 4, y1c - 4], dict(color='0.6', lw=0.3, ls='-.'))],
+               text=[(0, y1c + 2.5, 'FRONT', dict(ha='center', fs=8, weight='bold')),
+                     (0, y0c - 5.5, 'BACK  (back panel side, -y: USB-C / PORT.A / DB9 cables come out here)',
+                      dict(ha='center', fs=8, weight='bold'))])
+    # the case centre sits 107 below the top of the sheet
+    return cut_template(os.path.join(out, f'vein_station_{REV}_{name}.pdf'), 107, [top], -72, -86, notes, rows)
 
 
 downloads = [
     *zip(('穴加工図(DXF、寸法入り、タカチの穴加工用)', '穴加工図(PDF、寸法入り、DXF と同じ図)'),
-         sheet('top', 'PF13-4-9W cover (top plate) - seen from OUTSIDE (above), origin = case centre, back panel side = -y',
+         sheet(os.path.join(out, f'vein_station_{REV}_top.dxf'), 'PF13-4-9W cover (top plate) - seen from OUTSIDE (above), origin = case centre, back panel side = -y',
                ['CUT: 2 rectangular windows, through, corner R as dimensioned (vein, VoiceS3R)',
                 'dimensions: window centres from the case centre, window size, corner R', 'no window for the NFC unit',
                 'base, front panel, back panel: no machining (the back panel is not used)', 'unit mm'], draw_top,

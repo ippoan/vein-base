@@ -23,7 +23,7 @@ Grove's G5 / G6.
 """
 import os, sys
 from shapes import ROOT, box, rbox, cyl_z, union, vein_parts, write_page
-from template import vein_unit_template
+from template import cut_template
 import cadquery as cq
 
 REV = 'vu13'
@@ -176,9 +176,52 @@ parts = [('shell', f'蓋(タカチ {NAME}、指静脈の窓)', '#2b2f33', 0.45, 
     [('lid', f'本体(タカチ {NAME})', '#3a3f44', 0.55, 'lid', body)]
 NOTE = ('ケースはタカチ公式 STP を実測した数値からの簡略形状(STP は再配布しない)。指静脈の外形は公式値、細部は製品写真を見て描いた'
         'イメージ、ケーブルは写真どおり平らな窓の側の端面から水平に出る。ピン配置は Waveshare の Wiki による。基板と部品は仮の形。単位 mm。')
-tpl = vein_unit_template(os.path.join(ROOT, 'station', f'vein_unit_{REV}_{VARIANT}_template_1to1.pdf'),
-                         f'Vein Unit {REV} - Takachi {NAME} cutting template, 1:1', (L, W, OUT_R), TOP, VEIN_WIN, END,
-                         TPL_NOTES)
+
+
+def template(path, title, case, top, win, end, notes):
+    """The two cuts on one A4 sheet, 1:1.
+    case = (L, W, R): the outline seen from above (origin = centre, x along the case)
+    top = (left label, right label, back label, front label) around the top view
+    win = (x0, x1, y0, y1, r): the cover window
+    end = dict(side=+1 / -1 (which x end), h=body height, hole=('rect', y0, y1, z0, z1) or ('circle', y, z, r),
+               label=the text over the end view); z from the bottom of the body."""
+    L, W, R = case
+    x0, x1, y0, y1, r = win
+    b = dict(fs=7, weight='bold')
+    cover = dict(outline=(-L / 2, L / 2, -W / 2, W / 2, R), holes=[('rect', *win, 'vein window')],
+                 lines=[([-L / 2 + 4, L / 2 - 4], [0, 0], dict(color='0.6', lw=0.3, ls='-.')),
+                        ([0, 0], [-W / 2 + 4, W / 2 - 4], dict(color='0.6', lw=0.3, ls='-.'))],
+                 text=[(-L / 2 - 2, 0, top[0], dict(ha='right', va='center', **b)),
+                       (L / 2 + 2, 0, top[1], dict(ha='left', va='center', **b)),
+                       (0, W / 2 + 2.5, top[3], dict(ha='center', **b)), (0, -W / 2 - 5.5, top[2], dict(ha='center', **b)),
+                       (-L / 2, W / 2 + 9, 'COVER, seen from above (lay face up on the cover)', dict(fs=8, weight='bold'))])
+    rows = [f'window  {x1 - x0:5.1f} x {y1 - y0:4.1f}  R{r:<4g} from the outline: left {x0 + L / 2:4.1f}  '
+            f'right {L / 2 - x1:4.1f}  -y {y0 + W / 2:4.1f}  +y {W / 2 - y1:4.1f}']
+    # the end wall, seen from outside that end (y to the right when looking at +x, mirrored at -x)
+    h, hole = end['h'], end['hole']
+    yb = -W / 2 - 40                                   # bottom of the body on the sheet
+    s = -end['side']                                   # looking at the +x end from outside, +y is on the left
+    if hole[0] == 'rect':
+        _, hy0, hy1, hz0, hz1 = hole
+        cut = ('rect', *sorted((s * hy0, s * hy1)), hz0, hz1, 0)
+        rows.append(f'end hole {hy1 - hy0:4.1f} x {hz1 - hz0:4.1f}  from the bottom {hz0:4.1f} .. {hz1:4.1f}  '
+                    f'(top edge {h - hz1:.1f} below the body rim)  centred')
+    else:
+        _, hy, hz, hr = hole
+        cut = ('circle', s * hy, hz, hr)
+        rows.append(f'end hole  dia {2 * hr:.1f}  centre {hz:.1f} from the bottom, centred')
+    wall = dict(outline=(-W / 2, W / 2, 0, h, 0), at=(0, yb), holes=[cut],
+                lines=[([yy, yy], [0, h], dict(color='0.6', lw=0.3, ls='--')) for yy in (-(W / 2 - R), W / 2 - R)] +
+                      [([0, 0], [-2, h + 2], dict(color='0.6', lw=0.3, ls='-.'))],   # flat face between the corners
+                text=[(-W / 2, h + 5, end['label'], dict(fs=8, weight='bold')),
+                      (0, -5, 'BOTTOM of the body (desk side)', dict(ha='center', **b)),
+                      (s * (W / 2 + 2), h / 2, '+y', dict(ha='left' if s > 0 else 'right', va='center', fs=6, color='0.4'))])
+    return cut_template(path, 60, [cover, wall], yb - 17, yb - 32,
+                        [title, 'PRINT AT 100% / ACTUAL SIZE (no "fit to page", no scaling).'] + notes + [''] + rows, rows)
+
+
+tpl = template(os.path.join(ROOT, 'station', f'vein_unit_{REV}_{VARIANT}_template_1to1.pdf'),
+               f'Vein Unit {REV} - Takachi {NAME} cutting template, 1:1', (L, W, OUT_R), TOP, VEIN_WIN, END, TPL_NOTES)
 write_page(f'vein-unit-{VARIANT}', f'指静脈 Unit {REV} {NAME}', parts, SUB + 'ドラッグで回転、ホイール/ピンチで拡大。', DIMS, NOTE,
            VEIN_Z0 + 15.0, downloads=[('加工の型紙(PDF、A4 原寸 — 拡大縮小なしで印刷、蓋の窓と端の穴)', tpl)],
            extra='<p>型紙を貼って手で開ける: 窓は角を ⌀4 でドリル → 糸のこ/ピラニアソーで線の内側を切る → やすりで線まで。'

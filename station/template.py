@@ -59,58 +59,58 @@ def save(fig, path):
     return path
 
 
-def vein_unit_template(path, title, case, top, win, end, notes):
-    """The Vein Unit's two cuts on one A4 sheet, 1:1.
-    case = (L, W, R): the outline seen from above (origin = centre, x along the case)
-    top = (left label, right label, back label, front label) around the top view
-    win = (x0, x1, y0, y1, r): the cover window
-    end = dict(side=+1 / -1 (which x end), h=body height, hole=('rect', y0, y1, z0, z1) or ('circle', y, z, r),
-               label=the text over the end view); z from the bottom of the body."""
-    fig, ax, txt = a4(60)
-    L, W, R = case
-    # ---- the cover, seen from above
-    ax.plot(*rrect_xy(-L / 2, L / 2, -W / 2, W / 2, R).T, color='0.35', lw=0.6)
-    ax.plot([-L / 2 + 4, L / 2 - 4], [0, 0], color='0.6', lw=0.3, ls='-.')
-    ax.plot([0, 0], [-W / 2 + 4, W / 2 - 4], color='0.6', lw=0.3, ls='-.')
-    txt(-L / 2 - 2, 0, top[0], ha='right', va='center', fs=7, weight='bold')
-    txt(L / 2 + 2, 0, top[1], ha='left', va='center', fs=7, weight='bold')
-    txt(0, W / 2 + 2.5, top[3], ha='center', fs=7, weight='bold')
-    txt(0, -W / 2 - 5.5, top[2], ha='center', fs=7, weight='bold')
-    x0, x1, y0, y1, r = win
-    ax.plot(*rrect_xy(x0, x1, y0, y1, r).T, color=RED, lw=0.5)
-    for cx, cy in ((x0 + r, y0 + r), (x1 - r, y0 + r), (x1 - r, y1 - r), (x0 + r, y1 - r)):
-        cross(ax, cx, cy)
-    txt((x0 + x1) / 2, (y0 + y1) / 2 + 1.5, 'vein window', ha='center', va='center', fs=7, weight='bold', color=RED)
-    txt((x0 + x1) / 2, (y0 + y1) / 2 - 2.5, f'{x1 - x0:.1f} x {y1 - y0:.1f}  R{r:g}', ha='center', va='center',
-        fs=6, color=RED)
-    txt(-L / 2, W / 2 + 9, 'COVER, seen from above (lay face up on the cover)', fs=8, weight='bold')
-    rows = [f'window  {x1 - x0:5.1f} x {y1 - y0:4.1f}  R{r:<4g} from the outline: left {x0 + L / 2:4.1f}  '
-            f'right {L / 2 - x1:4.1f}  -y {y0 + W / 2:4.1f}  +y {W / 2 - y1:4.1f}']
-    # ---- the end wall, seen from outside that end (y to the right when looking at +x, mirrored at -x)
-    h, hole = end['h'], end['hole']
-    yb = -W / 2 - 40                                   # bottom of the body on the sheet
-    s = -end['side']                                   # looking at the +x end from outside, +y is on the left
-    ax.plot(*rrect_xy(-W / 2, W / 2, yb, yb + h, 0).T, color='0.35', lw=0.6)
-    for yy in (-(W / 2 - R), W / 2 - R):               # where the rounded corners start (the flat face between)
-        ax.plot([yy, yy], [yb, yb + h], color='0.6', lw=0.3, ls='--')
-    ax.plot([0, 0], [yb - 2, yb + h + 2], color='0.6', lw=0.3, ls='-.')
-    txt(-W / 2, yb + h + 5, end['label'], fs=8, weight='bold')
-    txt(0, yb - 5, 'BOTTOM of the body (desk side)', ha='center', fs=7, weight='bold')
-    txt(s * (W / 2 + 2), yb + h / 2, '+y', ha='left' if s > 0 else 'right', va='center', fs=6, color='0.4')
-    if hole[0] == 'rect':
-        _, hy0, hy1, hz0, hz1 = hole
-        ax.plot(*rrect_xy(*sorted((s * hy0, s * hy1)), yb + hz0, yb + hz1, 0).T, color=RED, lw=0.5)
-        for cx in ((hy0 + hy1) / 2 - (hy1 - hy0) / 4, (hy0 + hy1) / 2 + (hy1 - hy0) / 4):
-            cross(ax, s * cx, yb + (hz0 + hz1) / 2)
-        rows.append(f'end hole {hy1 - hy0:4.1f} x {hz1 - hz0:4.1f}  from the bottom {hz0:4.1f} .. {hz1:4.1f}  '
-                    f'(top edge {h - hz1:.1f} below the body rim)  centred')
-    else:
-        _, hy, hz, hr = hole
-        a = np.linspace(0, 2 * np.pi, 65)
-        ax.plot(s * hy + hr * np.cos(a), yb + hz + hr * np.sin(a), color=RED, lw=0.5)
-        cross(ax, s * hy, yb + hz)
-        rows.append(f'end hole  dia {2 * hr:.1f}  centre {hz:.1f} from the bottom, centred')
-    ruler(ax, txt, yb - 17)
-    notes_block(ax, txt, yb - 32, [title, 'PRINT AT 100% / ACTUAL SIZE (no "fit to page", no scaling).'] + notes +
-                [''] + rows, mono=rows)
+def view(ax, txt, outline, holes=(), text=(), lines=(), at=(0, 0)):
+    """One face of the case, 1:1, in its own mm with its origin at `at` on the sheet: the grey outline
+    (x0, x1, y0, y1, r), extra lines [(xs, ys, plot kwargs)], text [(x, y, s, txt kwargs)] and the cuts in red:
+    ('rect', x0, x1, y0, y1, r[, label]) with + at the corner drill centres (two + on the centre line when r = 0) and,
+    with a label, the label and the size inside; ('circle', x, y, r) with + at the centre."""
+    dx, dy = at
+    ax.plot(*(rrect_xy(*outline) + (dx, dy)).T, color='0.35', lw=0.6)
+    for xs, ys, kw in lines:
+        ax.plot(np.add(xs, dx), np.add(ys, dy), **kw)
+    for x, y, s, kw in text:
+        txt(x + dx, y + dy, s, **kw)
+    for kind, *g in holes:
+        if kind == 'circle':
+            x, y, r = g
+            a = np.linspace(0, 2 * np.pi, 65)
+            ax.plot(x + dx + r * np.cos(a), y + dy + r * np.sin(a), color=RED, lw=0.5)
+            cross(ax, x + dx, y + dy)
+            continue
+        x0, x1, y0, y1, r = g[:5]
+        ax.plot(*(rrect_xy(x0, x1, y0, y1, r) + (dx, dy)).T, color=RED, lw=0.5)
+        if r:
+            marks = ((x0 + r, y0 + r), (x1 - r, y0 + r), (x1 - r, y1 - r), (x0 + r, y1 - r))
+        else:
+            marks = [((x0 + x1) / 2 + k * (x1 - x0) / 4, (y0 + y1) / 2) for k in (-1, 1)]
+        for cx, cy in marks:
+            cross(ax, cx + dx, cy + dy)
+        if len(g) > 5:
+            cx, cy = (x0 + x1) / 2 + dx, (y0 + y1) / 2 + dy
+            txt(cx, cy + 1.5, g[5], ha='center', va='center', fs=7, weight='bold', color=RED)
+            txt(cx, cy - 2.5, f'{x1 - x0:.1f} x {y1 - y0:.1f}  R{r:g}', ha='center', va='center', fs=6, color=RED)
+
+
+def edge_row(label, cut, outline, names=('left', 'right', 'back', 'front')):
+    """One line of the notes: a cut's size and its distances from the outline's edges (names = -x, +x, -y, +y)."""
+    x0c, x1c, y0c, y1c, _ = outline
+    kind, *g = cut
+    if kind == 'circle':
+        x, y, r = g
+        return (f'{label:9s} dia {2 * r:<11.1f} centre: {names[0]} {x - x0c:5.1f}  {names[1]} {x1c - x:5.1f}  '
+                f'{names[2]} {y - y0c:5.1f}  {names[3]} {y1c - y:5.1f}')
+    x0, x1, y0, y1, r = g[:5]
+    return (f'{label:9s} {x1 - x0:5.1f} x {y1 - y0:4.1f}  R{r:<4g} {names[0]} {x0 - x0c:5.1f}  {names[1]} {x1c - x1:5.1f}'
+            f'  {names[2]} {y0 - y0c:5.1f}  {names[3]} {y1c - y1:5.1f}' +
+            (f'   drill at the + marks, dia {2 * r:.1f} or less' if r else ''))
+
+
+def cut_template(path, y_top, views, ruler_y, notes_y, notes, mono=()):
+    """A4 portrait, 1 mm on paper = 1 mm (y_top = the sheet's top edge in sheet mm, x -105..105): the faces to lay on
+    the case and cut by hand (views = [view() keyword arguments]), a 50 mm line to check the print scale and the notes."""
+    fig, ax, txt = a4(y_top)
+    for v in views:
+        view(ax, txt, **v)
+    ruler(ax, txt, ruler_y)
+    notes_block(ax, txt, notes_y, notes, mono=mono)
     return save(fig, path)
