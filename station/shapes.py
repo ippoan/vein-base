@@ -63,12 +63,18 @@ def stl_at(key, x, y, z, z_top, turn=False):
     return (t + np.float32([x, y, z - z_top])).reshape(-1).astype(np.float32)
 
 
-def vein_parts(rect, z0):
+def vein_parts(rect, z0, along_y=False):
     """The vein module (x0, x1, y0, y1) standing on z0, long side along x, as a picture only (Waveshare publishes no
     CAD): drawn by hand inside its 59 × 26 × 15 box after the product photos, not measured. A finger scoop over the
     IR lens at +x, the flat dark window at -x, a channel across the bottom and the MX1.25 9P socket low in the -x end
     (the flat window's end, where Waveshare's photo shows the cable leaving level).
+    along_y: the long side along y instead (a quarter turn, the socket end at -y).
     Interference checks use the plain box."""
+    if along_y:
+        cx, cy = (rect[0] + rect[1]) / 2, (rect[2] + rect[3]) / 2
+        hl, hw = (rect[3] - rect[2]) / 2, (rect[1] - rect[0]) / 2
+        return [(k, l, c, o, g, s.rotate((cx, cy, 0), (cx, cy, 1), 90))
+                for k, l, c, o, g, s in vein_parts((cx - hl, cx + hl, cy - hw, cy + hw), z0)]
     vx0, vx1, vy0, vy1 = rect
     vz1 = z0 + 15.0
     yc = (vy0 + vy1) / 2

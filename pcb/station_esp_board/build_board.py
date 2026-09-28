@@ -1,5 +1,8 @@
-"""Vein Station ESP board (e1): the station board for the Takachi PF13-4-9 case (the pf outline of
-pcb/station_board, 92 × 71) with the Atom VoiceS3R's circuit on the board itself instead of the Atom on the Ext.Pin.
+"""Vein Station ESP board (e1): the station board with the Atom VoiceS3R's circuit on the board itself instead of the
+Atom on the Ext.Pin, in two outlines of the same circuit:
+  (default)  92 × 71 for the Takachi PF13-4-9 (the pf outline of pcb/station_board, same holes / DB9 / MAX3232 / DIP / J3)
+  'sw'       52 × 76 for the Takachi SW-85B (station/build_station_sw.py): every part placed anew (POS), the vein module
+             and the Unit NFC on M3 spacers from the board, the board on three Takachi ASL-12 stuck to the floor
 The circuit follows M5Stack's schematics (Sch_M5_AtomS3R_v0.4.1 / Sch_M5_AtomEchoS3R_Audio_v1.0_20250716) with the
 same GPIOs, so VoiceS3R firmware keeps working:
   - U2 ESP32-S3-WROOM-1-N8R8 (the VoiceS3R's ESP32-S3-PICO-1 has the same 8 MB flash + 8 MB octal PSRAM; the
@@ -25,9 +28,11 @@ the codec yourself).
 
 Board coords are the station board's (origin = where the VoiceS3R stood, +y = away from the back edge, F up).
 The speaker and the mic sit under the PF case's old VoiceS3R window (|x|, |y| <= 10.8 in these coords).
-Routing comes from freerouting and is kept in station_esp_board.ses (the board file itself is always generated):
-    python3 build_board.py dsn     # placement only -> station_esp_board.dsn (feed it to freerouting -> .ses)
-    python3 build_board.py         # placement + tracks/vias from station_esp_board.ses -> station_esp_board.kicad_pcb
+In 'sw' the coords are the SW-85B case's instead (origin = case centre, the DB9 / USB-C end = -y); the speaker and
+the mic sit in front of the NFC under holes in the cover, the WROOM's antenna on the front edge.
+Routing comes from freerouting and is kept in station_esp_board[_sw].ses (the board file itself is always generated):
+    python3 build_board.py [sw] dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
+    python3 build_board.py [sw]       # placement + tracks/vias from the .ses -> station_esp_board[_sw].kicad_pcb
 Run with KiCad's python from pcb/station_esp_board/.
 """
 import math, os, re, sys
@@ -37,8 +42,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..'))
 from kicad_ses import import_ses  # noqa: E402
 
+SW = 'sw' in sys.argv[1:]
 REV = 'e1'
-NAME = 'station_esp_board'
+NAME = 'station_esp_board_sw' if SW else 'station_esp_board'
 FP = '/usr/share/kicad/footprints/'
 LOCAL = os.path.join(HERE, '..') + '/'         # pcb/vein_base.pretty (the project's own footprints)
 OX, OY = 100.0, 100.0
@@ -54,6 +60,38 @@ BOSSES = [(37.5, 3.2), (-49.5, 3.2), (37.5, 50.2), (-49.5, 50.2)]
 WX, WY = 24.0, 0.5             # WROOM centre: antenna end at y = -12.25 (1.25 past the edge; its courtyard stays
                                # clear of the H1 / H2 spacers)
 UX = -5.5                      # USB-C centre, clear of the antenna keep-out (x >= WX - 24)
+ASL = []                       # sw: Takachi ASL-12 stick-on snap spacers under the board (3.0 holes)
+POS = {}                       # sw: ref -> (x, y, rot), overriding the pf places below
+if SW:
+    # Takachi SW-85B (60 x 40 x 85, inside 52.8 x 77.8 x 32.7): board coords = case coords seen from above, origin =
+    # case centre, the DB9 / USB-C end = -y. The same lists are in station/build_station_sw.py (keep them together).
+    X0, X1, Y0, Y1 = -26.0, 26.0, -38.0, 38.0
+    DB9_BX = -10.0
+    UX = 12.5
+    WX, WY = -14.0, 25.25      # WROOM, antenna to the +y edge (front, flush), under the front of the vein module
+    HOLES = [(-22.5, -8.0), (-3.3, -8.0), (-22.5, 6.0), (-3.3, 6.0),         # H1..H4 vein module spacers (clear of
+                                                                            # the J3 plug's run at y -18..-12)
+             (6.5, -24.5), (22.5, -24.5), (21.2, 16.0)]                     # H5..H7 Unit NFC spacers (under it,
+                                                                            # it only rests on them and is taped to
+                                                                            # the cover; three, the codec's caps
+                                                                            # take the fourth corner)
+    BOSSES = []
+    ASL = [(-8.0, -13.5), (-10.0, 8.5), (0.5, 12.5)]                        # between the floor ribs (|x| <= 10.5)
+    POS = {'J3': (-20.0, -21.0, 180), 'U1': (-7.5, -21.0, 90),
+           'C1': (-12.0, -26.6, 0), 'C2': (-8.5, -26.6, 0), 'C3': (-5.0, -26.6, 0), 'C4': (-1.5, -26.6, 0),
+           'C5': (0.8, -24.6, 0), 'SW1': (-12.9, -3.0, 0),
+           'U2': (WX, WY, 0), 'C9': (-2.9, 17.0, 90), 'C10': (-25.0, 27.0, 90), 'R5': (-25.0, 23.5, 90),
+           'C11': (-25.0, 20.0, 90), 'SW2': (23.2, 4.8, 90), 'SW3': (23.2, -4.4, 90),
+           'R1': (19.8, -35.2, 0), 'R2': (23.2, -35.2, 0), 'R3': (19.8, -32.0, 0), 'R4': (23.2, -32.0, 0),
+           'U3': (4.5, -15.0, 90), 'C6': (2.5, -7.8, 0), 'C7': (4.3, -4.9, 0), 'C8': (1.0, -4.9, 0),
+           'MK1': (7.8, 29.6, 0), 'FB1': (2.5, 28.5, 90), 'C20': (10.3, 28.5, 90), 'C21': (0.5, 28.5, 90),
+           # ES8311 turned 270: I2S (6..9) to -x (the WROOM), OUTP / OUTN (12, 13) to -y (the amp), mic pins to +x
+           'U4': (4.0, 21.5, 270), 'C12': (3.5, 25.3, 0), 'C13': (6.9, 25.2, 90), 'C14': (2.4, 17.4, 90),
+           'C15': (8.2, 21.0, 0), 'C16': (7.1, 17.2, 90), 'C17': (5.4, 17.2, 90), 'C18': (8.2, 22.8, 0),
+           'C19': (0.2, 21.5, 90), 'R6': (-3.3, 27.5, 90), 'R7': (-1.6, 30.3, 90),
+           'U5': (15.2, 16.0, 90), 'C22': (11.2, 20.6, 0), 'C23': (14.3, 20.6, 0), 'C24': (17.4, 20.6, 0),
+           'C25': (20.6, 20.6, 0), 'C26': (23.8, 20.6, 0), 'R8': (11.2, 22.6, 0), 'R9': (14.4, 22.6, 0),
+           'R10': (17.6, 22.6, 0), 'SP1': (18.5, 30.5, 0), 'J6': (15.5, -13.3, 180), 'J7': (12.8, 2.5, 180)}   # plugs out to +y
 
 
 def P(x, y):
@@ -88,6 +126,8 @@ def load(lib, name, ref, value, x, y, rot=0, local=False):
     fp.SetFPID(pcbnew.LIB_ID(nick, name))
     fp.SetReference(ref); fp.SetValue(value)
     b.Add(fp)
+    if ref in POS:
+        x, y, rot = POS[ref]
     fp.SetPosition(P(x, y))
     fp.SetOrientationDegrees(rot)
     return fp
@@ -138,6 +178,8 @@ J4.Move(pcbnew.VECTOR2I(mm((DB9_BX - 5.54) - px), -mm((Y0 + 7.70) - py)))
 wire(J4, {'2': 'D2', '3': 'D3', '5': 'GND', '0': 'GND'})
 for i, (x, y) in enumerate(HOLES, 1):
     load('MountingHole.pretty', 'MountingHole_3.2mm_M3', f'H{i}', 'M3 spacer', x, y)
+for i, (x, y) in enumerate(ASL, 1):
+    load('MountingHole.pretty', 'MountingHole_3mm', f'A{i}', 'ASL-12', x, y)
 
 # ======== ESP32-S3 (WROOM-1: pins 1..14 on the +x side after the turn, 15..26 along +y, 27..40 on -x) ========
 U2 = load('RF_Module.pretty', 'ESP32-S3-WROOM-1', 'U2', 'ESP32-S3-WROOM-1-N8R8', WX, WY, rot=180)
@@ -147,7 +189,7 @@ for p in [p for p in U2.Pads() if p.GetNumber() == '41' and p.GetAttribute() == 
 wire(U2, {'1': 'GND', '40': 'GND', '41': 'GND', '2': '3V3', '3': 'EN', '13': 'G19', '14': 'G20',
           '27': 'G0', '26': 'G45', '19': 'G11', '10': 'G17', '15': 'G3', '25': 'G48', '4': 'G4', '11': 'G18',
           '39': 'G1', '38': 'G2', '31': 'G38', '32': 'G39', '5': 'G5', '6': 'G6', '7': 'G7', '12': 'G8'})
-EPX, EPY = WX + 1.5, WY + 2.46
+EPX, EPY = xy([p for p in U2.Pads() if p.GetNumber() == '41'][0].GetPosition())
 for dx, dy in ((-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (0.0, 0.0)):
     v = pcbnew.PCB_VIA(b); v.SetPosition(P(EPX + dx, EPY + dy)); v.SetWidth(mm(0.6)); v.SetDrill(mm(0.3))
     v.SetNet(nets['GND']); v.SetLocked(True); b.Add(v)
@@ -252,13 +294,15 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
     b.Add(t)
 
 
-text('SW1 1+2 PASS(FC-1200) / 3+4 CROSS', -41.2, 14.0, size=0.8)
-text('J3 vein: 1RX 2TX 3V3 4G', -30.0, 16.2, size=0.8)
-text('NFC: G2 G1 5V G', 32.0, 35.5, size=0.8)         # pin 1 first
-text('G38 G39 5V G', 18.5, 35.5, size=0.8)
-text('EN', 37.2, 7.0, size=0.8)
-text('BOOT', 37.2, 24.0, size=0.8)
-text(f'vein-station ESP board {REV} (PF13-4-9)', -20.0, 18.0, layer=pcbnew.B_SilkS)
+# silk: (text, x, y) per outline; the Grove labels list pin 1 first
+SILK = ([('1+2 PASS / 3+4 CROSS', -12.9, 4.6), ('J3 1RX 2TX 3V3 G', -20.0, -16.6), ('NFC: G2 G1 5V G', 15.5, -19.8),
+         ('G38 G39 5V G', 12.8, 9.0), ('BOOT', 23.2, -9.4), ('EN', 23.2, 9.8)] if SW else
+        [('SW1 1+2 PASS(FC-1200) / 3+4 CROSS', -41.2, 14.0), ('J3 vein: 1RX 2TX 3V3 4G', -30.0, 16.2),
+         ('NFC: G2 G1 5V G', 32.0, 35.5), ('G38 G39 5V G', 18.5, 35.5), ('EN', 37.2, 7.0), ('BOOT', 37.2, 24.0)])
+for t, x, y in SILK:
+    text(t, x, y, size=0.8)
+text(f'vein-station ESP board {REV} ' + ('(SW-85B)' if SW else '(PF13-4-9)'), -12.0 if SW else -20.0,
+     -32.0 if SW else 18.0, layer=pcbnew.B_SilkS)
 
 
 
@@ -267,17 +311,15 @@ def stitch(b, pitch=2.5, clr=0.25):
     r = 0.3 + clr
     items = [t.GetEffectiveShape() for t in b.GetTracks()]
     items += [p.GetEffectiveShape() for fp in b.GetFootprints() for p in fp.Pads()]
-    crt = [fp.GetCourtyard(pcbnew.F_CrtYd) for fp in b.GetFootprints() if fp.GetReference() != 'U2']
-    holes = HOLES + BOSSES
+    crt = [fp.GetCourtyard(pcbnew.F_CrtYd) for fp in b.GetFootprints()]   # the WROOM's takes in its antenna keep-out
+    holes = HOLES + BOSSES + ASL
     n = 0
     y = Y0 + 1.5
     while y < Y1 - 1.0:
         x = X0 + 1.5
         while x < X1 - 1.0:
             q = P(x, y)
-            ok = (not (x > WX - 24.5 and y < WY - 6.25)                                 # antenna keep-out
-                  and not (WX - 10.3 < x < WX + 10.3 and y < WY + 14.0)                 # under the module
-                  and all((x - hx) ** 2 + (y - hy) ** 2 > 4.5 ** 2 for hx, hy in holes)
+            ok = (all((x - hx) ** 2 + (y - hy) ** 2 > 4.5 ** 2 for hx, hy in holes)
                   and not any(c.OutlineCount() and c.Contains(q) for c in crt)
                   and not any(s.Collide(q, mm(r)) for s in items))
             if ok:
@@ -332,7 +374,7 @@ def tie_islands(b, r=0.35, step=0.2):
 
 
 os.chdir(HERE)
-if len(sys.argv) > 1 and sys.argv[1] == 'dsn':
+if 'dsn' in sys.argv[1:]:
     b.Save(f'{NAME}.kicad_pcb')
     print('dsn', pcbnew.ExportSpecctraDSN(b, f'{NAME}.dsn'))
     # 5V (USB -> LDO / Grove) routed 0.5 wide: a net class written into the DSN for freerouting (the .ses keeps it)

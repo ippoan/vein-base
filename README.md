@@ -53,7 +53,16 @@ VoiceS3R(vein-base の基板のみ。ケースは使わない)・指静脈モジ
 - ES8311(I2C: SDA G45 / SCL G0、I2S: MCLK G11 / BCLK G17 / WS G3 / G48 → DSDIN / ASDOUT → G4)、MEMS マイク(LinkMems LMA3729T381。VoiceS3R のマイクは在庫切れ)、NS4150B(CTRL G18)、13 × 13 mm の SMD スピーカー。スピーカーとマイクは、PF の天板にある旧 VoiceS3R 用の窓の下に置く。
 - Grove 2 口: J6 = Unit NFC(G2 SDA / G1 SCL、VoiceS3R の PORT.A と同じ)、J7 = 予備(G38 / G39)。IR LED は載せない(G47 は空き)。
 - **初回だけ**: G45(SDA のプルアップ付き)は Flash 電圧のストラップなので、最初に BOOT を押したまま EN を押し、`espefuse.py --port <ポート> set_flash_voltage 3.3V` で Flash 電圧を eFuse に書く。M5Unified は PICO-1 のパッケージで VoiceS3R を見分けるので、`cfg.fallback_board = m5::board_t::board_M5AtomVoiceS3R` を指定する。
-- 配線は freerouting の結果を `station_esp_board.ses` に入れてある(`build_board.py dsn` で DSN を出して再配線)。CI で gerber / CPL / DRC → `fab/station_esp/`。筐体側(`station/build_station_pf.py`)はまだ VoiceS3R 版のまま。
+- 外形は 2 種類(回路は同じ): PF13-4-9 用 92 × 71(`build_board.py`、`fab/station_esp/`。筐体側 `station/build_station_pf.py` はまだ VoiceS3R 版のまま)と、SW-85B 用 52 × 76(`build_board.py sw`、`fab/station_esp_sw/`)。
+- 配線は freerouting 2.4.1 の結果を `station_esp_board[_sw].ses` に入れてある(`build_board.py [sw] dsn` で DSN を出して再配線)。CI で gerber / CPL / DRC。
+
+### Vein Station SW(タカチ SW-85B・別案)
+
+ケースを小さくする案。VoiceS3R が無くなった分、中身は指静脈・NFC・DB9 と ESP 基板だけなので、タカチで一番小さく収まる SW-85B(60 × 40 × 85、はめ込み式、¥350。PF13-4-9 の半分以下の面積)に入れる。`station/build_station_sw.py` がケースの簡略形状(タカチの外形図から)と干渉チェック、3D プレビュー(`site/station-sw/`)を作る。
+
+- 基板(52 × 76)は床に貼るタカチ ASL-12 × 3 に差し込む(床のリブの間)。指静脈は M3 × 12 の上に立てて、カバーの窓から 3.8 出す。NFC は M3 × 10 の上で、カバーの裏に貼る(窓なし)。
+- 加工はカバーの窓(指静脈)とスピーカー・マイクの穴、端面の DB9 のフードが入る角穴・USB-C プラグの穴・J7 ケーブルの穴。
+- 幅の余裕は小さい(指静脈 26 + NFC 24 に対して内寸 52.8)。発注前に指静脈の実物を測る。床のリブの高さは図面に無いので 2.0 と仮定。
 
 ### Vein Station SE(CoreS3 SE 版・案)
 
@@ -68,7 +77,7 @@ VoiceS3R(vein-base の基板のみ。ケースは使わない)・指静脈モジ
 | `case/` | ケース生成スクリプト(`build_case.py`、CadQuery) |
 | `pcb/jlc_bom.csv` | JLCPCB 用 BOM の元データ(LCSC 品番) |
 | `pcb/station_board/jlc_bom.csv` | station 基板の JLCPCB 用 BOM の元データ |
-| `pcb/station_esp_board/jlc_bom.csv` | station ESP 基板(VoiceS3R の回路を載せた版)の JLCPCB 用 BOM の元データ |
+| `pcb/station_esp_board/jlc_bom.csv` | station ESP 基板(VoiceS3R の回路を載せた版、PF 用・SW 用で共通)の JLCPCB 用 BOM の元データ |
 | `fab/` | CI の出力先(git 管理外)。JLCPCB 発注用(ガーバー zip、BOM、CPL)、原寸の確認用 PDF、基板の STEP |
 | `tools/` | CI 用スクリプト(DRC チェック、JLC 用 CPL 変換、3D プレビュー生成と干渉チェック) |
 
