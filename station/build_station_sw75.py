@@ -2,8 +2,10 @@
 with the Unit NFC left outside on its Grove cable, and the Atom VoiceS3R's circuit on the board (pcb/station_esp_board,
 `build_board.py sw75`, 40.8 × 68.1). A third of the PF13-4-9's desk area and 10 lower.
 Run from the repository root:  python3 station/build_station_sw75.py
-Writes the 3D preview site/station-sw75/index.html and fails if the case collides with a module, plug, spacer or the
-board, or two of those collide with each other.
+Writes the 3D preview site/station-sw75/index.html, the dimensioned hole drawings of the three machined faces
+(station/vein_station_<REV>_{cover,side,end}.dxf / .pdf: the cover, the +x side, the +y end, each seen from outside) and
+a 1:1 A4 paper template of the same three faces for cutting them by hand (station/vein_station_<REV>_template_1to1.pdf),
+and fails if the case collides with a module, plug, spacer or the board, or two of those collide with each other.
 
 Case coordinates = the board's: x across the 50 side, y along the 75 side, origin = case centre, z = 0 at the inside
 of the floor. DB9 and USB-C on the +x side, both Groves on the +y end, the WROOM's antenna to the -x wall.
@@ -16,10 +18,13 @@ vein module on M3 × 6 spacers (male-female into the ASR-7 at H1 / H4, female-fe
 + 1.0 VHB tape, 15.8..30.8: 2.8 proud of the cover through a window of its outline + 0.2 | DB9, USB-C and the Grove plugs
 through cut-outs in the walls. The speaker and the mic sit beside the vein module under holes in the cover.
 """
+import os
 import cadquery as cq
-from shapes import box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
+from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
+from template import cut_template, edge_row
+from drawing import face, sheet
 
-REV = 'sw75c'
+REV = 'sw75d'
 
 # ---- case (Takachi SW-75B, from the drawing) --------------------------------------------------------------
 OUT = (-25.0, 25.0, -37.5, 37.5)
@@ -123,12 +128,15 @@ cover_cut = rbox(*VEIN_WIN[:4], CEIL - 1, TOP + 1, VEIN_WIN[4])
 for x, y in SPK_HOLES:
     cover_cut = cover_cut.union(cyl_z(x, y, 1.0, CEIL - 1, TOP + 1))
 cover_cut = cover_cut.union(cyl_z(*MIC, 0.75, CEIL - 1, TOP + 1))
+# wall cut-outs as (along the wall 0, 1, z0, z1, R) in case coords: y on the +x side, x on the +y end
+DB9_CUT = (DB9_Y0 - 0.25, DB9_Y1 + 0.25, ZBT - 1.5, ZBT + 14.0, 0)                        # DB9 hood (+x)
+USB_CUT = (USB[1] - 4.8, USB[1] + 4.8, UZ - 2.1, UZ + 2.1, 1.0)                           # USB-C plug (+x)
+GROVE_CUTS = [(x - 5.0, x + 5.0, ZBT + 0.1, ZBT + 5.9, 0.8) for _, x, _y in GROVE]        # Grove plugs (+y)
 SIDE = (BX1 + 0.5, OUT[1] + 1)             # the +x wall
 END = (BY1 - 0.5, OUT[3] + 1)              # the +y wall
-wall_cut = (box(*SIDE, DB9_Y0 - 0.25, DB9_Y1 + 0.25, ZBT - 1.5, ZBT + 14.0)                   # DB9 hood
-            .union(rbox(*SIDE, USB[1] - 4.8, USB[1] + 4.8, UZ - 2.1, UZ + 2.1, 1.0)))          # USB-C plug
-for _, x, _y in GROVE:
-    wall_cut = wall_cut.union(rbox(x - 5.0, x + 5.0, *END, ZBT + 0.1, ZBT + 5.9, 0.8))         # Grove plugs
+wall_cut = box(*SIDE, *DB9_CUT[:4]).union(rbox(*SIDE, *USB_CUT))
+for c in GROVE_CUTS:
+    wall_cut = wall_cut.union(rbox(*c[:2], *END, *c[2:]))
 case = body.cut(cover_cut).cut(wall_cut)
 
 # ---- interference ------------------------------------------------------------------------------------------
@@ -156,6 +164,120 @@ if v > 0.01:
     print(f'interference vein cable x board = {v:.3f} mm3')
     bad.append('vein cable/board')
 print('parts among themselves: ' + ('ok' if not any(not b.startswith('case/') for b in bad) else 'NG'))
+
+# ---- hole drawings and the 1:1 template (the cover, the +x side, the +y end, each seen from outside) ---------
+# Faces in their own 2D coords: the cover as the case's x, y (seen from above); the walls with the height h = z - FLOOR
+# (0 = the floor's outside face, 30 = the cover's top face) and along the wall as seen from outside: y on the +x side
+# (+y to the right), -x on the +y end (+x, the DB9 side, to the left). The side and end holes are dimensioned from the
+# bottom-left corner (what a ruler starts from), the cover's from the case centre (as Takachi machine).
+H = TOP - FLOOR
+COVER = (*OUT, 2.0)
+SIDE_FACE = (OUT[2], OUT[3], 0, H, 0)
+END_FACE = (-OUT[1], -OUT[0], 0, H, 0)
+cover_cuts = [('vein', ('rect', *VEIN_WIN)), ('speaker', ('circle', *SPK_HOLES[0], 1.0)), ('mic', ('circle', *MIC, 0.75))]
+side_cuts = [('DB9', ('rect', *DB9_CUT[:2], DB9_CUT[2] - FLOOR, DB9_CUT[3] - FLOOR, DB9_CUT[4])),
+             ('USB-C', ('rect', *USB_CUT[:2], USB_CUT[2] - FLOOR, USB_CUT[3] - FLOOR, USB_CUT[4]))]
+end_cuts = [(n.split()[0], ('rect', -c[1], -c[0], c[2] - FLOOR, c[3] - FLOOR, c[4])) for (n, _x, _y), c in zip(GROVE, GROVE_CUTS)]
+SPK_NOTE = 'centre hole + 6 on a 3.5 hexagon (x +-3.5 / +-1.75, y 0 / +-3.0)'
+SIDE_NAMES, END_NAMES = ('-y end', '+y end', 'bottom', 'top'), ('+x side', '-x side', 'bottom', 'top')
+out = os.path.join(ROOT, 'station')
+
+
+def size(c):
+    if c[0] == 'circle':
+        return f'dia {2 * c[3]:.1f}'
+    return f'{c[2] - c[1]:.1f} x {c[4] - c[3]:.1f}' + (f', 4-R{c[5]:g}' if c[5] else ', square corners')
+
+
+def draw_cover(msp):
+    face(msp, COVER, [
+        dict(cut=cover_cuts[0][1], at=(VEIN_WIN[0] + 1.5, 22), hdim=VEIN_WIN[0] + 4,
+             text=('vein window, through', size(cover_cuts[0][1]))),
+        dict(cut=('circles', SPK_HOLES, 1.0), at=(OUT[1] + 16, SPK[1]), text=('speaker: 7 x dia 2.0, through', SPK_NOTE)),
+        dict(cut=cover_cuts[2][1], at=(OUT[1] + 16, MIC[1]), text=('mic: dia 1.5, through',))],
+        titles=[('+y END (Grove J6 / J7)', (0, OUT[3] + 16)), ('-y END', (0, OUT[2] - 36))])
+
+
+def draw_side(msp):
+    x0 = SIDE_FACE[0]
+    face(msp, SIDE_FACE, [
+        dict(cut=side_cuts[0][1], at=(-14, 21), wdim=H + 3, hdim=side_cuts[0][1][1] - 4, text=('DB9 hood, through', size(side_cuts[0][1]))),
+        dict(cut=side_cuts[1][1], at=(SIDE_FACE[1] + 18, 14), text=('USB-C, through', size(side_cuts[1][1])))],
+        titles=[('+x SIDE seen from outside: -y end left, +y (Grove) end right', (0, -24)),
+                ('bottom edge = the floor\'s outside face (z -2), top edge = the cover\'s top (z 28)', (0, -29))],
+        datum=(x0, 0))
+
+
+def draw_end(msp):
+    face(msp, END_FACE, [
+        dict(cut=c, at=(c[1] + 3.5, c[3] - 4.5), hdim=c[1] - 4 if i else c[2] + 4, text=(n,))
+        for i, (n, c) in enumerate(end_cuts)],
+        titles=[(f'Grove J6 (NFC) / J7 (G38 / G39), through: {size(end_cuts[0][1])}', (0, H + 16)), ('+y END seen from outside: +x (DB9 side) left, -x right', (0, -24)),
+                ('bottom edge = the floor\'s outside face (z -2), top edge = the cover\'s top (z 28)', (0, -29))],
+        datum=(END_FACE[0], 0))
+
+
+def wall_view(outline, cuts, at, label, left, right):
+    x0, x1, _, h, _ = outline
+    g = dict(color='0.6', lw=0.3)
+    small = [(n, c) for n, c in cuts if c[2] - c[1] <= 12]      # labelled under the hole, the big ones inside
+    return dict(outline=outline, at=at, holes=[c if (n, c) in small else (*c, n) for n, c in cuts],
+                lines=[([x, x], [0, h], dict(g, ls='--')) for x in (x0 + COVER[4], x1 - COVER[4])] +
+                      [([(x0 + x1) / 2] * 2, [-2, h + 2], dict(g, ls='-.'))],
+                text=[(x0, h + 3, label, dict(fs=7, weight='bold')),
+                      (x0 - 1.5, h / 2, left, dict(ha='right', va='center', fs=6, color='0.4')),
+                      (x1 + 1.5, h / 2, right, dict(ha='left', va='center', fs=6, color='0.4')),
+                      ((x0 + x1) / 2, -3.5, 'BOTTOM (desk side)', dict(ha='center', fs=6, weight='bold'))] +
+                     [((c[1] + c[2]) / 2, c[3] - 2.8, n, dict(ha='center', fs=5.5, color='#d0021b')) for n, c in small])
+
+
+
+def template():
+    x0, x1, y0, y1, _ = COVER
+    g = dict(color='0.6', lw=0.3, ls='-.')
+    b = dict(ha='center', fs=7, weight='bold')
+    cover = dict(outline=COVER, at=(-62, 2),
+                 holes=[('rect', *VEIN_WIN, 'vein')] + [('circle', x, y, 1.0) for x, y in SPK_HOLES] + [('circle', *MIC, 0.75)],
+                 lines=[([x0 + 4, x1 - 4], [0, 0], g), ([0, 0], [y0 + 4, y1 - 4], g)],
+                 text=[(x0, y1 + 9, 'COVER, seen from above', dict(fs=8, weight='bold')),
+                       (0, y1 + 2.5, '+y END (Grove)', b), (0, y0 - 5.5, '-y END', b),
+                       (x1 + 2, 0, '+x SIDE\n(DB9, USB-C)', dict(ha='left', va='center', fs=6.5, weight='bold')),
+                       (SPK[0], SPK[1] - 5.5, 'speaker', dict(ha='center', fs=5.5, color='#d0021b')),
+                       (MIC[0], MIC[1] - 3.2, 'mic', dict(ha='center', fs=5.5, color='#d0021b'))])
+    side = wall_view(SIDE_FACE, side_cuts, (50, 8), '+x SIDE, seen from outside', '-y', '+y')
+    end = wall_view(END_FACE, end_cuts, (50, -38), '+y END, seen from outside', '+x', '-x')
+    rows = ([edge_row(n, c, COVER, ('-x', '+x', '-y', '+y')) for n, c in cover_cuts] +
+            ['          speaker: ' + SPK_NOTE, ''] +
+            [edge_row(n, c, SIDE_FACE, SIDE_NAMES) for n, c in side_cuts] + [''] +
+            [edge_row(n, c, END_FACE, END_NAMES) for n, c in end_cuts])
+    notes = [f'Vein Station {REV} - Takachi SW-75B cutting template, 1:1 (cover, +x side, +y end, all seen from outside)',
+             'PRINT AT 100% / ACTUAL SIZE (no "fit to page", no scaling).',
+             'Cut the three views apart. Cover: face up on the cover, grey outline (50 x 75, R2) on the cover edges.',
+             'Side / end: the grey line is the whole case (cover on, 30 high): its BOTTOM edge on the desk side of the body,',
+             'its ends on the case ends; dashed = where the corner radius starts. All wall holes are in the body.',
+             'Red = cut through; + = corner drill centres (hole centres for round holes). Unit mm.',
+             'Distances: cover from the outline edges; side / end from the ends, the bottom (floor outside) and the top',
+             '(the cover\'s top face, 30 above the bottom).', ''] + rows
+    return cut_template(os.path.join(out, f'vein_station_{REV}_template_1to1.pdf'), 60, [cover, side, end], -62, -76,
+                        notes, rows)
+
+
+dxf = {}
+for name, title, notes, draw, x0, y0 in (
+        ('cover', 'SW-75B cover - seen from OUTSIDE (above), origin = case centre, +y = the Grove end',
+         ['CUT: vein window (corner R as dimensioned), speaker 7 x dia 2.0, mic dia 1.5, all through',
+          'dimensions: centres from the case centre (speaker: the centre hole), sizes', 'unit mm'],
+         draw_cover, OUT[0], OUT[2] - 44),
+        ('side', 'SW-75B body, +x side - seen from OUTSIDE, datum = bottom left (-y end, floor outside)',
+         ['CUT: DB9 hood (square corners), USB-C (R1.0), through', 'heights from the bottom (the floor\'s outside face)',
+          'unit mm'], draw_side, SIDE_FACE[0], -36),
+        ('end', 'SW-75B body, +y end - seen from OUTSIDE, datum = bottom left (+x side, floor outside)',
+         ['CUT: Grove J6 (NFC) and J7 (G38 / G39), R0.8, through', 'heights from the bottom (the floor\'s outside face)',
+          'unit mm'], draw_end, END_FACE[0], -36)):
+    dxf[name] = sheet(os.path.join(out, f'vein_station_{REV}_{name}.dxf'), title, notes, draw, x0, y0)
+downloads = [('型紙(PDF、A4 原寸 — 拡大縮小なしで印刷。カバー・+x 側面・+y 端面)', template())]
+for name, label in (('cover', 'カバー'), ('side', '+x 側面(DB9 / USB-C)'), ('end', '+y 端面(Grove)')):
+    downloads += [(f'加工図 {label}(DXF、寸法入り)', dxf[name][0]), (f'加工図 {label}(PDF、DXF と同じ図)', dxf[name][1])]
 
 # ---- 3D preview ------------------------------------------------------------------------------------------
 cover = case.intersect(box(-26, 26, -39, 39, CEIL, TOP + 1))
@@ -196,7 +318,9 @@ NOTE = ('ケースはタカチの外形図(SW-75□)からの簡略形状です(
         'NFC Unit の形は M5Stack 公式 STL(m5stack/M5_Hardware、Copyright (c) 2021 M5Stack、MIT License)、'
         '指静脈の外形は公式値(細部は写真からのイメージ)、基板上の部品は KiCad のフットプリント寸法からの簡略形状、'
         '指静脈のコネクタ位置は未確定。単位 mm。')
-write_page('station-sw75', 'SW75 ' + REV, parts, SUB, DIMS, NOTE, TOP)
+write_page('station-sw75', 'SW75 ' + REV, parts, SUB, DIMS, NOTE, TOP, downloads,
+           '<p>試作は型紙を切り分けてカバー・ボディに貼り、手で開ける(角穴は角をドリル → 糸のこ/ピラニアソー → やすり、'
+           '丸穴はドリル)。側面・端面の高さはボディの底(床の外面)から測る。</p>')
 
 if bad:
     raise SystemExit('interference: ' + ', '.join(bad))
