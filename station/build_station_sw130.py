@@ -1,5 +1,6 @@
 """Vein Station SW130 (slim): everything inside a Takachi SW-130B (40 × 25 × 130, ABS, snap-in cover, ¥360) in a row
-along it: the DB9 on the -y end, the vein module, the DIP and the MAX3232, and the Atom VoiceS3R at the +y end. The
+along it: the DB9 on the -y end with the DIP beside the vein cable, the vein module over the MAX3232, and the Atom
+VoiceS3R at the +y end. The
 station board (pcb/station_board, `build_board.py sw130`, one-sided, Economic PCBA) fills the case floor; the VoiceS3R
 stands on it on its Ext.Pin (J1 / J2, stock pin headers), centred, its USB-C / PORT.A edge to +y (both through
 one hole in the +y end wall), its top 1.4 proud of the cover through a window. The Unit NFC plugs into the board's Grove J6 on the -x
@@ -28,7 +29,7 @@ from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
 from template import cut_template, edge_row
 from drawing import face, sheet
 
-REV = 'sw130e'
+REV = 'sw130f'
 
 # ---- case (Takachi SW-130B, from the drawing) ------------------------------------------------------------
 OUT = (-20.0, 20.0, -65.0, 65.0)
@@ -40,18 +41,19 @@ body = rbox(*OUT, FLOOR, TOP, 3.0).cut(rbox(*IN, 0, SKIRT, 1.0)).cut(rbox(*SK, S
 # ---- board (pcb/station_board, build_board.py sw130) and what stands on it: keep these numbers together with it ----
 BX0, BX1, BY0, BY1 = -17.4, 17.4, -61.7, 61.0
 AX, AY = 0.0, 49.2                           # VoiceS3R centre, USB-C / PORT.A edge to +y
-HOLES = [(-9.0, -26.0), (9.0, -26.0), (-9.0, 9.0), (9.0, 9.0), (0.0, 54.2), (-13.8, -18.0), (13.5, -47.5)]
+HOLES = [(-9.0, -26.0), (9.0, -26.0), (-9.0, 9.0), (9.0, 9.0), (0.0, 54.2), (-13.8, -18.0), (14.0, -34.0)]
 VEIN_H = (1, 2, 3, 4)                        # the vein module's spacers; the others hold the board only
-J3 = (-0.15, -34.5)                          # opening -y, under the vein socket
+J3 = (-0.15, -34.5)                          # opening -y, just in front of the vein socket
 J6 = (BX0 + 4.45 + 2.3, -45.0)               # Grove (NFC), opening -x: its footprint's front 2.3 inside the edge
 U1 = (-8.0, 26.0)                            # MAX3232, turned (along x)
-SW1 = (8.0, 26.0)                            # DIP, turned (along x), reached with the cover off
+SW1 = (11.3, -44.3)                          # DIP (pads across x), between the vein module and the DB9, reached with the cover off
 J1X, J2X = AX - 7.62, AX + 7.62              # Ext.Pin rows (J1 5 pins from AY - 2.54, J2 4 pins from AY, both to +y)
 
 ZB = 3.0                                     # M3 × 3 spacers on the floor
 ZBT = ZB + 1.6
 SP_VEIN, TAPE = 5.0, 0.7
-VEIN = (-13.0, 13.0, -38.0, 21.0)            # 26 across, 59 along y, the socket end at -y (the cable loops before the DB9)
+VEIN = (-13.0, 13.0, -30.0, 29.0)            # 26 across, 59 along y, the socket end at -y; 8 towards the VoiceS3R so
+                                             # the cable's slack fits before the DB9 (VHB on H1..H4, no screws)
 VEIN_Z0 = ZBT + SP_VEIN + TAPE               # 10.3, top 25.3
 Z_ATOM = ZBT + 2.5                           # VoiceS3R bottom (header plastic 2.5), top 23.9
 
@@ -87,12 +89,12 @@ YS, YP, YL = VEIN[2], J3[1] - 9.1, J3[1] - 11.0              # socket face, plug
 ZS, ZP = VEIN_Z0 + 3.2, ZBT + 1.7
 vein_cable = (box(*VCX, YL, YS, ZS - 0.5, ZS + 0.5).union(box(*VCX, YL - 1.0, YL, ZP - 0.5, ZS + 0.5))
               .union(box(*VCX, YL - 1.0, YP, ZP - 0.5, ZP + 0.5)))
-# its slack (~80 of the 100: the loop takes ~20), folded 4 times ~22 long (2 × 2 of a ~2 × 2 bundle) and laid across
-# above J6, between the loop and the DB9 body; no cable hole in the case
-cable_slack = box(-11.0, 11.0, BY0 + 10.9, YL - 1.5, ZBT + 6.4, ZBT + 13.4)
+# its slack (~70 of the 100: the loop takes ~30), 4 passes of ~18 side by side (a 4-wire bundle is ~2.5 across) in front
+# of the vein module on the -x side, over J6 and beside the loop; no cable hole in the case
+cable_slack = box(-15.0, -3.0, BY0 + 11.2, VEIN[2] - 1.0, ZBT + 6.9, ZBT + 12.9)
 u1 = on(U1[0] - 4.95, U1[0] + 4.95, U1[1] - 1.95, U1[1] + 1.95, 0, 1.75)
 caps = on(-14.0, -2.0, 19.6, 21.0, 0, 0.9).union(on(-9.5, -6.5, 31.1, 32.5, 0, 0.9))
-sw1 = on(SW1[0] - 5.86, SW1[0] + 5.86, SW1[1] - 3.35, SW1[1] + 3.35, 0, 3.0)
+sw1 = on(SW1[0] - 5.6, SW1[0] + 5.6, SW1[1] - 3.35, SW1[1] + 3.35, 0, 3.0)   # gull-wing pads across x
 
 # Ext.Pin headers (plastic 2.54 × 2.5, pins up 6 into the VoiceS3R, tails 3 under the board)
 hdr_plastic = on(J1X - 1.27, J1X + 1.27, AY - 3.81, AY + 8.89, 0, 2.5).union(
@@ -287,9 +289,9 @@ parts = [
     ('j3', 'J3 MX1.25 4P(指静脈)', '#f1efe8', 1, 'mods', j3),
     ('j3plug', 'J3 プラグ(指静脈ケーブル)', '#e7e1cf', 1, 'mods', j3_plug),
     ('veincable', '指静脈のケーブル(MX1.25 4P、約 10 cm。DB9 との間で折り返す、おおよその通り道)', '#b04a2f', 1, 'mods', vein_cable),
-    ('slack', '指静脈のケーブルの余り(約 8 cm を 22 mm で 4 回折って J6 の上に置く、おおよその形)', '#d9775c', 1, 'mods', cable_slack),
+    ('slack', '指静脈のケーブルの余り(約 7 cm を 18 mm で 4 本並べて指静脈の手前・J6 の上に置く、おおよその形)', '#d9775c', 1, 'mods', cable_slack),
     ('u1', 'U1 MAX3232 と C1〜C5', '#202326', 1, 'mods', u1.union(caps)),
-    ('sw1', 'SW1 ストレート / クロス DIP(カバーを外して切り替え)', '#c0392b', 1, 'mods', sw1),
+    ('sw1', 'SW1 ストレート / クロス DIP(指静脈と DB9 の間の +x 側、カバーを外して切り替え)', '#c0392b', 1, 'mods', sw1),
     ('db9', 'J4 DB9 オス(−y の端面)', '#8a8f96', 1, 'mods', db9_body.union(db9_flange).union(db9_shell).union(db9_posts)),
     ('spacers', 'M3 × 3(床に VHB)と M3 × 5(指静脈、上面に VHB)', '#c9a227', 1, 'mods', spacers),
     ('db9plug', 'DB9 プラグ(FC-1200 へ)', '#5c6166', 1, 'mods', db9_plug),
@@ -306,7 +308,7 @@ DIMS = [('ケース', 'タカチ SW-130B(40 × 25 × 130、ABS、はめ込み式
         ('基板', 'station 基板 sw130(34.8 × 122.7)、部品は全部上面。床に VHB で貼った M3 × 3 の上(3.0)'),
         ('VoiceS3R', '基板に Ext.Pin(J1 / J2、普通のピンヘッダー)で立てる。カバーの窓から 1.4 出る。USB-C とその下の PORT.A(予備)は +y の端面の 1 つの穴から、リセットは +x の側面の穴からドライバーで'),
         ('NFC', '基板の Grove J6(−x の側面、DB9 の近く)。G38 = SDA / G39 = SCL(4.7k プルアップ)、ファームで I2C をこのピンで開く'),
-        ('指静脈', 'M3 × 5 の上に VHB 0.7、カバーから 2.8 突き出す。J3 はその下、ケーブルは DB9 との間で折り返す'),
+        ('指静脈', 'M3 × 5 の上に VHB 0.7、カバーから 2.8 突き出す。VoiceS3R 側へ寄せ(y −30〜29)、手前に J3 とケーブル(MX1.25 4P・約 10 cm)の余りを置く'),
         ('DB9', '−y の端面(切り欠きはボディの上縁まで開いていて、基板を上から落とし込む)。カバーの縁をその上だけ 0.8 削る'),
         ('加工', 'カバーに窓 2 つ、−y 端面に DB9、+y 端面に USB-C / PORT.A(1 つの穴)、−x 側面に NFC の Grove、+x 側面にリセットの穴 6 × 8')]
 NOTE = ('ケースはタカチの外形図(SW-130□)からの簡略形状です。VoiceS3R と NFC Unit の形は M5Stack 公式 STL'
