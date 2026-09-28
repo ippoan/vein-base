@@ -80,6 +80,22 @@ jobs:
           python3 tools/check_drc.py --board pcb/station_board/station_board.kicad_pcb --report fab/station/drc.rpt --ignore silk_edge_clearance
           python3 tools/check_drc.py --board pcb/station_board/station_board_pf.kicad_pcb --report fab/station_pf/drc.rpt --ignore silk_edge_clearance
 
+      - name: Build Vein Station ESP board (KiCad) + DRC
+        # the PF13-4-9 board with the VoiceS3R's circuit on it (ESP32-S3-WROOM-1, ES8311, NS4150B, mic, speaker)
+        # silk_edge_clearance: the DB9 / WROOM / USB-C outline silk runs off the board edge, as on the station board.
+        run: |
+          cd pcb/station_esp_board && python3 build_board.py && cd ../..
+          B=pcb/station_esp_board/station_esp_board.kicad_pcb; D=fab/station_esp
+          mkdir -p $D/gerber
+          kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o $D/gerber/ $B
+          kicad-cli pcb export drill --format excellon --excellon-separate-th -o $D/gerber/ $B
+          kicad-cli pcb export pos --format csv --units mm --side both -o $D/pos.csv $B
+          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o $D/station_esp_board_v${VER}_fitcheck_1to1.pdf $B
+          (cd $D/gerber && zip -q ../station_esp_board_v${VER}_gerbers.zip *)
+          python3 tools/make_jlc_cpl.py --pos $D/pos.csv --bom pcb/station_esp_board/jlc_bom.csv --prefix station_esp_board_v --outdir $D \
+            --corrections pcb/station_esp_board/jlc_cpl_corrections.csv
+          python3 tools/check_drc.py --board $B --report $D/drc.rpt --ignore silk_edge_clearance
+
       - name: Build Vein Unit board (KiCad) + DRC
         run: |
           cd pcb/vein_unit_board && python3 build_board.py && cd ../..
@@ -128,6 +144,7 @@ jobs:
             station/vein_unit_*
             fab/station/*
             fab/station_pf/*
+            fab/station_esp/*
             fab/vein_unit/*
 
       - uses: actions/upload-pages-artifact@v3

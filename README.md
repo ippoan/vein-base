@@ -44,6 +44,17 @@ VoiceS3R(Ext.Pin メス)
 
 VoiceS3R(vein-base の基板のみ。ケースは使わない)・指静脈モジュール・NFC ユニットを上向きに並べて収める卓上筐体の案。`station/build_station.py`(CadQuery)が筐体(ケース上部・底蓋)の STEP / STL と 3D プレビュー(https://ippoan.github.io/vein-base/station/)を作り、モジュール・プラグ・USB ケーブルとの干渉をチェックする。モジュールの外形は公式値(VoiceS3R・NFC は M5Stack 公式 STL の [Atom_VoiceS3R.stl](https://github.com/m5stack/M5_Hardware/blob/a240115c94b19ecf647f229c47fa9a8ce46ccdc4/Products/C126-ECHO_Atom_VoiceS3R/Structures/Atom_VoiceS3R.stl)・[Unit_NFC.stl](https://github.com/m5stack/M5_Hardware/blob/a240115c94b19ecf647f229c47fa9a8ce46ccdc4/Products/U216_Unit_NFC/Structures/Unit_NFC.stl)、指静脈は [Waveshare の製品ページ](https://www.waveshare.com/finger-vein-scanner-module-a.htm) の 59 × 26 × 15)。上面ボタン・ネジ頭などの細部とケーブルは写真からの実測。指静脈のコネクタ位置は未確定。基板は `pcb/station_board/`(r12)が生成する 60 × 35 mm の 1 枚基板で、VoiceS3R の Ext.Pin・指静脈 J3(G5/G6)・MAX3232(G7=送信 / G8=受信)・DIP(1+2 = Passthrough、3+4 = Cross)・DB9 オス RA をまとめ、接続口はすべて奥の壁に出す。同じ回路・同じ配線で外形を広げた版(`build_board.py pf` → `station_board_pf`、92 × 71)は、既製ケースタカチ PF13-4-9 用(印刷部品なし)。基板はケースに元からある基板用ボス(87 × 47)にタカチ TPS-M2.3-7 と M2.3 ねじで留め、モジュールは M3 オスメス六角スペーサーとナットで基板に立てる。60 × 35 の範囲と配線は共通。ケース側は `station/build_station_pf.py`(ケースはタカチ公式 STP の実測値からの簡略形状、STP は入れない)が、干渉チェック・3D プレビュー(`site/station-pf/`)・タカチの穴加工に出す DXF(天板の窓 2 つだけ)を作る。接続口はすべて背面なので背面パネルは付けない。基板の穴(H1..H8、B1..B4)はこのスクリプトと `build_board.py` の 2 か所にあるので一緒に直す。
 
+### Vein Station ESP 基板(VoiceS3R の回路を基板に載せた版・案)
+
+`pcb/station_esp_board/build_board.py`(e1)は、PF13-4-9 用の station 基板(92 × 71、穴・DB9・MAX3232・DIP・J3 の位置は同じ)に、Atom VoiceS3R を挿す代わりにその回路を直接載せた版。M5Stack 公開の回路図(`Sch_M5_AtomS3R_v0.4.1` / `Sch_M5_AtomEchoS3R_Audio_v1.0`)と同じ GPIO でつなぐので、VoiceS3R 用のファームがそのまま使える見込み。
+
+- ESP32-S3-WROOM-1-N8R8(技適付きモジュール。VoiceS3R の PICO-1 と同じ Flash 8 MB / PSRAM 8 MB)。アンテナは背面(−y)の端から 1.25 mm はみ出す。
+- USB-C(G19 / G20 を直結)、AMS1117-3.3、EN / BOOT ボタン。
+- ES8311(I2C: SDA G45 / SCL G0、I2S: MCLK G11 / BCLK G17 / WS G3 / G48 → DSDIN / ASDOUT → G4)、MEMS マイク(LinkMems LMA3729T381。VoiceS3R のマイクは在庫切れ)、NS4150B(CTRL G18)、13 × 13 mm の SMD スピーカー。スピーカーとマイクは、PF の天板にある旧 VoiceS3R 用の窓の下に置く。
+- Grove 2 口: J6 = Unit NFC(G2 SDA / G1 SCL、VoiceS3R の PORT.A と同じ)、J7 = 予備(G38 / G39)。IR LED は載せない(G47 は空き)。
+- **初回だけ**: G45(SDA のプルアップ付き)は Flash 電圧のストラップなので、最初に BOOT を押したまま EN を押し、`espefuse.py --port <ポート> set_flash_voltage 3.3V` で Flash 電圧を eFuse に書く。M5Unified は PICO-1 のパッケージで VoiceS3R を見分けるので、`cfg.fallback_board = m5::board_t::board_M5AtomVoiceS3R` を指定する。
+- 配線は freerouting の結果を `station_esp_board.ses` に入れてある(`build_board.py dsn` で DSN を出して再配線)。CI で gerber / CPL / DRC → `fab/station_esp/`。筐体側(`station/build_station_pf.py`)はまだ VoiceS3R 版のまま。
+
 ### Vein Station SE(CoreS3 SE 版・案)
 
 本体を CoreS3 SE に替え、RS232M Module 13.2(アルコールチェッカー FC-1200 用)・NFC・指静脈を収める版。LAN は使わず、USB 1 本で Windows PC につなぐ。`station/build_station_se.py` が筐体と 3D プレビュー(https://ippoan.github.io/vein-base/station-se/)を作る。CoreS3 SE には PORT.B のコネクタが無いので、指静脈の UART(G8/G9)は RS232M の下に挿す M-Bus 分岐基板から取り出す。CoreS3 SE と Unit NFC は M5Stack 公式 STL([m5stack/M5_Hardware](https://github.com/m5stack/M5_Hardware)、MIT)を commit 固定で取得して表示とポート位置に使う(`station/cad/`、git 管理外)。CoreS3 SE の PWR・USB-C・PORT.A はすべて左側面にある。指静脈モジュールの外形は公式値(コネクタ位置は未確定)。RS232M・分岐基板は仮の箱。計画は #14。
@@ -57,6 +68,7 @@ VoiceS3R(vein-base の基板のみ。ケースは使わない)・指静脈モジ
 | `case/` | ケース生成スクリプト(`build_case.py`、CadQuery) |
 | `pcb/jlc_bom.csv` | JLCPCB 用 BOM の元データ(LCSC 品番) |
 | `pcb/station_board/jlc_bom.csv` | station 基板の JLCPCB 用 BOM の元データ |
+| `pcb/station_esp_board/jlc_bom.csv` | station ESP 基板(VoiceS3R の回路を載せた版)の JLCPCB 用 BOM の元データ |
 | `fab/` | CI の出力先(git 管理外)。JLCPCB 発注用(ガーバー zip、BOM、CPL)、原寸の確認用 PDF、基板の STEP |
 | `tools/` | CI 用スクリプト(DRC チェック、JLC 用 CPL 変換、3D プレビュー生成と干渉チェック) |
 

@@ -1,0 +1,11 @@
+Footprint,Rotation,OffsetX,OffsetY
+SOIC-16_3.9x9.9mm_P1.27mm,270,0,0
+SW_DIP_SPSTx04_Slide_6.7x11.72mm_W8.61mm_P2.54mm_LowProfile,270,0,0
+DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm,270,5.54,1.42
+Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal,0,0,-0.95
+ESP32-S3-WROOM-1,0,0,3.63
+USB_C_Receptacle_HRO_TYPE-C-31-M-12,0,0,-1.57
+SOT-223-3_TabPin2,180,-0.18,0
+QFN-20-1EP_3x3mm_P0.4mm_EP1.65x1.65mm,270,0,0
+MSOP-8_3x3mm_P0.65mm,270,0,0
+JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal,0,0,1.05
