@@ -27,7 +27,7 @@ from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
 from template import cut_template, edge_row
 from drawing import face, sheet
 
-REV = 'sw130a'
+REV = 'sw130b'
 
 # ---- case (Takachi SW-130B, from the drawing) ------------------------------------------------------------
 OUT = (-20.0, 20.0, -65.0, 65.0)
@@ -99,8 +99,9 @@ atom = rbox(AX - 12, AX + 12, AY - 12, AY + 12, Z_ATOM, Z_ATOM + 16.8, 3.0)
 YF = AY + 12                                                # the USB-C / PORT.A face
 usb_plug = box(AX - 6, AX + 6, YF + 6.5, YF + 24.2, Z_ATOM + 4.0, Z_ATOM + 11.0).union(
     box(AX - 4.2, AX + 4.2, YF, YF + 6.5, Z_ATOM + 6.0, Z_ATOM + 9.0))
-# J6: JLC's HY2.0 body runs ~2.1 further out than the footprint's (the vein unit board's measurement): to the edge
-GF = BX0 + 0.2                                              # its front, 0.2 inside the board edge
+# J6: JLC's HY2.0 body runs ~2.1 further out than the footprint's (the vein unit board's measurement); JLC's assembly
+# preview shows its front ~0.5 past the board edge, so take 0.6 (into the wall; the Grove cut takes the whole body)
+GF = BX0 - 0.6                                              # its front, 0.6 outside the board edge
 grove = on(GF, J6[0] + 3.25, J6[1] - 6.0, J6[1] + 6.0, 0, 6.0)
 grove_plug = on(GF - 8.1, GF, J6[1] - 4.5, J6[1] + 4.5, 0.6, 5.4)
 
@@ -123,7 +124,7 @@ SKIRT_FILE = box(-16.0, 16.0, IN[2] - 0.5, SK[2] + 0.2, SKIRT - 0.1, SKIRT + 0.8
 # wall cut-outs as (along the wall 0, 1, z0, z1, R) in case coords: x on the ends, y on the +x side
 DB9_CUT = (-15.65, 15.65, ZBT - 1.5, CEIL, 0)                                            # DB9 hood (-y), open to the top
 USB_CUT = (AX - 4.8, AX + 4.8, Z_ATOM + 5.4, Z_ATOM + 9.6, 1.0)                          # USB-C plug (+y)
-GROVE_CUT = (J6[1] - 5.2, J6[1] + 5.2, ZBT + 0.1, ZBT + 5.9, 0.8)                          # Grove plug (-x)
+GROVE_CUT = (J6[1] - 6.3, J6[1] + 6.3, ZBT - 0.3, ZBT + 6.4, 0.5)                          # Grove body 12 × 6 (-x)
 # the reset: a U-shaped flap on the face left of the ports (official STL: 1.5..6.5 from the centre away from the
 # ports, 1.4..8.4 up), on the +x face here (the VoiceS3R turned half a turn); the hole takes a screwdriver
 RESET_CUT = (AY - 7.0, AY - 1.0, Z_ATOM + 1.0, Z_ATOM + 9.0, 1.0)                        # the reset (+x)
