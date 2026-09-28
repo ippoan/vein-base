@@ -28,7 +28,7 @@ from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
 from template import cut_template, edge_row
 from drawing import face, sheet
 
-REV = 'sw130d'
+REV = 'sw130e'
 
 # ---- case (Takachi SW-130B, from the drawing) ------------------------------------------------------------
 OUT = (-20.0, 20.0, -65.0, 65.0)
@@ -80,13 +80,16 @@ db9_plug = box(-15.15, 15.15, -100, BY0 - 1.8, ZBT - 0.75, ZBT + 13.25)   # stop
 
 j3 = on(J3[0] - 5.0, J3[0] + 5.0, J3[1] - 3.1, J3[1] + 3.7, 0, 3.4)
 j3_plug = on(J3[0] - 3.0, J3[0] + 3.0, J3[1] - 9.1, J3[1] - 3.1, 0.3, 3.1)
-# the vein cable (MX1.25 9P -> 4P, approx a 3 × 1 bundle): level out of the module's socket at the -y end, a loop down
+# the vein cable (MX1.25 4P, about 100 long, approx a 3 × 1 bundle): level out of the module's socket at the -y end, a loop down
 # in front of it (between the vein module and the DB9), back into J3's plug from -y
 VCX = (J3[0] - 1.5, J3[0] + 1.5)
 YS, YP, YL = VEIN[2], J3[1] - 9.1, J3[1] - 11.0              # socket face, plug's back, the loop's far side
 ZS, ZP = VEIN_Z0 + 3.2, ZBT + 1.7
 vein_cable = (box(*VCX, YL, YS, ZS - 0.5, ZS + 0.5).union(box(*VCX, YL - 1.0, YL, ZP - 0.5, ZS + 0.5))
               .union(box(*VCX, YL - 1.0, YP, ZP - 0.5, ZP + 0.5)))
+# its slack (~80 of the 100: the loop takes ~20), folded 4 times ~22 long (2 × 2 of a ~2 × 2 bundle) and laid across
+# above J6, between the loop and the DB9 body; no cable hole in the case
+cable_slack = box(-11.0, 11.0, BY0 + 10.9, YL - 1.5, ZBT + 6.4, ZBT + 13.4)
 u1 = on(U1[0] - 4.95, U1[0] + 4.95, U1[1] - 1.95, U1[1] + 1.95, 0, 1.75)
 caps = on(-14.0, -2.0, 19.6, 21.0, 0, 0.9).union(on(-9.5, -6.5, 31.1, 32.5, 0, 0.9))
 sw1 = on(SW1[0] - 5.86, SW1[0] + 5.86, SW1[1] - 3.35, SW1[1] + 3.35, 0, 3.0)
@@ -136,7 +139,7 @@ wall_cut = wall_cut.union(rbox(AX + 12.5, OUT[1] + 1, *RESET_CUT)).union(rbox(OU
 case = body.cut(cover_cut).cut(SKIRT_FILE).cut(wall_cut)
 
 # ---- interference ------------------------------------------------------------------------------------------
-checks = [('指静脈', vein), ('vein cable', vein_cable), ('board', pcb), ('J3', j3), ('J3 plug', j3_plug), ('MAX3232', u1),
+checks = [('指静脈', vein), ('vein cable', vein_cable), ('cable slack', cable_slack), ('board', pcb), ('J3', j3), ('J3 plug', j3_plug), ('MAX3232', u1),
           ('caps', caps), ('SW1', sw1), ('DB9 body', db9_body), ('DB9 flange', db9_flange), ('DB9 shell', db9_shell),
           ('DB9 posts', db9_posts), ('DB9 tails', db9_tails), ('spacers', spacers), ('DB9 plug', db9_plug),
           ('headers', hdr_plastic.union(hdr_pins)), ('VoiceS3R', atom), ('USB plug', usb_plug), ('Grove', grove),
@@ -147,7 +150,7 @@ for name, obj in checks:
     print(f'interference case x {name:14s} = {v:.3f} mm3')
     if v > 0.01:
         bad.append(f'case/{name}')
-mutual = [('指静脈', vein), ('vein cable', vein_cable), ('spacers', spacers), ('J3 plug', j3_plug), ('MAX3232', u1),
+mutual = [('指静脈', vein), ('vein cable', vein_cable), ('cable slack', cable_slack), ('spacers', spacers), ('J3 plug', j3_plug), ('MAX3232', u1),
           ('caps', caps), ('SW1', sw1), ('DB9 body', db9_body), ('DB9 tails', db9_tails), ('DB9 plug', db9_plug),
           ('header plastic', hdr_plastic), ('VoiceS3R', atom), ('USB plug', usb_plug), ('Grove', grove),
           ('Grove plug', grove_plug), ('PORT.A plug', porta_plug)]
@@ -283,7 +286,8 @@ parts = [
     ('hdr', 'J1 / J2 ピンヘッダー(VoiceS3R の Ext.Pin)', '#2b2f33', 1, 'mods', hdr_plastic.union(hdr_pins)),
     ('j3', 'J3 MX1.25 4P(指静脈)', '#f1efe8', 1, 'mods', j3),
     ('j3plug', 'J3 プラグ(指静脈ケーブル)', '#e7e1cf', 1, 'mods', j3_plug),
-    ('veincable', '指静脈のケーブル(DB9 との間で折り返す、おおよその通り道)', '#b04a2f', 1, 'mods', vein_cable),
+    ('veincable', '指静脈のケーブル(MX1.25 4P、約 10 cm。DB9 との間で折り返す、おおよその通り道)', '#b04a2f', 1, 'mods', vein_cable),
+    ('slack', '指静脈のケーブルの余り(約 8 cm を 22 mm で 4 回折って J6 の上に置く、おおよその形)', '#d9775c', 1, 'mods', cable_slack),
     ('u1', 'U1 MAX3232 と C1〜C5', '#202326', 1, 'mods', u1.union(caps)),
     ('sw1', 'SW1 ストレート / クロス DIP(カバーを外して切り替え)', '#c0392b', 1, 'mods', sw1),
     ('db9', 'J4 DB9 オス(−y の端面)', '#8a8f96', 1, 'mods', db9_body.union(db9_flange).union(db9_shell).union(db9_posts)),
