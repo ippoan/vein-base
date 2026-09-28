@@ -16,7 +16,9 @@ taken as solid (so the model is on the safe side).
 Stack (z): Takachi ASR-7 stick-on tapped bosses on the floor (□20 tape base) under H1 / H4 | board 7.2..8.8 |
 vein module on M3 × 6 spacers (male-female into the ASR-7 at H1 / H4, female-female with a screw from below at H2 / H3)
 + 1.0 VHB tape, 15.8..30.8: 2.8 proud of the cover through a window of its outline + 0.2 | DB9, USB-C and the Grove plugs
-through cut-outs in the walls. The speaker and the mic sit beside the vein module under holes in the cover.
+through cut-outs in the walls, and a pin hole beside them for the BOOT button (SW3, a side-push switch on the board's
++x edge: hold it with a pin while plugging the USB in to enter download mode with the station built). The speaker and
+the mic sit beside the vein module under holes in the cover.
 """
 import os
 import cadquery as cq
@@ -24,7 +26,7 @@ from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
 from template import cut_template, edge_row
 from drawing import face, sheet
 
-REV = 'sw75d'
+REV = 'sw75e'
 
 # ---- case (Takachi SW-75B, from the drawing) --------------------------------------------------------------
 OUT = (-25.0, 25.0, -37.5, 37.5)
@@ -37,7 +39,8 @@ BX0, BX1, BY0, BY1 = -20.4, 20.4, -33.8, 34.3
 HOLES = [(-6.3, -15.0), (1.2, -19.5), (-10.9, 20.5), (1.3, 20.5)]      # H1..H4 vein spacers
 ASR = (1, 4)                                                            # the ones on ASR-7 bosses
 DB9_BY = 0.0                                                            # DB9 on the +x edge
-USB = (17.35, 26.0)                                                     # opening +x
+USB = (17.35, 27.0)                                                     # opening +x
+BOOT = (18.6, 18.8)                        # SW3 BOOT, side-push EVQP7C between the DB9 and the USB-C, plunger to +x
 WROOM = (-7.65, 0.0)                                                    # antenna to -x
 J3 = (-8.35, -22.5)                                                     # opening -y, under the vein socket
 GROVE = [('J6 NFC', -7.75, 29.2), ('J7 G38/G39', 5.45, 29.2)]           # openings +y (the end wall)
@@ -82,6 +85,12 @@ UZ = ZBT + 1.63
 usb = on(UF - 7.3, UF, USB[1] - 4.47, USB[1] + 4.47, 0, 3.26)
 usb_plug = box(UF, UF + 6.5, USB[1] - 4.2, USB[1] + 4.2, UZ - 1.5, UZ + 1.5).union(
     box(UF + 6.5, UF + 24.2, USB[1] - 6.0, USB[1] + 6.0, UZ - 3.5, UZ + 3.5))
+
+# SW3 (EVQP7C): body 3.5 × 2.9 × 1.35 on the board, plunger 1.7 wide out to 2.1 from its centre (0.3 past the edge,
+# its centre 0.7 up)
+boot = on(BOOT[0] - 1.45, BOOT[0] + 1.45, BOOT[1] - 1.75, BOOT[1] + 1.75, 0, 1.35).union(
+    on(BOOT[0] + 1.45, BOOT[0] + 2.1, BOOT[1] - 0.85, BOOT[1] + 0.85, 0.2, 1.2))
+BZ = ZBT + 0.7
 
 j3 = on(J3[0] - 5.0, J3[0] + 5.0, J3[1] - 3.1, J3[1] + 3.7, 0, 3.4)
 j3_plug = on(J3[0] - 3.0, J3[0] + 3.0, J3[1] - 9.1, J3[1] - 3.1, 0.3, 3.1)
@@ -131,17 +140,18 @@ cover_cut = cover_cut.union(cyl_z(*MIC, 0.75, CEIL - 1, TOP + 1))
 # wall cut-outs as (along the wall 0, 1, z0, z1, R) in case coords: y on the +x side, x on the +y end
 DB9_CUT = (DB9_Y0 - 0.25, DB9_Y1 + 0.25, ZBT - 1.5, ZBT + 14.0, 0)                        # DB9 hood (+x)
 USB_CUT = (USB[1] - 4.8, USB[1] + 4.8, UZ - 2.1, UZ + 2.1, 1.0)                           # USB-C plug (+x)
+BOOT_HOLE = (BOOT[1], BZ, 1.0)                                                            # pin hole φ2 (+x)
 GROVE_CUTS = [(x - 5.0, x + 5.0, ZBT + 0.1, ZBT + 5.9, 0.8) for _, x, _y in GROVE]        # Grove plugs (+y)
 SIDE = (BX1 + 0.5, OUT[1] + 1)             # the +x wall
 END = (BY1 - 0.5, OUT[3] + 1)              # the +y wall
-wall_cut = box(*SIDE, *DB9_CUT[:4]).union(rbox(*SIDE, *USB_CUT))
+wall_cut = box(*SIDE, *DB9_CUT[:4]).union(rbox(*SIDE, *USB_CUT)).union(cyl_x(*SIDE, *BOOT_HOLE))
 for c in GROVE_CUTS:
     wall_cut = wall_cut.union(rbox(*c[:2], *END, *c[2:]))
 case = body.cut(cover_cut).cut(wall_cut)
 
 # ---- interference ------------------------------------------------------------------------------------------
 checks = [('指静脈', vein), ('vein cable', vein_cable), ('board', pcb), ('J3', j3), ('J3 plug', j3_plug), ('MAX3232', u1), ('WROOM', wroom),
-          ('speaker', spk), ('USB-C', usb), ('Grove', grove), ('Grove plugs', grove_plugs), ('DB9 body', db9_body),
+          ('speaker', spk), ('USB-C', usb), ('BOOT', boot), ('Grove', grove), ('Grove plugs', grove_plugs), ('DB9 body', db9_body),
           ('DB9 flange', db9_flange), ('DB9 shell', db9_shell), ('DB9 posts', db9_posts), ('DB9 tails', db9_tails),
           ('spacers', spacers), ('ASR-7', asr), ('DB9 plug', db9_plug), ('USB plug', usb_plug)]
 bad = []
@@ -152,7 +162,7 @@ for name, obj in checks:
         bad.append(f'case/{name}')
 mutual = [('指静脈', vein), ('vein cable', vein_cable), ('spacers', spacers), ('ASR-7', asr), ('J3 plug', j3_plug), ('WROOM', wroom),
           ('speaker', spk), ('Grove', grove), ('Grove plugs', grove_plugs), ('DB9 body', db9_body),
-          ('DB9 tails', db9_tails), ('DB9 plug', db9_plug), ('USB plug', usb_plug)]
+          ('DB9 tails', db9_tails), ('DB9 plug', db9_plug), ('USB plug', usb_plug), ('BOOT', boot)]
 for i, (na, a) in enumerate(mutual):
     for nb, b in mutual[i + 1:]:
         v = a.intersect(b).val().Volume()
@@ -176,7 +186,8 @@ SIDE_FACE = (OUT[2], OUT[3], 0, H, 0)
 END_FACE = (-OUT[1], -OUT[0], 0, H, 0)
 cover_cuts = [('vein', ('rect', *VEIN_WIN)), ('speaker', ('circle', *SPK_HOLES[0], 1.0)), ('mic', ('circle', *MIC, 0.75))]
 side_cuts = [('DB9', ('rect', *DB9_CUT[:2], DB9_CUT[2] - FLOOR, DB9_CUT[3] - FLOOR, DB9_CUT[4])),
-             ('USB-C', ('rect', *USB_CUT[:2], USB_CUT[2] - FLOOR, USB_CUT[3] - FLOOR, USB_CUT[4]))]
+             ('USB-C', ('rect', *USB_CUT[:2], USB_CUT[2] - FLOOR, USB_CUT[3] - FLOOR, USB_CUT[4])),
+             ('BOOT', ('circle', BOOT_HOLE[0], BOOT_HOLE[1] - FLOOR, BOOT_HOLE[2]))]
 end_cuts = [(n.split()[0], ('rect', -c[1], -c[0], c[2] - FLOOR, c[3] - FLOOR, c[4])) for (n, _x, _y), c in zip(GROVE, GROVE_CUTS)]
 SPK_NOTE = 'centre hole + 6 on a 3.5 hexagon (x +-3.5 / +-1.75, y 0 / +-3.0)'
 SIDE_NAMES, END_NAMES = ('-y end', '+y end', 'bottom', 'top'), ('+x side', '-x side', 'bottom', 'top')
@@ -202,7 +213,8 @@ def draw_side(msp):
     x0 = SIDE_FACE[0]
     face(msp, SIDE_FACE, [
         dict(cut=side_cuts[0][1], at=(-14, 21), wdim=H + 3, hdim=side_cuts[0][1][1] - 4, text=('DB9 hood, through', size(side_cuts[0][1]))),
-        dict(cut=side_cuts[1][1], at=(SIDE_FACE[1] + 18, 14), text=('USB-C, through', size(side_cuts[1][1])))],
+        dict(cut=side_cuts[1][1], at=(SIDE_FACE[1] + 18, 14), text=('USB-C, through', size(side_cuts[1][1]))),
+        dict(cut=side_cuts[2][1], at=(SIDE_FACE[1] + 18, 4), text=('BOOT pin hole, through', size(side_cuts[2][1])))],
         titles=[('+x SIDE seen from outside: -y end left, +y (Grove) end right', (0, -24)),
                 ('bottom edge = the floor\'s outside face (z -2), top edge = the cover\'s top (z 28)', (0, -29))],
         datum=(x0, 0))
@@ -220,7 +232,7 @@ def draw_end(msp):
 def wall_view(outline, cuts, at, label, left, right):
     x0, x1, _, h, _ = outline
     g = dict(color='0.6', lw=0.3)
-    small = [(n, c) for n, c in cuts if c[2] - c[1] <= 12]      # labelled under the hole, the big ones inside
+    small = [(n, c) for n, c in cuts if c[0] == 'circle' or c[2] - c[1] <= 12]   # labelled under the hole, big ones inside
     return dict(outline=outline, at=at, holes=[c if (n, c) in small else (*c, n) for n, c in cuts],
                 lines=[([x, x], [0, h], dict(g, ls='--')) for x in (x0 + COVER[4], x1 - COVER[4])] +
                       [([(x0 + x1) / 2] * 2, [-2, h + 2], dict(g, ls='-.'))],
@@ -228,7 +240,8 @@ def wall_view(outline, cuts, at, label, left, right):
                       (x0 - 1.5, h / 2, left, dict(ha='right', va='center', fs=6, color='0.4')),
                       (x1 + 1.5, h / 2, right, dict(ha='left', va='center', fs=6, color='0.4')),
                       ((x0 + x1) / 2, -3.5, 'BOTTOM (desk side)', dict(ha='center', fs=6, weight='bold'))] +
-                     [((c[1] + c[2]) / 2, c[3] - 2.8, n, dict(ha='center', fs=5.5, color='#d0021b')) for n, c in small])
+                     [(c[1], c[2] - c[3] - 2.8, n, dict(ha='center', fs=5.5, color='#d0021b')) if c[0] == 'circle' else
+                      ((c[1] + c[2]) / 2, c[3] - 2.8, n, dict(ha='center', fs=5.5, color='#d0021b')) for n, c in small])
 
 
 
@@ -269,7 +282,7 @@ for name, title, notes, draw, x0, y0 in (
           'dimensions: centres from the case centre (speaker: the centre hole), sizes', 'unit mm'],
          draw_cover, OUT[0], OUT[2] - 44),
         ('side', 'SW-75B body, +x side - seen from OUTSIDE, datum = bottom left (-y end, floor outside)',
-         ['CUT: DB9 hood (square corners), USB-C (R1.0), through', 'heights from the bottom (the floor\'s outside face)',
+         ['CUT: DB9 hood (square corners), USB-C (R1.0), BOOT pin hole dia 2.0, through', 'heights from the bottom (the floor\'s outside face)',
           'unit mm'], draw_side, SIDE_FACE[0], -36),
         ('end', 'SW-75B body, +y end - seen from OUTSIDE, datum = bottom left (+x side, floor outside)',
          ['CUT: Grove J6 (NFC) and J7 (G38 / G39), R0.8, through', 'heights from the bottom (the floor\'s outside face)',
@@ -296,6 +309,7 @@ parts = [
     ('veincable', '指静脈のケーブル(基板の切り欠きから下へ、余りは基板の下、おおよその通り道)', '#b04a2f', 1, 'mods', vein_cable),
     ('u1', 'U1 MAX3232', '#202326', 1, 'mods', u1),
     ('usb', 'J5 USB-C', '#8a8f96', 1, 'mods', usb),
+    ('boot', 'SW3 BOOT(横押し EVQP7C、側面のピン穴から押す)', '#202326', 1, 'mods', boot),
     ('grove', 'J6(NFC)/ J7(G38 / G39)Grove', '#f1efe8', 1, 'mods', grove),
     ('groveplug', 'Grove プラグ(端面から外へ)', '#c47f0e', 1, 'mods', grove_plugs),
     ('db9', 'J4 DB9 オス(右の側面)', '#8a8f96', 1, 'mods', db9_body.union(db9_flange).union(db9_shell).union(db9_posts)),
@@ -313,7 +327,8 @@ DIMS = [('ケース', 'タカチ SW-75B(50 × 30 × 75、ABS、はめ込み式)�
         ('指静脈', 'M3 × 6 の上に VHB テープ、カバーから 2.8 突き出す。ケーブルは基板の -y 端の切り欠きから下へ逃がし、余りを基板の下に収めて J3(同じ -y 向き)へ'),
         ('NFC', '箱の外(Grove ケーブルで J6 へ)'),
         ('カバーの穴', '指静脈(外形 + 0.2)・スピーカー φ2 × 7・マイク φ1.5'),
-        ('側面・端面', '+x の側面に DB9 の角穴と USB-C の穴、+y の端面に Grove × 2 の角穴')]
+        ('側面・端面', '+x の側面に DB9 の角穴・USB-C の穴・BOOT のピン穴 φ2、+y の端面に Grove × 2 の角穴'),
+        ('BOOT', '組んだまま書き込みモードに入れる: ピン穴からクリップで BOOT を押したまま USB を挿す')]
 NOTE = ('ケースはタカチの外形図(SW-75□)からの簡略形状です(縁の下 23 から上は全部ふさがっているとして安全側に見ている)。'
         'NFC Unit の形は M5Stack 公式 STL(m5stack/M5_Hardware、Copyright (c) 2021 M5Stack、MIT License)、'
         '指静脈の外形は公式値(細部は写真からのイメージ)、基板上の部品は KiCad のフットプリント寸法からの簡略形状、'

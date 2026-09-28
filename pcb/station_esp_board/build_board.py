@@ -4,7 +4,9 @@ Atom on the Ext.Pin, in two outlines of the same circuit:
   'sw'       52 × 76 for the Takachi SW-85B (station/build_station_sw.py): every part placed anew (POS), the vein module
              and the Unit NFC on M3 spacers from the board, the board on three Takachi ASL-12 stuck to the floor
   'sw75'     40.8 × 68.1 for the Takachi SW-75B (station/build_station_sw75.py), the Unit NFC outside on its cable:
-             DB9 / USB-C on the +x side, both Groves on the +y end, 0402 passives, SOT-89 LDO, SKRPACE010 buttons, the
+             DB9 / USB-C on the +x side, both Groves on the +y end, 0402 passives, SOT-89 LDO, EN on a SKRPACE010 inside
+             and BOOT on a side-push Panasonic EVQP7C on the +x edge between the DB9 and the USB-C (pressed with a pin
+             through a hole in the case's side, so a built station can be put into download mode), the
              straight / cross DIP as 0R links (R11 / R12) + open solder jumpers (JP1 / JP2), 5 / 5 mil tracks; the board
              hangs on the vein module's spacers (two of them into Takachi ASR-7 stuck to the floor). Its own BOM
              (jlc_bom_sw75.csv)
@@ -27,7 +29,8 @@ same GPIOs, so VoiceS3R firmware keeps working:
         R1OUT -> G8), SW1 DIP (1+2 pass / 3+4 cross), J4 DB9 male RA on the -y edge, H1..H8 M3 module spacers,
         B1..B4 M2.3 over the case's PCB bosses
 GPIO45 is the VDD_SPI strap and the SDA pull-up holds it high at reset: burn the flash voltage eFuse once before the
-first boot (hold BOOT, tap EN, then `espefuse.py --port <port> set_flash_voltage 3.3V`), as the WROOM-1's flash is 3.3 V.
+first boot (hold BOOT, tap EN or plug the USB in, then `espefuse.py --port <port> set_flash_voltage 3.3V`), as the
+WROOM-1's flash is 3.3 V.
 M5Unified detects the VoiceS3R by the PICO-1 package, so set cfg.fallback_board = board_M5AtomVoiceS3R (or configure
 the codec yourself).
 
@@ -39,6 +42,9 @@ Routing comes from freerouting and is kept in station_esp_board[_sw|_sw75].ses (
     python3 build_board.py [sw|sw75] dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py [sw|sw75]       # placement + tracks/vias from the .ses -> station_esp_board[_sw|_sw75].kicad_pcb
 Run with KiCad's python from pcb/station_esp_board/.
+The sw75 .ses since the BOOT button moved to the +x edge keeps the earlier routing and has only the nets around the
+moved USB-C / BOOT (5V, CC1 / CC2, UDP / UDN, G0 and the GND near J5) routed again by freerouting (a full reroute left
+G4 unrouted), merged into one file.
 """
 import math, os, re, sys
 import pcbnew
@@ -121,8 +127,10 @@ if SW75:
            'C5': (-3.25, -27.8, 0), 'R11': (0.0, 11.2, 0), 'R12': (2.2, 11.2, 0), 'JP1': (1.0, 13.8, 0),
            'JP2': (4.6, 13.8, 0),
            'U2': (WX, WY, 90), 'C9': (-11.4, -10.8, 90), 'C10': (-10.3, -10.8, 90), 'R5': (-13.6, -10.8, 90),   # under pins 1..3
-           'C11': (-12.5, -10.8, 90), 'SW2': (-4.8, 21.0, 90), 'SW3': (-4.8, 14.0, 90),
-           'J5': (17.35, 26.0, 90), 'R1': (8.0, 17.5, 0), 'R2': (8.0, 19.0, 0), 'R3': (10.3, 17.5, 0),
+           'C11': (-12.5, -10.8, 90), 'SW2': (-4.8, 21.0, 90),
+           'SW3': (18.6, 18.8, 90),     # EVQP7C, plunger to +x: pads 0.5 in from the edge, plunger tip 0.3 past it
+           # J5 1.0 to +y of sw75c's 26.0, to make room for SW3 between it and the DB9
+           'J5': (17.35, 27.0, 90), 'R1': (8.0, 17.5, 0), 'R2': (8.0, 19.0, 0), 'R3': (10.3, 17.5, 0),
            'R4': (10.3, 19.0, 0),
            'U3': (-10.5, 13.4, 0), 'C6': (-12.5, 16.6, 0), 'C7': (-7.4, 13.4, 90), 'C8': (-12.5, 10.3, 0),
            'MK1': (8.6, -12.5, 0), 'FB1': (6.9, -15.6, 90), 'C20': (8.3, -15.6, 90), 'C21': (9.7, -15.6, 90),
@@ -256,7 +264,7 @@ C('C11', '1uF', 'EN', 'GND', 38.8, -3.0, 90)
 BTN = ('vein_base.pretty', 'SW_Push_Alps_SKRPACE010') if SW75 else ('Button_Switch_SMD.pretty', 'SW_Push_1P1T_XKB_TS-1187A')
 SW2 = load(*BTN, 'SW2', 'EN (reset)', 37.2, 11.5, rot=90, local=SW75)
 wire(SW2, {'1': 'EN', '2': 'GND'})
-SW3 = load(*BTN, 'SW3', 'BOOT (G0)', 37.2, 19.5, rot=90, local=SW75)
+SW3 = load(*(('Button_Switch_SMD.pretty', 'SW_SPST_EVQP7C') if SW75 else BTN), 'SW3', 'BOOT (G0)', 37.2, 19.5, rot=90)
 wire(SW3, {'1': 'G0', '2': 'GND'})
 
 # ======== USB-C + 3.3 V ========
@@ -357,7 +365,7 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 # silk: (text, x, y) per outline; the Grove labels list pin 1 first
 SILK = ([('R11 R12 PASS / JP1 JP2 CROSS', 2.3, 16.2), ('NFC: G2 G1 5V G', -7.75, 23.4), ('G38 G39 5V G', 5.45, 23.4),
-         ('EN', -4.8, 24.6), ('BOOT', -4.8, 10.4)] if SW75 else
+         ('EN', -4.8, 24.6), ('BOOT', 13.5, 21.0)] if SW75 else
         [('1+2 PASS / 3+4 CROSS', -12.9, 4.6), ('J3 1RX 2TX 3V3 G', -20.0, -16.6), ('NFC: G2 G1 5V G', 15.5, -19.8),
          ('G38 G39 5V G', 12.8, 9.0), ('BOOT', 23.2, -9.4), ('EN', 23.2, 9.8)] if SW else
         [('SW1 1+2 PASS(FC-1200) / 3+4 CROSS', -41.2, 14.0), ('J3 vein: 1RX 2TX 3V3 4G', -30.0, 16.2),
