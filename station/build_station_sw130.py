@@ -27,7 +27,7 @@ from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
 from template import cut_template, edge_row
 from drawing import face, sheet
 
-REV = 'sw130b'
+REV = 'sw130c'
 
 # ---- case (Takachi SW-130B, from the drawing) ------------------------------------------------------------
 OUT = (-20.0, 20.0, -65.0, 65.0)
@@ -251,7 +251,7 @@ for name, title, notes, draw, x0, y0 in (
          wall_sheet(SIDE_FACE, side_cuts, '+x SIDE seen from outside: -y (DB9) end left, +y end right'),
          SIDE_FACE[0], -36),
         ('side_nfc', 'SW-130B body, -x side - seen from OUTSIDE, datum = bottom left (+y end, floor outside)',
-         ['CUT: the Grove (NFC) plug, R0.8, through', 'heights from the bottom (the floor\'s outside face)', 'unit mm'],
+         [f'CUT: the Grove (NFC) socket body and plug, R{GROVE_CUT[4]:g}, through', 'heights from the bottom (the floor\'s outside face)', 'unit mm'],
          wall_sheet(SIDE_FACE, nfc_cuts, '-x SIDE seen from outside: +y (USB) end left, -y (DB9) end right'),
          SIDE_FACE[0], -36),
         ('end_db9', 'SW-130B body, -y end - seen from OUTSIDE, datum = bottom left (-x side, floor outside)',
