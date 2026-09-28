@@ -57,28 +57,32 @@ jobs:
           python3 tools/check_drc.py --board pcb/vein_base_atomic.kicad_pcb --report fab/atomic/drc.rpt
 
       - name: Build Vein Station board (KiCad)
-        # both outlines of the same circuit: r10 for the printed enclosure (fab/station/) and r11 for the Takachi
-        # PF13-4-9 case (station_board_pf -> fab/station_pf/)
+        # the same circuit in three outlines: the printed enclosure (fab/station/), the Takachi PF13-4-9 case
+        # (station_board_pf -> fab/station_pf/) and the SW-75B with the VoiceS3R on a tongue outside the case
+        # (station_board_sw75 -> fab/station_sw75/, placed and routed on its own)
         run: |
-          cd pcb/station_board && python3 build_board.py && python3 build_board.py pf && cd ../..
+          cd pcb/station_board && python3 build_board.py && python3 build_board.py pf && python3 build_board.py sw75 && cd ../..
           sfab() {  # $1 = board name, $2 = output dir
             local B=pcb/station_board/$1.kicad_pcb
             mkdir -p $2/gerber
             kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o $2/gerber/ $B
             kicad-cli pcb export drill --format excellon --excellon-separate-th -o $2/gerber/ $B
             kicad-cli pcb export pos --format csv --units mm --side both -o $2/pos.csv $B
+            kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o $2/$1_v${VER}_fitcheck_1to1.pdf $B
             (cd $2/gerber && zip -q ../$1_v${VER}_gerbers.zip *)
             python3 tools/make_jlc_cpl.py --pos $2/pos.csv --bom pcb/station_board/jlc_bom.csv --prefix $1_v --outdir $2 \
               --corrections pcb/station_board/jlc_cpl_corrections.csv
           }
           sfab station_board fab/station
           sfab station_board_pf fab/station_pf
+          sfab station_board_sw75 fab/station_sw75
 
       - name: Vein Station board DRC
         # silk_edge_clearance: the DB9 footprint's outline silk runs off the board edge; only this board is exempt.
         run: |
           python3 tools/check_drc.py --board pcb/station_board/station_board.kicad_pcb --report fab/station/drc.rpt --ignore silk_edge_clearance
           python3 tools/check_drc.py --board pcb/station_board/station_board_pf.kicad_pcb --report fab/station_pf/drc.rpt --ignore silk_edge_clearance
+          python3 tools/check_drc.py --board pcb/station_board/station_board_sw75.kicad_pcb --report fab/station_sw75/drc.rpt --ignore silk_edge_clearance
 
       - name: Build Vein Station ESP boards (KiCad) + DRC
         # the station board with the VoiceS3R's circuit on it (ESP32-S3-WROOM-1, ES8311, NS4150B, mic, speaker), in three
@@ -157,6 +161,7 @@ jobs:
             station/vein_unit_*
             fab/station/*
             fab/station_pf/*
+            fab/station_sw75/*
             fab/station_esp/*
             fab/station_esp_sw/*
             fab/station_esp_sw75/*

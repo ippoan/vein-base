@@ -21,9 +21,19 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  The modules stand on stock M3 male-female hex spacers, male end down through the board with a nut
                  under it: NFC 12 mm (H1..H4), vein 6 mm (H5..H8).
 
-Routing comes from freerouting and is kept in station_board.ses (the board file itself is always generated):
-    python3 build_board.py dsn     # placement only -> station_board.dsn (feed it to freerouting -> .ses)
-    python3 build_board.py [pf]    # placement + tracks/vias from station_board.ses -> station_board[_pf].kicad_pcb
+  'sw75'         the same circuit and parts placed anew for the Takachi SW-75B (station/build_station_sw75.py), with
+                 the VoiceS3R outside the case: the board fills the case and a tongue (26 wide) runs out through the
+                 +y end wall; the VoiceS3R stands on the tongue on J1 / J2, its USB-C / PORT.A edge to +y (outwards),
+                 its top level with the cover. The vein module stands on M3 × 6 spacers on the board (H1..H4, H1 / H4
+                 into Takachi ASR-7 stuck to the floor), MAX3232 and J3 under it; SW1 above the DB9 (reached by taking
+                 the cover off); the DB9 on the +x edge; H5 on the tongue takes a foot down to the desk. Board coords =
+                 case coords there (origin = case centre, x across the 50 side, y along the 75 side). Parts, holes and
+                 the -y notch are also in station/build_station_sw75.py: keep the two together.
+                 -> station_board_sw75.kicad_pcb, routed on its own (station_board_sw75.ses)
+
+Routing comes from freerouting and is kept in station_board[_sw75].ses (the board file itself is always generated):
+    python3 build_board.py [sw75] dsn   # placement only -> .dsn (feed it to freerouting -> .ses)
+    python3 build_board.py [pf|sw75]    # placement + tracks/vias from the .ses -> station_board[_pf|_sw75].kicad_pcb
 Run with KiCad's python from pcb/station_board/.
 """
 import os, sys
@@ -34,8 +44,10 @@ from kicad_ses import import_ses  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PF = 'pf' in sys.argv[1:]
+SW75 = 'sw75' in sys.argv[1:]
 REV = 'r12'
-NAME = 'station_board_pf' if PF else 'station_board'
+NAME = 'station_board_pf' if PF else 'station_board_sw75' if SW75 else 'station_board'
+SES = 'station_board_sw75.ses' if SW75 else 'station_board.ses'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
 mm = pcbnew.FromMM
@@ -53,6 +65,25 @@ if PF:
     HOLES = [(27.0, 17.5), (14.9, 17.5), (27.0, 55.5), (14.9, 55.5),    # H1..H4 under the Unit NFC's corners
              (5.2, 27.5), (-43.8, 27.5), (5.2, 42.5), (-43.8, 42.5)]    # H5..H8 under the vein module's corners
     BOSSES = [(37.5, 3.2), (-49.5, 3.2), (37.5, 50.2), (-49.5, 50.2)]
+POS = {}                     # sw75: ref -> (x, y, rot), overriding the places below
+DB9_ROT, DB9_BY = 0, 0.0     # sw75: the DB9 turned to the +x edge at y = DB9_BY
+EDGE = None                  # sw75: the outline as a polygon
+NOTCH = None                 # sw75: (x0, x1, depth) cut into the -y edge for the vein cable (not in the DSN)
+if SW75:
+    X0, X1, Y0, Y1 = -20.4, 20.4, -33.8, 34.3
+    AX, AY = 0.0, 50.0                         # VoiceS3R centre: out past the +y end wall (outside 37.5), 0.5 clear
+    TX, TY = 13.0, 62.0                        # the tongue: |x| <= TX, out to y = TY
+    NOTCH = (-12.0, -6.0, 2.5)
+    DB9_ROT, DB9_BY = 90, 0.0
+    HOLES = [(-6.3, -15.0), (1.2, -19.5), (-10.9, 20.5), (1.3, 20.5),     # H1..H4 vein spacers (as the ESP sw75)
+             (0.0, 55.0)]                                                  # H5 the tongue's foot, under the VoiceS3R
+    # turned half a turn (USB-C / PORT.A to +y): case x = AX - x_vb, y = AY - y_vb; J1 / J2 pin 1 at y_vb = 2.54 / 0
+    POS = {'J1': (AX - 7.62, AY - 2.54, 180), 'J2': (AX + 7.62, AY, 180),
+           'J3': (-8.35, -22.5, 0),              # under the vein socket, opening -y like it (one C loop of cable)
+           'U1': (-12.5, 2.0, 0), 'C1': (-8.0, 6.5, 90), 'C2': (-8.0, 3.0, 90), 'C3': (-8.0, -0.5, 90),
+           'C4': (-8.0, -4.0, 90), 'C5': (-16.5, 8.5, 0),
+           'SW1': (13.0, 25.5, 90)}             # above the DB9, under the cover (not under the vein module)
+    EDGE = [(X0, Y0), (X1, Y0), (X1, Y1), (TX, Y1), (TX, TY), (-TX, TY), (-TX, Y1), (X0, Y1)]
 
 
 def P(x, y):
@@ -84,6 +115,8 @@ def load(lib, name, ref, value, x, y, rot=0, flip=False):
     fp.SetFPID(pcbnew.LIB_ID(nick, name))
     fp.SetReference(ref); fp.SetValue(value)
     b.Add(fp)
+    if ref in POS:
+        x, y, rot = POS[ref]
     fp.SetPosition(P(x, y))
     if flip:
         fp.Flip(fp.GetPosition(), False)
@@ -130,7 +163,11 @@ J4 = load('Connector_Dsub.pretty', 'DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinO
 # local +y (towards the mating face) points to board -y; put the pin-1 row 7.70 inside the edge, centre at DB9_BX
 p1 = [p for p in J4.Pads() if p.GetNumber() == '1'][0]
 px, py = xy(p1.GetPosition())
-J4.Move(pcbnew.VECTOR2I(mm((DB9_BX - 5.54) - px), -mm((Y0 + 7.70) - py)))
+if DB9_ROT == 90:      # sw75: mating face to +x, the pin row along +y, pin 1 7.70 in from the +x edge
+    J4.SetOrientationDegrees(90); px, py = xy(p1.GetPosition())
+    J4.Move(pcbnew.VECTOR2I(mm((X1 - 7.70) - px), -mm((DB9_BY - 5.54) - py)))
+else:
+    J4.Move(pcbnew.VECTOR2I(mm((DB9_BX - 5.54) - px), -mm((Y0 + 7.70) - py)))
 wire(J4, {'2': 'D2', '3': 'D3', '5': 'GND', '0': 'GND'})
 print('J4 pin1', xy(p1.GetPosition()), 'pin5', xy([p for p in J4.Pads() if p.GetNumber() == '5'][0].GetPosition()))
 
@@ -141,8 +178,12 @@ for x, y in BOSSES:
     c = pcbnew.PCB_SHAPE(b); c.SetShape(pcbnew.SHAPE_T_CIRCLE)
     c.SetCenter(P(x, y)); c.SetEnd(P(x + 1.3, y)); c.SetLayer(pcbnew.Edge_Cuts); c.SetWidth(mm(0.1)); b.Add(c)
 
-# ---- outline
-for (a, c), (d, e) in [((X0, Y0), (X1, Y0)), ((X1, Y0), (X1, Y1)), ((X1, Y1), (X0, Y1)), ((X0, Y1), (X0, Y0))]:
+# ---- outline (sw75: with the tongue, and the -y notch except in the DSN, where it kept the routing from passing)
+EDGE = EDGE or [(X0, Y0), (X1, Y0), (X1, Y1), (X0, Y1)]
+if NOTCH and 'dsn' not in sys.argv[1:]:
+    nx0, nx1, nd = NOTCH
+    EDGE = [(X0, Y0), (nx0, Y0), (nx0, Y0 + nd), (nx1, Y0 + nd), (nx1, Y0)] + EDGE[1:]
+for (a, c), (d, e) in zip(EDGE, EDGE[1:] + EDGE[:1]):
     s = pcbnew.PCB_SHAPE(b); s.SetShape(pcbnew.SHAPE_T_SEGMENT)
     s.SetStart(P(a, c)); s.SetEnd(P(d, e)); s.SetLayer(pcbnew.Edge_Cuts); s.SetWidth(mm(0.1)); b.Add(s)
 
@@ -156,24 +197,31 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
     b.Add(t)
 
 
-text('USB-C / PORT.A side', 0, -13.2, size=0.8)
-text('SW1 1+2 PASS(FC-1200) / 3+4 CROSS', -41.2, 14.0, size=0.8)
-text('J3 vein: 1RX 2TX 3V3 4G', -30.0, 16.2, size=0.8)
-text(f'vein-station board {REV}' + (' (PF13-4-9)' if PF else ''), -20.0, 18.0, layer=pcbnew.B_SilkS)
+if SW75:
+    text('VoiceS3R: USB-C / PORT.A this way', 0.0, TY - 1.2, size=0.8)
+    text('SW1 1+2 PASS / 3+4 CROSS', 13.0, 31.5, size=0.8)
+    text('J3 vein: 1RX 2TX 3V3 4G', -8.35, -17.6, size=0.8)
+    text(f'vein-station board {REV} (SW-75B)', -6.0, 0.0, layer=pcbnew.B_SilkS)
+else:
+    text('USB-C / PORT.A side', 0, -13.2, size=0.8)
+    text('SW1 1+2 PASS(FC-1200) / 3+4 CROSS', -41.2, 14.0, size=0.8)
+    text('J3 vein: 1RX 2TX 3V3 4G', -30.0, 16.2, size=0.8)
+    text(f'vein-station board {REV}' + (' (PF13-4-9)' if PF else ''), -20.0, 18.0, layer=pcbnew.B_SilkS)
 
 os.chdir(HERE)
-if len(sys.argv) > 1 and sys.argv[1] == 'dsn':
+if 'dsn' in sys.argv[1:]:
     b.Save(f'{NAME}.kicad_pcb')
     print('dsn', pcbnew.ExportSpecctraDSN(b, f'{NAME}.dsn'))
 else:
-    import_ses(b, nets, 'station_board.ses')
+    import_ses(b, nets, SES)
     b.Save(f'{NAME}.kicad_pcb')
     # GND pour on B.Cu over the whole board (stitches the GND tracks, shields the RS232 lines).
     # Filled on a reloaded board: the filler crashes on a board built in memory without a connectivity graph.
     b = pcbnew.LoadBoard(f'{NAME}.kicad_pcb')
     z = pcbnew.ZONE(b); z.SetLayer(pcbnew.B_Cu); z.SetNet(b.FindNet('GND'))
     ol = z.Outline(); ol.NewOutline()
-    for x, y in ((X0 + 0.3, Y0 + 0.3), (X1 - 0.3, Y0 + 0.3), (X1 - 0.3, Y1 - 0.3), (X0 + 0.3, Y1 - 0.3)):
+    YT = TY if SW75 else Y1      # the fill is clipped to the outline (the sw75 tongue and notch)
+    for x, y in ((X0 + 0.3, Y0 + 0.3), (X1 - 0.3, Y0 + 0.3), (X1 - 0.3, YT - 0.3), (X0 + 0.3, YT - 0.3)):
         ol.Append(mm(OX + x), mm(OY - y))
     z.SetLocalClearance(mm(0.3)); z.SetMinThickness(mm(0.25))
     b.Add(z)
