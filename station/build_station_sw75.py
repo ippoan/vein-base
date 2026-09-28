@@ -19,7 +19,7 @@ through cut-outs in the walls. The speaker and the mic sit beside the vein modul
 import cadquery as cq
 from shapes import box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
 
-REV = 'sw75b'
+REV = 'sw75c'
 
 # ---- case (Takachi SW-75B, from the drawing) --------------------------------------------------------------
 OUT = (-25.0, 25.0, -37.5, 37.5)
@@ -46,7 +46,8 @@ VEIN = (-21.2, 4.8, -26.5, 32.5)           # 26 across, 59 along y, the socket e
                                            # (the cable's C loop down to J3)
 VEIN_Z0 = ZBT + SP_VEIN + TAPE             # 15.8, top 30.8
 
-pcb = box(BX0, BX1, BY0, BY1, ZB, ZBT)
+NOTCH = (-12.0, -6.0, 2.5)                 # cut into the -y edge under the vein socket, for the cable
+pcb = box(BX0, BX1, BY0, BY1, ZB, ZBT).cut(box(NOTCH[0], NOTCH[1], BY0 - 1, BY0 + NOTCH[2], ZB - 1, ZBT + 1))
 for x, y in HOLES:
     pcb = pcb.cut(cyl_z(x, y, 1.6, ZB - 1, ZBT + 1))
 
@@ -79,13 +80,16 @@ usb_plug = box(UF, UF + 6.5, USB[1] - 4.2, USB[1] + 4.2, UZ - 1.5, UZ + 1.5).uni
 
 j3 = on(J3[0] - 5.0, J3[0] + 5.0, J3[1] - 3.1, J3[1] + 3.7, 0, 3.4)
 j3_plug = on(J3[0] - 3.0, J3[0] + 3.0, J3[1] - 9.1, J3[1] - 3.1, 0.3, 3.1)
-# the vein cable (MX1.25 9P -> 4P, approx 3 × 1 flat bundle): level out of the module's socket at the -y end, one C loop
-# down in the gap before the end wall and back +y into J3's plug
+# the vein cable (MX1.25 9P -> 4P, approx a 3 × 1 bundle): level out of the module's socket at the -y end, down through
+# the board's notch, the spare length folded under the board (7.2 to the floor), back up through the notch into J3's plug
 VCX = (J3[0] - 1.5, J3[0] + 1.5)
-YS, YP, YL = VEIN[2], J3[1] - 9.1, VEIN[2] - 7.0          # socket face, plug's back, the loop's far side
-ZS, ZP = VEIN_Z0 + 3.2, ZBT + 1.7                         # socket and plug centre heights
-vein_cable = (box(*VCX, YL, YS, ZS - 0.5, ZS + 0.5).union(box(*VCX, YL, YL + 1.0, ZP - 0.5, ZS + 0.5))
-              .union(box(*VCX, YL, YP, ZP - 0.5, ZP + 0.5)))
+YS, YP = VEIN[2], J3[1] - 9.1                              # socket face, plug's back
+YN = (BY0 + 0.5, BY0 + 1.5)                                # the run down / up, inside the notch
+ZS, ZP = VEIN_Z0 + 3.2, ZBT + 1.7                          # socket and plug centre heights
+vein_cable = (box(*VCX, YN[0], YS, ZS - 0.5, ZS + 0.5)                       # socket -> over the notch
+              .union(box(*VCX, *YN, 2.0, ZS + 0.5))                          # down / up through the notch
+              .union(box(*VCX, YN[0], YP, ZP - 0.5, ZP + 0.5))               # plug's back -> the notch
+              .union(box(J3[0] - 3.5, J3[0] + 3.0, YN[0], BY0 + 7.0, 2.0, 5.5)))   # spare length under the board
 u1 = on(U1[0] - 1.95, U1[0] + 1.95, U1[1] - 5.0, U1[1] + 5.0, 0, 1.75)
 wroom = on(WROOM[0] - 12.75, WROOM[0] + 12.75, WROOM[1] - 9.0, WROOM[1] + 9.0, 0, 3.1)
 spk = on(SPK[0] - 6.5, SPK[0] + 6.5, SPK[1] - 6.5, SPK[1] + 6.5, 0, 4.0)
@@ -147,6 +151,10 @@ for i, (na, a) in enumerate(mutual):
         if v > 0.01:
             print(f'interference {na} x {nb} = {v:.3f} mm3')
             bad.append(f'{na}/{nb}')
+v = vein_cable.intersect(pcb).val().Volume()                  # the cable passes the board only through the notch
+if v > 0.01:
+    print(f'interference vein cable x board = {v:.3f} mm3')
+    bad.append('vein cable/board')
 print('parts among themselves: ' + ('ok' if not any(not b.startswith('case/') for b in bad) else 'NG'))
 
 # ---- 3D preview ------------------------------------------------------------------------------------------
@@ -163,7 +171,7 @@ parts = [
     ('spk', 'スピーカー 13 × 13(カバーの穴の下)', '#202326', 1, 'mods', spk),
     ('j3', 'J3 MX1.25 4P(指静脈)', '#f1efe8', 1, 'mods', j3),
     ('j3plug', 'J3 プラグ(指静脈ケーブル)', '#e7e1cf', 1, 'mods', j3_plug),
-    ('veincable', '指静脈のケーブル(-y 端で C 字、おおよその通り道)', '#b04a2f', 1, 'mods', vein_cable),
+    ('veincable', '指静脈のケーブル(基板の切り欠きから下へ、余りは基板の下、おおよその通り道)', '#b04a2f', 1, 'mods', vein_cable),
     ('u1', 'U1 MAX3232', '#202326', 1, 'mods', u1),
     ('usb', 'J5 USB-C', '#8a8f96', 1, 'mods', usb),
     ('grove', 'J6(NFC)/ J7(G38 / G39)Grove', '#f1efe8', 1, 'mods', grove),
@@ -180,7 +188,7 @@ SUB = ('別案(最小): NFC を外に出し、タカチ SW-75B(50 × 30 × 75)�
 DIMS = [('ケース', 'タカチ SW-75B(50 × 30 × 75、ABS、はめ込み式)。PF13-4-9 の約 1/3 の面積、高さ 30'),
         ('内側', '床 44.8 × 69.8 → 縁の下 42.8 × 67.8、高さ 23(図面の有効寸法)'),
         ('基板', 'ESP 基板 sw75 40.8 × 68.1、0402・片面実装。床に貼る ASR-7 × 2 にスペーサーのオス側でねじ込む(7.2)'),
-        ('指静脈', 'M3 × 6 の上に VHB テープ、カバーから 2.8 突き出す。ケーブルは -y 端で下へ C 字に曲げて J3(同じ -y 向き)へ'),
+        ('指静脈', 'M3 × 6 の上に VHB テープ、カバーから 2.8 突き出す。ケーブルは基板の -y 端の切り欠きから下へ逃がし、余りを基板の下に収めて J3(同じ -y 向き)へ'),
         ('NFC', '箱の外(Grove ケーブルで J6 へ)'),
         ('カバーの穴', '指静脈(外形 + 0.2)・スピーカー φ2 × 7・マイク φ1.5'),
         ('側面・端面', '+x の側面に DB9 の角穴と USB-C の穴、+y の端面に Grove × 2 の角穴')]
