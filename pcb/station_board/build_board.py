@@ -26,8 +26,11 @@ Routing comes from freerouting and is kept in station_board.ses (the board file 
     python3 build_board.py [pf]    # placement + tracks/vias from station_board.ses -> station_board[_pf].kicad_pcb
 Run with KiCad's python from pcb/station_board/.
 """
-import os, re, sys
+import os, sys
 import pcbnew
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+from kicad_ses import import_ses  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PF = 'pf' in sys.argv[1:]
@@ -158,59 +161,12 @@ text('SW1 1+2 PASS(FC-1200) / 3+4 CROSS', -41.2, 14.0, size=0.8)
 text('J3 vein: 1RX 2TX 3V3 4G', -30.0, 16.2, size=0.8)
 text(f'vein-station board {REV}' + (' (PF13-4-9)' if PF else ''), -20.0, 18.0, layer=pcbnew.B_SilkS)
 
-# ---- routing (freerouting session file)
-LAY = {'F.Cu': pcbnew.F_Cu, 'B.Cu': pcbnew.B_Cu}
-
-
-def sexp(text):
-    """Parse an s-expression into nested lists of strings (quoted strings lose their quotes)."""
-    stack, cur = [], []
-    for tok in re.findall(r'"[^"]*"|\(|\)|[^\s()]+', text):
-        if tok == '(':
-            stack.append(cur); cur = []
-        elif tok == ')':
-            done = cur; cur = stack.pop(); cur.append(done)
-        else:
-            cur.append(tok.strip('"'))
-    return cur[0]
-
-
-def find(node, key):
-    for c in node:
-        if isinstance(c, list) and c and c[0] == key:
-            yield c
-
-
-def import_ses(path):
-    """Add the wires and vias of a Specctra session file (freerouting output) to the board."""
-    ses = sexp(open(path).read())
-    route = next(find(ses, 'routes'))
-    unit, res = next(find(route, 'resolution'))[1:3]
-    k = {'um': 0.001, 'mm': 1.0, 'mil': 0.0254, 'inch': 25.4}[unit] / int(res)
-    n_w = n_v = 0
-    for net in find(next(find(route, 'network_out')), 'net'):
-        ni = nets[net[1]]
-        for w in find(net, 'wire'):
-            path = next(find(w, 'path'))
-            lay, width, c = path[1], float(path[2]) * k, [float(v) * k for v in path[3:]]
-            pts = list(zip(c[0::2], c[1::2]))
-            for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
-                t = pcbnew.PCB_TRACK(b)
-                t.SetStart(pcbnew.VECTOR2I(mm(x1), mm(-y1))); t.SetEnd(pcbnew.VECTOR2I(mm(x2), mm(-y2)))
-                t.SetWidth(mm(width)); t.SetLayer(LAY[lay]); t.SetNet(ni); b.Add(t); n_w += 1
-        for v in find(net, 'via'):
-            x, y = float(v[2]) * k, float(v[3]) * k
-            via = pcbnew.PCB_VIA(b); via.SetPosition(pcbnew.VECTOR2I(mm(x), mm(-y)))
-            via.SetWidth(mm(0.6)); via.SetDrill(mm(0.3)); via.SetNet(ni); b.Add(via); n_v += 1
-    print(f'ses: {n_w} track segments, {n_v} vias')
-
-
 os.chdir(HERE)
 if len(sys.argv) > 1 and sys.argv[1] == 'dsn':
     b.Save(f'{NAME}.kicad_pcb')
     print('dsn', pcbnew.ExportSpecctraDSN(b, f'{NAME}.dsn'))
 else:
-    import_ses('station_board.ses')
+    import_ses(b, nets, 'station_board.ses')
     b.Save(f'{NAME}.kicad_pcb')
     # GND pour on B.Cu over the whole board (stitches the GND tracks, shields the RS232 lines).
     # Filled on a reloaded board: the filler crashes on a board built in memory without a connectivity graph.

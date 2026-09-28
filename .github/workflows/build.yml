@@ -80,6 +80,27 @@ jobs:
           python3 tools/check_drc.py --board pcb/station_board/station_board.kicad_pcb --report fab/station/drc.rpt --ignore silk_edge_clearance
           python3 tools/check_drc.py --board pcb/station_board/station_board_pf.kicad_pcb --report fab/station_pf/drc.rpt --ignore silk_edge_clearance
 
+      - name: Build Vein Station ESP boards (KiCad) + DRC
+        # the station board with the VoiceS3R's circuit on it (ESP32-S3-WROOM-1, ES8311, NS4150B, mic, speaker), in two
+        # outlines: PF13-4-9 (station_esp_board -> fab/station_esp/) and SW-85B (station_esp_board_sw -> fab/station_esp_sw/)
+        # silk_edge_clearance: the DB9 / WROOM / USB-C outline silk runs off the board edge, as on the station board.
+        run: |
+          cd pcb/station_esp_board && python3 build_board.py && python3 build_board.py sw && cd ../..
+          efab() {  # $1 = board name, $2 = output dir
+            local B=pcb/station_esp_board/$1.kicad_pcb D=$2
+            mkdir -p $D/gerber
+            kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o $D/gerber/ $B
+            kicad-cli pcb export drill --format excellon --excellon-separate-th -o $D/gerber/ $B
+            kicad-cli pcb export pos --format csv --units mm --side both -o $D/pos.csv $B
+            kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o $D/$1_v${VER}_fitcheck_1to1.pdf $B
+            (cd $D/gerber && zip -q ../$1_v${VER}_gerbers.zip *)
+            python3 tools/make_jlc_cpl.py --pos $D/pos.csv --bom pcb/station_esp_board/jlc_bom.csv --prefix $1_v --outdir $D \
+              --corrections pcb/station_esp_board/jlc_cpl_corrections.csv
+            python3 tools/check_drc.py --board $B --report $D/drc.rpt --ignore silk_edge_clearance
+          }
+          efab station_esp_board fab/station_esp
+          efab station_esp_board_sw fab/station_esp_sw
+
       - name: Build Vein Unit board (KiCad) + DRC
         run: |
           cd pcb/vein_unit_board && python3 build_board.py && cd ../..
@@ -109,6 +130,9 @@ jobs:
       - name: Build Vein Station PF (Takachi PF13-4-9) hole drawings + 3D preview + interference check
         run: python3 station/build_station_pf.py
 
+      - name: Build Vein Station SW (Takachi SW-85B, alternative) 3D preview + interference check
+        run: python3 station/build_station_sw.py
+
       - name: Build Vein Unit (finger vein module alone in a small Takachi case) cutting templates + 3D previews + interference check
         run: python3 station/build_vein_unit.py cs && python3 station/build_vein_unit.py sic
 
@@ -128,6 +152,9 @@ jobs:
             station/vein_unit_*
             fab/station/*
             fab/station_pf/*
+            fab/station_esp/*
+            fab/station_esp_sw/*
+            site/station-sw/*
             fab/vein_unit/*
 
       - uses: actions/upload-pages-artifact@v3

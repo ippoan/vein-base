@@ -12,6 +12,10 @@ station/cad/
 pcb/vein_unit_board/*.kicad_pcb
 pcb/vein_unit_board/*.kicad_pro
 pcb/vein_unit_board/fp-lib-table
+pcb/station_esp_board/*.kicad_pcb
+pcb/station_esp_board/*.kicad_pro
+pcb/station_esp_board/*.dsn
+pcb/station_esp_board/fp-lib-table
 
 # 見積書・受信メールなど個人情報を含む手元の書類 (git に入れない)
 private/
