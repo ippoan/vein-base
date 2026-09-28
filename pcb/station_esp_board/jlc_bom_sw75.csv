@@ -7,7 +7,8 @@ NS4150B class-D amplifier (MSOP-8),U5,MSOP-8_3x3mm_P0.65mm,C189961,
 LinkMems LMA3729T381-OAC03 analog MEMS mic (top port),MK1,MEMS_Mic_LinkMems_LMA3729T381_3.76x2.95mm,C41347996,pin 1 corner as JLC's footprint; check it in the assembly preview
 "GSPK1304S-8R0.5W SMD speaker 13x13x4, 8 ohm",SP1,Speaker_SMD_GSPK1304S_13x13mm,C2847318,sound opening up
 "HY2.0-4P right angle SMD (Grove), JST PH S4B-PH-SM4-TB footprint","J6,J7",JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal,C722729,J6 = Unit NFC (G2 SDA / G1 SCL) / J7 = spare (G38 / G39); openings on the +y edge; check the pads against JLC's footprint in the assembly preview
-"Tact switch 4.2x3.2 (Alps SKRPACE010)","SW2,SW3",SW_Push_Alps_SKRPACE010,C139797,SW2 = EN (reset) / SW3 = BOOT (G0); two diagonal pads used
+"Tact switch 4.2x3.2 (Alps SKRPACE010)",SW2,SW_Push_Alps_SKRPACE010,C139797,EN (reset); two diagonal pads used
+"Side-push tact switch 3.5x2.9 (Panasonic EVQP7C01P)",SW3,SW_SPST_EVQP7C,C388883,BOOT (G0); plunger over the +x edge (pressed through a pin hole in the case side); check it faces +x in the assembly preview
 "Ferrite bead 120R@100MHz 0402 (Murata BLM15AG121SN1D)",FB1,L_0402_1005Metric,C85812,mic supply
 Molex PicoBlade 53261-0471 (MX1.25 4P RA SMD),J3,Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal,C696092,opening faces +y (the vein cable)
 "MAX3232EIDR (TI, RS232 transceiver 3-5.5V)",U1,SOIC-16_3.9x9.9mm_P1.27mm,C193666,powered from 3V3
