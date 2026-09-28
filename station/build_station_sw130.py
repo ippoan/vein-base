@@ -19,7 +19,8 @@ Stack (z): M3 × 3 spacers stuck to the floor (VHB) | board 3.0..4.6 (THT tails 
 vein module on M3 × 5 spacers over H1..H4 + 0.7 VHB, 10.3..25.3: 2.8 proud of the cover through a window of its outline
 + 0.2 | VoiceS3R 7.1..23.9 on the pin headers (plastic 2.5), through a window of its outline + 0.2 | DB9 up to 17.1,
 0.1 into the skirt's height: the skirt's lower edge is filed back 0.8 over the DB9 (the only cut in the cover's skirt).
-The DB9 notch in the -y end wall is open to the top of the body, so the board drops in from above.
+The DB9 notch in the -y end wall is open to the top of the body, so the board drops in from above; the USB-C / PORT.A
+notch in the +y end is open to the top as well (a closed hole would leave a 0.3 bridge under the body's top edge).
 """
 import os
 import cadquery as cq
@@ -124,13 +125,13 @@ cover_cut = rbox(*VEIN_WIN[:4], CEIL - 1, TOP + 1, VEIN_WIN[4]).union(rbox(*ATOM
 SKIRT_FILE = box(-16.0, 16.0, IN[2] - 0.5, SK[2] + 0.2, SKIRT - 0.1, SKIRT + 0.8)   # the skirt filed back over the DB9
 # wall cut-outs as (along the wall 0, 1, z0, z1, R) in case coords: x on the ends, y on the +x side
 DB9_CUT = (-15.65, 15.65, ZBT - 1.5, CEIL, 0)                                            # DB9 hood (-y), open to the top
-USB_CUT = (AX - 5.3, AX + 5.3, Z_ATOM - 0.4, Z_ATOM + 9.6, 1.0)                          # USB-C over PORT.A (+y), one hole
+USB_CUT = (AX - 5.3, AX + 5.3, Z_ATOM - 0.4, SKIRT, 0)                                    # USB-C over PORT.A (+y), open to the top
 GROVE_CUT = (J6[1] - 6.3, J6[1] + 6.3, ZBT - 0.3, ZBT + 6.4, 0.5)                          # Grove body 12 × 6 (-x)
 # the reset: a U-shaped flap on the face left of the ports (official STL: 1.5..6.5 from the centre away from the
 # ports, 1.4..8.4 up), on the +x face here (the VoiceS3R turned half a turn); the hole takes a screwdriver
 RESET_CUT = (AY - 7.0, AY - 1.0, Z_ATOM + 1.0, Z_ATOM + 9.0, 1.0)                        # the reset (+x)
 wall_cut = (box(*DB9_CUT[:2], OUT[2] - 1, BY0 - 0.5, *DB9_CUT[2:4])
-            .union(rbox(*USB_CUT[:2], YF + 0.5, OUT[3] + 1, *USB_CUT[2:])))
+            .union(box(*USB_CUT[:2], YF + 0.5, OUT[3] + 1, *USB_CUT[2:4])))
 wall_cut = wall_cut.union(rbox(AX + 12.5, OUT[1] + 1, *RESET_CUT)).union(rbox(OUT[0] - 1, IN[0] + 0.2, *GROVE_CUT))
 case = body.cut(cover_cut).cut(SKIRT_FILE).cut(wall_cut)
 
@@ -231,7 +232,7 @@ def template():
              'PRINT AT 100% / ACTUAL SIZE (no "fit to page", no scaling).',
              'Cut the views apart. Cover: face up on the cover, grey outline (40 x 130, R3) on the cover edges.',
              'Side / ends: the grey line is the whole case (cover on, 25 high): its BOTTOM edge on the desk side of the body,',
-             'its ends on the case ends. All wall cuts are in the body; the DB9 cut is open to the body\'s top edge.',
+             'its ends on the case ends. All wall cuts are in the body; the DB9 and USB cuts are open to the body\'s top edge.',
              'Also file the cover\'s skirt back 0.8 over the DB9 (32 wide, at the -y end).',
              'Red = cut through; + = corner drill centres. Unit mm.',
              'Distances: cover from the outline edges; side / ends from the ends, the bottom (floor outside) and the top.',
@@ -259,7 +260,7 @@ for name, title, notes, draw, x0, y0 in (
          ['CUT: DB9 hood (square corners), open to the top of the body', 'heights from the bottom', 'unit mm'],
          wall_sheet(END_FACE, end_db9_cuts, '-y END seen from outside: -x left, +x right'), END_FACE[0], -36),
         ('end_usb', 'SW-130B body, +y end - seen from OUTSIDE, datum = bottom left (+x side, floor outside)',
-         [f'CUT: USB-C over PORT.A, one hole, R{USB_CUT[4]:g}, through', 'heights from the bottom', 'unit mm'],
+         ['CUT: USB-C over PORT.A (square corners), open to the top of the body', 'heights from the bottom', 'unit mm'],
          wall_sheet(END_FACE, end_usb_cuts, '+y END seen from outside: +x left, -x right'), END_FACE[0], -36)):
     dxf[name] = sheet(os.path.join(out, f'vein_station_{REV}_{name}.dxf'), title, notes, draw, x0, y0)
 downloads = [('型紙(PDF、A4 原寸 — 拡大縮小なしで印刷。カバー・両側面・両端面)', template())]
