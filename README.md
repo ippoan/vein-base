@@ -6,6 +6,20 @@ M5Stack **Atom VoiceS3R** の下に積むベースです。**指静脈モジュ�
 
 **3D プレビュー:** https://ippoan.github.io/vein-base/(回転・分解表示・部品の表示切替ができます)
 
+3D プレビュー(GitHub Pages、main の CI が更新。各ページから型紙・加工図もダウンロードできます):
+
+| 案 | ページ |
+|---|---|
+| vein-base(単体) | https://ippoan.github.io/vein-base/ |
+| Vein Station(印刷筐体) | https://ippoan.github.io/vein-base/station/ |
+| Vein Station SE(CoreS3 SE) | https://ippoan.github.io/vein-base/station-se/ |
+| Vein Station PF(タカチ PF13-4-9) | https://ippoan.github.io/vein-base/station-pf/ |
+| Vein Station SW(タカチ SW-85B) | https://ippoan.github.io/vein-base/station-sw/ |
+| Vein Station SW75(タカチ SW-75B) | https://ippoan.github.io/vein-base/station-sw75/ |
+| Vein Station SW130(タカチ SW-130B) | https://ippoan.github.io/vein-base/station-sw130/ |
+| 指静脈 Unit(CS75N-B) | https://ippoan.github.io/vein-base/vein-unit-cs/ |
+| 指静脈 Unit(SIC5-9-2B) | https://ippoan.github.io/vein-base/vein-unit-sic/ |
+
 ## 構成
 
 ```
@@ -73,6 +87,10 @@ NFC Unit を箱の外に置き(Grove ケーブルで J6 へ)、SW-75B(50 × 30 �
 - DB9 と USB-C は +x の側面、Grove 2 口は +y の端面から出す。WROOM のアンテナは -x の壁側。
 - 基板は指静脈の M3 × 6 スペーサーにぶら下げる形で、うち 2 本(H1 / H4)のオス側を床に貼るタカチ ASR-7 にねじ込む。指静脈はカバーから 2.8 出す。
 - 指静脈のケーブル: モジュールの -y 端のソケットから出て、基板の -y 端の切り欠き(6 × 2.5)から基板の下へ逃がし、余りは基板の下(床まで 7.2)に収める。同じ切り欠きから J3(口は同じ -y 向き)へ入る。
+
+### Vein Station SW130(タカチ SW-130B・全部入りの細い案)
+
+タカチ SW-130B(40 × 25 × 130、¥360)に、−y から DB9 → DIP と指静脈のケーブル → 指静脈 → VoiceS3R を一列に全部入れる。`station/build_station_sw130.py` が干渉チェック・3D プレビュー(https://ippoan.github.io/vein-base/station-sw130/)・加工図(DXF / PDF)と A4 原寸の型紙、基板は `build_board.py sw130`(34.8 × 122.7、片面、`fab/station_sw130/`、BOM は `jlc_bom_sw130.csv`)。詳細は `CLAUDE.md` の SW130 案の節。
 
 ### Vein Station SE(CoreS3 SE 版・案)
 
