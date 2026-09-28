@@ -64,6 +64,15 @@ VoiceS3R(vein-base の基板のみ。ケースは使わない)・指静脈モジ
 - 加工はカバーの窓(指静脈)とスピーカー・マイクの穴、端面の DB9 のフードが入る角穴・USB-C プラグの穴・J7 ケーブルの穴。
 - 幅の余裕は小さい(指静脈 26 + NFC 24 に対して内寸 52.8)。発注前に指静脈の実物を測る。床のリブの高さは図面に無いので 2.0 と仮定。
 
+### Vein Station SW75(タカチ SW-75B・NFC を外に出す最小案)
+
+NFC Unit を箱の外に置き(Grove ケーブルで J6 へ)、SW-75B(50 × 30 × 75、¥200。PF13-4-9 の約 1/3 の面積で高さも 10 低い)に指静脈・DB9 と ESP 基板だけを収める。`station/build_station_sw75.py` が干渉チェックと 3D プレビュー(`site/station-sw75/`)、基板は `build_board.py sw75`(40.8 × 68.1、`fab/station_esp_sw75/`、BOM は `jlc_bom_sw75.csv`)。
+
+- 片面実装のまま収めるため、抵抗・コンデンサは 0402、LDO は SOT-89、ボタンは Alps SKRPACE010(4.2 × 3.2)、線幅 / 間隔は 5 / 5 mil。
+- DIP スイッチの代わりに 0 Ω(R11 / R12 = ストレート、実装済み)とはんだジャンパー(JP1 / JP2 = クロス)。クロスにするときは R11 / R12 を外して JP1 / JP2 をはんだでつなぐ。
+- DB9 と USB-C は +x の側面、Grove 2 口は +y の端面から出す。WROOM のアンテナは -x の壁側。
+- 基板は指静脈の M3 × 6 スペーサーにぶら下げる形で、うち 2 本(H1 / H4)のオス側を床に貼るタカチ ASR-7 にねじ込む。指静脈はカバーから 2.8 出す。
+
 ### Vein Station SE(CoreS3 SE 版・案)
 
 本体を CoreS3 SE に替え、RS232M Module 13.2(アルコールチェッカー FC-1200 用)・NFC・指静脈を収める版。LAN は使わず、USB 1 本で Windows PC につなぐ。`station/build_station_se.py` が筐体と 3D プレビュー(https://ippoan.github.io/vein-base/station-se/)を作る。CoreS3 SE には PORT.B のコネクタが無いので、指静脈の UART(G8/G9)は RS232M の下に挿す M-Bus 分岐基板から取り出す。CoreS3 SE と Unit NFC は M5Stack 公式 STL([m5stack/M5_Hardware](https://github.com/m5stack/M5_Hardware)、MIT)を commit 固定で取得して表示とポート位置に使う(`station/cad/`、git 管理外)。CoreS3 SE の PWR・USB-C・PORT.A はすべて左側面にある。指静脈モジュールの外形は公式値(コネクタ位置は未確定)。RS232M・分岐基板は仮の箱。計画は #14。
@@ -78,6 +87,7 @@ VoiceS3R(vein-base の基板のみ。ケースは使わない)・指静脈モジ
 | `pcb/jlc_bom.csv` | JLCPCB 用 BOM の元データ(LCSC 品番) |
 | `pcb/station_board/jlc_bom.csv` | station 基板の JLCPCB 用 BOM の元データ |
 | `pcb/station_esp_board/jlc_bom.csv` | station ESP 基板(VoiceS3R の回路を載せた版、PF 用・SW 用で共通)の JLCPCB 用 BOM の元データ |
+| `pcb/station_esp_board/jlc_bom_sw75.csv` | 同じく SW-75B 用(0402 部品)の BOM |
 | `fab/` | CI の出力先(git 管理外)。JLCPCB 発注用(ガーバー zip、BOM、CPL)、原寸の確認用 PDF、基板の STEP |
 | `tools/` | CI 用スクリプト(DRC チェック、JLC 用 CPL 変換、3D プレビュー生成と干渉チェック) |
 

@@ -3,6 +3,11 @@ Atom on the Ext.Pin, in two outlines of the same circuit:
   (default)  92 × 71 for the Takachi PF13-4-9 (the pf outline of pcb/station_board, same holes / DB9 / MAX3232 / DIP / J3)
   'sw'       52 × 76 for the Takachi SW-85B (station/build_station_sw.py): every part placed anew (POS), the vein module
              and the Unit NFC on M3 spacers from the board, the board on three Takachi ASL-12 stuck to the floor
+  'sw75'     40.8 × 68.1 for the Takachi SW-75B (station/build_station_sw75.py), the Unit NFC outside on its cable:
+             DB9 / USB-C on the +x side, both Groves on the +y end, 0402 passives, SOT-89 LDO, SKRPACE010 buttons, the
+             straight / cross DIP as 0R links (R11 / R12) + open solder jumpers (JP1 / JP2), 5 / 5 mil tracks; the board
+             hangs on the vein module's spacers (two of them into Takachi ASR-7 stuck to the floor). Its own BOM
+             (jlc_bom_sw75.csv)
 The circuit follows M5Stack's schematics (Sch_M5_AtomS3R_v0.4.1 / Sch_M5_AtomEchoS3R_Audio_v1.0_20250716) with the
 same GPIOs, so VoiceS3R firmware keeps working:
   - U2 ESP32-S3-WROOM-1-N8R8 (the VoiceS3R's ESP32-S3-PICO-1 has the same 8 MB flash + 8 MB octal PSRAM; the
@@ -30,9 +35,9 @@ Board coords are the station board's (origin = where the VoiceS3R stood, +y = aw
 The speaker and the mic sit under the PF case's old VoiceS3R window (|x|, |y| <= 10.8 in these coords).
 In 'sw' the coords are the SW-85B case's instead (origin = case centre, the DB9 / USB-C end = -y); the speaker and
 the mic sit in front of the NFC under holes in the cover, the WROOM's antenna on the front edge.
-Routing comes from freerouting and is kept in station_esp_board[_sw].ses (the board file itself is always generated):
-    python3 build_board.py [sw] dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
-    python3 build_board.py [sw]       # placement + tracks/vias from the .ses -> station_esp_board[_sw].kicad_pcb
+Routing comes from freerouting and is kept in station_esp_board[_sw|_sw75].ses (the board file itself is always generated):
+    python3 build_board.py [sw|sw75] dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
+    python3 build_board.py [sw|sw75]       # placement + tracks/vias from the .ses -> station_esp_board[_sw|_sw75].kicad_pcb
 Run with KiCad's python from pcb/station_esp_board/.
 """
 import math, os, re, sys
@@ -42,9 +47,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..'))
 from kicad_ses import import_ses  # noqa: E402
 
+SW75 = 'sw75' in sys.argv[1:]
 SW = 'sw' in sys.argv[1:]
 REV = 'e1'
-NAME = 'station_esp_board_sw' if SW else 'station_esp_board'
+NAME = 'station_esp_board' + ('_sw75' if SW75 else '_sw' if SW else '')
 FP = '/usr/share/kicad/footprints/'
 LOCAL = os.path.join(HERE, '..') + '/'         # pcb/vein_base.pretty (the project's own footprints)
 OX, OY = 100.0, 100.0
@@ -61,7 +67,8 @@ WX, WY = 24.0, 0.5             # WROOM centre: antenna end at y = -12.25 (1.25 p
                                # clear of the H1 / H2 spacers)
 UX = -5.5                      # USB-C centre, clear of the antenna keep-out (x >= WX - 24)
 ASL = []                       # sw: Takachi ASL-12 stick-on snap spacers under the board (3.0 holes)
-POS = {}                       # sw: ref -> (x, y, rot), overriding the pf places below
+POS = {}                       # sw / sw75: ref -> (x, y, rot), overriding the pf places below
+DB9_ROT, DB9_BY = 0, 0.0       # sw75: the DB9 on the +x side (turned 90) at y = DB9_BY
 if SW:
     # Takachi SW-85B (60 x 40 x 85, inside 52.8 x 77.8 x 32.7): board coords = case coords seen from above, origin =
     # case centre, the DB9 / USB-C end = -y. The same lists are in station/build_station_sw.py (keep them together).
@@ -93,6 +100,36 @@ if SW:
            'C25': (20.6, 20.6, 0), 'C26': (23.8, 20.6, 0), 'R8': (11.2, 22.6, 0), 'R9': (14.4, 22.6, 0),
            'R10': (17.6, 22.6, 0), 'SP1': (18.5, 30.5, 0), 'J6': (15.5, -13.3, 180), 'J7': (12.8, 2.5, 180)}   # plugs out to +y
 
+if SW75:
+    # Takachi SW-75B (50 x 30 x 75, inside 42.8 x 67.8 x 23) with the Unit NFC outside on a Grove cable: board coords =
+    # case coords (origin = case centre), the DB9 and the USB-C on the +x side, both Groves on the +y end, the WROOM's
+    # antenna to the -x wall. One-sided and small: 0402 passives, SOT-89 LDO, SKRPACE010 buttons, and the straight /
+    # cross DIP replaced by 0R links (R11 / R12 = straight, fitted) and open solder jumpers (JP1 / JP2 = cross).
+    # The same lists are in station/build_station_sw75.py (keep them together).
+    X0, X1, Y0, Y1 = -20.4, 20.4, -33.8, 34.3    # +y 0.5 longer: the Grove MP pads keep 0.5 to the edge
+    DB9_ROT, DB9_BY = 90, 0.0
+    WX, WY = -7.65, 0.0
+    HOLES = [(-9.5, -16.3), (-3.6, -20.3), (-10.9, 20.5), (1.3, 20.5)]   # H1..H4 vein spacers; H1 / H4 also hold the
+    BOSSES = []                                                          # board, into Takachi ASR-7 on the floor
+    ASL = []
+    POS = {'J3': (-14.4, -30.0, 180), 'U1': (-1.5, -29.8, 90),
+           'C1': (-5.6, -24.3, 0), 'C2': (-3.3, -24.3, 0), 'C3': (-1.0, -24.3, 0), 'C4': (1.3, -24.3, 0),
+           'C5': (3.6, -24.3, 0), 'R11': (0.0, 11.2, 0), 'R12': (2.2, 11.2, 0), 'JP1': (1.0, 13.8, 0),
+           'JP2': (4.6, 13.8, 0),
+           'U2': (WX, WY, 90), 'C9': (-8.1, -11.0, 0), 'C10': (-5.9, -11.0, 0), 'R5': (-12.5, -11.0, 0),
+           'C11': (-10.3, -11.0, 0), 'SW2': (-4.8, 21.0, 90), 'SW3': (-4.8, 14.0, 90),
+           'J5': (17.35, 26.0, 90), 'R1': (8.0, 17.5, 0), 'R2': (8.0, 19.0, 0), 'R3': (10.3, 17.5, 0),
+           'R4': (10.3, 19.0, 0),
+           'U3': (-10.5, 13.4, 0), 'C6': (-12.5, 16.6, 0), 'C7': (-7.4, 13.4, 90), 'C8': (-12.5, 10.3, 0),
+           'MK1': (8.6, -12.5, 0), 'FB1': (6.9, -15.6, 90), 'C20': (8.3, -15.6, 90), 'C21': (9.7, -15.6, 90),
+           # ES8311 under the WROOM's pin row, turned 270: I2S (6..9) to -x, the mic pins (16..18) to +x (the mic)
+           'U4': (1.8, -12.3, 270), 'C12': (-1.8, -10.6, 0), 'C13': (4.85, -10.6, 0), 'C14': (-0.4, -15.3, 0),
+           'C15': (5.3, -13.9, 90), 'C16': (5.1, -16.9, 0), 'C17': (3.2, -15.3, 0), 'C18': (5.3, -12.0, 90),
+           'C19': (6.25, -10.9, 90), 'R6': (7.0, -7.8, 0), 'R7': (9.2, -7.8, 0),
+           'U5': (8.1, -2.5, 90), 'C22': (7.0, 1.6, 0), 'C23': (9.2, 1.6, 0), 'R8': (7.0, 3.5, 0),
+           'R9': (9.2, 3.5, 0), 'C24': (7.0, 5.4, 0), 'R10': (9.2, 5.4, 0), 'C25': (7.0, 7.3, 0),
+           'C26': (9.2, 7.3, 0), 'SP1': (13.2, -24.0, 0), 'J6': (-7.75, 29.2, 180), 'J7': (5.45, 29.2, 180)}
+
 
 def P(x, y):
     return pcbnew.VECTOR2I(mm(OX + x), mm(OY - y))
@@ -108,6 +145,8 @@ ds.SetCopperLayerCount(2)
 ds.SetBoardThickness(mm(1.6))
 nc = ds.m_NetSettings.m_DefaultNetClass
 nc.SetClearance(mm(0.15)); nc.SetTrackWidth(mm(0.2));  # 0.2 / 0.15 fits the ES8311's 0.4 pitch
+if SW75:                                                # 5 / 5 mil (JLC's 2-layer standard) for the dense sw75
+    nc.SetClearance(mm(0.127)); nc.SetTrackWidth(mm(0.127))
 nc.SetViaDiameter(mm(0.6)); nc.SetViaDrill(mm(0.3))
 
 nets = {}
@@ -148,11 +187,15 @@ def two(lib, name, ref, value, a, c, x, y, rot=0):
 
 
 def R(ref, value, a, c, x, y, rot=0):
-    return two('Resistor_SMD.pretty', 'R_0603_1608Metric', ref, value, a, c, x, y, rot)
+    size = '0402_1005' if SW75 else '0603_1608'
+    return two('Resistor_SMD.pretty', f'R_{size}Metric', ref, value, a, c, x, y, rot)
 
 
 def C(ref, value, a, c, x, y, rot=0):
-    size = '0805_2012' if value in ('10uF', '22uF') else '0603_1608'
+    if SW75:
+        size = '0603_1608' if value == '22uF' else '0402_1005'
+    else:
+        size = '0805_2012' if value in ('10uF', '22uF') else '0603_1608'
     return two('Capacitor_SMD.pretty', f'C_{size}Metric', ref, value, a, c, x, y, rot)
 
 
@@ -167,14 +210,23 @@ for ref, a, c, x, y, r in [('C1', 'C1P', 'C1N', -20.0, 11.0, 0), ('C2', 'C2P', '
                            ('C3', 'VP', 'GND', -27.0, 11.0, 0), ('C4', 'VN', 'GND', -30.5, 11.0, 0),
                            ('C5', '3V3', 'GND', -18.5, 5.0, 90)]:
     C(ref, '100nF', a, c, x, y, r)
-SW1 = load('Button_Switch_SMD.pretty', 'SW_DIP_SPSTx04_Slide_6.7x11.72mm_W8.61mm_P2.54mm_LowProfile', 'SW1',
-           'DIP4 (1+2 straight / 3+4 cross)', -41.2, 6.3)
-wire(SW1, {'1': 'TXO', '8': 'D3', '2': 'RXI', '7': 'D2', '3': 'TXO', '6': 'D2', '4': 'RXI', '5': 'D3'})
+if SW75:     # straight fitted (0R), cross by bridging JP1 / JP2 after taking R11 / R12 off
+    R('R11', '0', 'TXO', 'D3', 0, 0); R('R12', '0', 'RXI', 'D2', 0, 0)
+    for ref, a, c in (('JP1', 'TXO', 'D2'), ('JP2', 'RXI', 'D3')):
+        wire(load('Jumper.pretty', 'SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm', ref, 'cross', 0, 0), {'1': a, '2': c})
+else:
+    SW1 = load('Button_Switch_SMD.pretty', 'SW_DIP_SPSTx04_Slide_6.7x11.72mm_W8.61mm_P2.54mm_LowProfile', 'SW1',
+               'DIP4 (1+2 straight / 3+4 cross)', -41.2, 6.3)
+    wire(SW1, {'1': 'TXO', '8': 'D3', '2': 'RXI', '7': 'D2', '3': 'TXO', '6': 'D2', '4': 'RXI', '5': 'D3'})
 J4 = load('Connector_Dsub.pretty', 'DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm',
           'J4', 'DB9 male RA (to FC-1200)', 0, 0)
 p1 = [p for p in J4.Pads() if p.GetNumber() == '1'][0]
 px, py = xy(p1.GetPosition())
-J4.Move(pcbnew.VECTOR2I(mm((DB9_BX - 5.54) - px), -mm((Y0 + 7.70) - py)))
+if DB9_ROT == 90:      # mating face to +x: the pin row runs along +y, pin 1 7.70 in from the +x edge
+    J4.SetOrientationDegrees(90); px, py = xy(p1.GetPosition())
+    J4.Move(pcbnew.VECTOR2I(mm((X1 - 7.70) - px), -mm((DB9_BY - 5.54) - py)))
+else:
+    J4.Move(pcbnew.VECTOR2I(mm((DB9_BX - 5.54) - px), -mm((Y0 + 7.70) - py)))
 wire(J4, {'2': 'D2', '3': 'D3', '5': 'GND', '0': 'GND'})
 for i, (x, y) in enumerate(HOLES, 1):
     load('MountingHole.pretty', 'MountingHole_3.2mm_M3', f'H{i}', 'M3 spacer', x, y)
@@ -197,9 +249,10 @@ C('C9', '10uF', '3V3', 'GND', 13.0, 2.0, 90)
 C('C10', '100nF', '3V3', 'GND', 35.0, -3.0, 90)             # at pin 2
 R('R5', '10k', '3V3', 'EN', 36.9, -3.0, 90)
 C('C11', '1uF', 'EN', 'GND', 38.8, -3.0, 90)
-SW2 = load('Button_Switch_SMD.pretty', 'SW_Push_1P1T_XKB_TS-1187A', 'SW2', 'EN (reset)', 37.2, 11.5, rot=90)
+BTN = ('vein_base.pretty', 'SW_Push_Alps_SKRPACE010') if SW75 else ('Button_Switch_SMD.pretty', 'SW_Push_1P1T_XKB_TS-1187A')
+SW2 = load(*BTN, 'SW2', 'EN (reset)', 37.2, 11.5, rot=90, local=SW75)
 wire(SW2, {'1': 'EN', '2': 'GND'})
-SW3 = load('Button_Switch_SMD.pretty', 'SW_Push_1P1T_XKB_TS-1187A', 'SW3', 'BOOT (G0)', 37.2, 19.5, rot=90)
+SW3 = load(*BTN, 'SW3', 'BOOT (G0)', 37.2, 19.5, rot=90, local=SW75)
 wire(SW3, {'1': 'G0', '2': 'GND'})
 
 # ======== USB-C + 3.3 V ========
@@ -210,7 +263,7 @@ R('R1', '5.1k', 'CC1', 'GND', 1.5, -4.3)
 R('R2', '5.1k', 'CC2', 'GND', 4.5, -4.3)
 R('R3', '22', 'UDN', 'G19', 7.5, -4.3)
 R('R4', '22', 'UDP', 'G20', 10.5, -4.3)
-U3 = load('Package_TO_SOT_SMD.pretty', 'SOT-223-3_TabPin2', 'U3', 'AMS1117-3.3', -8.5, 3.0)
+U3 = load('Package_TO_SOT_SMD.pretty', 'SOT-89-3' if SW75 else 'SOT-223-3_TabPin2', 'U3', 'AMS1117-3.3', -8.5, 3.0)
 wire(U3, {'1': 'GND', '2': '3V3', '3': '5V'})
 C('C6', '10uF', '5V', 'GND', -11.8, 7.9)
 C('C7', '22uF', '3V3', 'GND', -15.2, 3.0, 90)
@@ -220,14 +273,14 @@ C('C8', '100nF', '3V3', 'GND', -15.2, 6.8, 90)
 MK1 = load('vein_base.pretty', 'MEMS_Mic_LinkMems_LMA3729T381_3.76x2.95mm', 'MK1', 'LMA3729T381-OAC03', -6.5, 9.8,
            local=True)
 wire(MK1, {'1': 'MICV', '2': 'MICO', '3': 'GND', '4': 'GND'})
-two('Inductor_SMD.pretty', 'L_0805_2012Metric', 'FB1', '100R@100MHz', '3V3', 'MICV', -10.2, 11.2, 90)
+two('Inductor_SMD.pretty', 'L_0402_1005Metric' if SW75 else 'L_0805_2012Metric', 'FB1', '100R@100MHz', '3V3', 'MICV', -10.2, 11.2, 90)
 C('C20', '100nF', 'MICV', 'GND', -9.3, 13.8)
 C('C21', '1uF', 'MICV', 'GND', -12.2, 11.5, 90)
 U4 = load('Package_DFN_QFN.pretty', 'QFN-20-1EP_3x3mm_P0.4mm_EP1.65x1.65mm', 'U4', 'ES8311', -5.0, 19.0, rot=90)   # I2S pins (6..9) towards the WROOM
 wire(U4, {'1': 'G0', '2': 'G11', '3': '3V3', '4': '3V3', '5': 'GND', '6': 'G17', '7': 'G4', '8': 'G3', '9': 'G48',
           '10': 'GND', '11': '3V3', '12': 'OUTP', '13': 'OUTN', '14': 'DACREF', '15': 'ADCREF', '16': 'VMID',
           '17': 'MIC1N', '18': 'MIC1P', '19': 'G45', '20': 'GND', '21': 'GND'})
-# GND pins 5 / 10 / 20 run straight in to the exposed pad (0.12 wide: 0.165 clear of the next pins' inner ends),
+# GND pins 5 / 10 / 20 run straight in to the exposed pad (0.127 wide: 0.16 clear of the next pins' inner ends),
 # which drops to the B.Cu pour through two vias (locked, so freerouting keeps clear of them)
 ep = [p for p in U4.Pads() if p.GetNumber() == '21'][0].GetPosition()
 for n in ('5', '10', '20'):
@@ -235,7 +288,7 @@ for n in ('5', '10', '20'):
     side = abs(q.x - ep.x) > abs(q.y - ep.y)                     # a pad on a side along y: run along x
     t = pcbnew.PCB_TRACK(b); t.SetStart(q)
     t.SetEnd(pcbnew.VECTOR2I(ep.x, q.y) if side else pcbnew.VECTOR2I(q.x, ep.y))
-    t.SetWidth(mm(0.12)); t.SetLayer(pcbnew.F_Cu); t.SetNet(nets['GND']); t.SetLocked(True); b.Add(t)
+    t.SetWidth(mm(0.127)); t.SetLayer(pcbnew.F_Cu); t.SetNet(nets['GND']); t.SetLocked(True); b.Add(t)
 for dx in (-0.4, 0.4):
     v = pcbnew.PCB_VIA(b); v.SetPosition(pcbnew.VECTOR2I(ep.x + mm(dx), ep.y)); v.SetWidth(mm(0.6)); v.SetDrill(mm(0.3))
     v.SetNet(nets['GND']); v.SetLocked(True); b.Add(v)
@@ -295,14 +348,16 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 
 # silk: (text, x, y) per outline; the Grove labels list pin 1 first
-SILK = ([('1+2 PASS / 3+4 CROSS', -12.9, 4.6), ('J3 1RX 2TX 3V3 G', -20.0, -16.6), ('NFC: G2 G1 5V G', 15.5, -19.8),
+SILK = ([('R11 R12 PASS / JP1 JP2 CROSS', 2.3, 16.2), ('NFC: G2 G1 5V G', -7.75, 23.4), ('G38 G39 5V G', 5.45, 23.4),
+         ('EN', -4.8, 24.6), ('BOOT', -4.8, 10.4)] if SW75 else
+        [('1+2 PASS / 3+4 CROSS', -12.9, 4.6), ('J3 1RX 2TX 3V3 G', -20.0, -16.6), ('NFC: G2 G1 5V G', 15.5, -19.8),
          ('G38 G39 5V G', 12.8, 9.0), ('BOOT', 23.2, -9.4), ('EN', 23.2, 9.8)] if SW else
         [('SW1 1+2 PASS(FC-1200) / 3+4 CROSS', -41.2, 14.0), ('J3 vein: 1RX 2TX 3V3 4G', -30.0, 16.2),
          ('NFC: G2 G1 5V G', 32.0, 35.5), ('G38 G39 5V G', 18.5, 35.5), ('EN', 37.2, 7.0), ('BOOT', 37.2, 24.0)])
 for t, x, y in SILK:
     text(t, x, y, size=0.8)
-text(f'vein-station ESP board {REV} ' + ('(SW-85B)' if SW else '(PF13-4-9)'), -12.0 if SW else -20.0,
-     -32.0 if SW else 18.0, layer=pcbnew.B_SilkS)
+text(f'vein-station ESP board {REV} ' + ('(SW-75B)' if SW75 else '(SW-85B)' if SW else '(PF13-4-9)'),
+     -6.0 if SW75 else -12.0 if SW else -20.0, 0.0 if SW75 else -32.0 if SW else 18.0, layer=pcbnew.B_SilkS)
 
 
 

@@ -1,0 +1,24 @@
+Comment,Designator,Footprint,LCSC Part #,Note
+ESP32-S3-WROOM-1-N8R8 (8 MB flash / 8 MB octal PSRAM),U2,ESP32-S3-WROOM-1,C2913201,antenna to the -x edge (flush); burn the flash voltage eFuse (3.3 V) before the first boot (GPIO45 is pulled up)
+"USB-C 16P receptacle (Korean Hroparts TYPE-C-31-M-12)",J5,USB_C_Receptacle_HRO_TYPE-C-31-M-12,C165948,opening on the +x edge
+AMS1117-3.3 (SOT-89),U3,SOT-89-3,C880752,800 mA
+ES8311 audio codec (QFN-20 3x3),U4,QFN-20-1EP_3x3mm_P0.4mm_EP1.65x1.65mm,C962342,I2C 0x18
+NS4150B class-D amplifier (MSOP-8),U5,MSOP-8_3x3mm_P0.65mm,C189961,
+LinkMems LMA3729T381-OAC03 analog MEMS mic (top port),MK1,MEMS_Mic_LinkMems_LMA3729T381_3.76x2.95mm,C41347996,pin 1 corner as JLC's footprint; check it in the assembly preview
+"GSPK1304S-8R0.5W SMD speaker 13x13x4, 8 ohm",SP1,Speaker_SMD_GSPK1304S_13x13mm,C2847318,sound opening up
+"HY2.0-4P right angle SMD (Grove), JST PH S4B-PH-SM4-TB footprint","J6,J7",JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal,C722729,J6 = Unit NFC (G2 SDA / G1 SCL) / J7 = spare (G38 / G39); openings on the +y edge; check the pads against JLC's footprint in the assembly preview
+"Tact switch 4.2x3.2 (Alps SKRPACE010)","SW2,SW3",SW_Push_Alps_SKRPACE010,C139797,SW2 = EN (reset) / SW3 = BOOT (G0); two diagonal pads used
+"Ferrite bead 120R@100MHz 0402 (Murata BLM15AG121SN1D)",FB1,L_0402_1005Metric,C85812,mic supply
+Molex PicoBlade 53261-0471 (MX1.25 4P RA SMD),J3,Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal,C696092,opening faces +y (the vein cable)
+"MAX3232EIDR (TI, RS232 transceiver 3-5.5V)",U1,SOIC-16_3.9x9.9mm_P1.27mm,C193666,powered from 3V3
+"DB9 male right angle, 4-40 screw lock (Ckmtw D-DMR009PM-D002)",J4,DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm,C141880,THT; flange on the +x board edge
+"0R 0402 (straight link, DB9 2/3 as a PC)","R11,R12",R_0402_1005Metric,C17168,Basic part; for cross take them off and bridge JP1 / JP2 (solder jumpers)
+"100nF 16V X7R 0402","C1,C2,C3,C4,C5,C8,C10,C13,C20,C22,C23,C25",C_0402_1005Metric,C1525,Basic part
+"1uF 25V X5R 0402","C11,C14,C15,C16,C17,C18,C19,C21,C24",C_0402_1005Metric,C52923,Basic part
+"10uF 6.3V X5R 0402","C6,C9,C12,C26",C_0402_1005Metric,C15525,Basic part
+"22uF 6.3V X5R 0603",C7,C_0603_1608Metric,C59461,Basic part; AMS1117 output
+"5.1k 1% 0402","R1,R2",R_0402_1005Metric,C25905,Basic part; USB-C CC1 / CC2
+"22R 1% 0402","R3,R4",R_0402_1005Metric,C25092,Basic part; USB D- / D+
+"10k 1% 0402","R5,R10",R_0402_1005Metric,C25744,Basic part; EN pull-up / NS4150B CTRL pull-down
+"4.7k 1% 0402","R6,R7",R_0402_1005Metric,C25900,Basic part; I2C SCL (G0) / SDA (G45) pull-ups
+"150k 1% 0402","R8,R9",R_0402_1005Metric,C25755,NS4150B inputs
