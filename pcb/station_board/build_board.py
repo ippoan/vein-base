@@ -30,6 +30,17 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  case coords there (origin = case centre, x across the 50 side, y along the 75 side). Parts, holes and
                  the -y notch are also in station/build_station_sw75.py: keep the two together.
                  -> station_board_sw75.kicad_pcb, routed on its own (station_board_sw75.ses)
+  'sw130'        the same circuit and parts placed anew for the Takachi SW-130B (station/build_station_sw130.py), all
+                 inside the case in a row along it: the DB9 on the -y edge (through the -y end wall), the vein module
+                 on M3 × 5 spacers over J3, MAX3232 / C1..C5 and SW1 between it and the VoiceS3R, and the VoiceS3R on
+                 J1 / J2 at the +y end, centred, its USB-C / PORT.A edge to +y (through the +y end wall). The Unit NFC
+                 plugs into J6 on the -x edge by the DB9 instead of the VoiceS3R's PORT.A (NFC and USB on different
+                 faces): J6 = G38 (SDA) / G39 (SCL) / 5V / GND from the Ext.Pin, 4.7 k pull-ups R1 / R2, so the
+                 firmware opens that I2C on G38 / G39. J6 sits 2.3 inside the edge (JLC's HY2.0 body is ~2 longer than
+                 the footprint's, as on the vein unit board). Its own BOM (jlc_bom_sw130.csv). The board
+                 stands 3.0 off the floor on M3 × 3 spacers (H1..H7). Board coords = case coords (origin = case
+                 centre, x across the 40 side, y along the 130 side); keep the numbers together with that script.
+                 -> station_board_sw130.kicad_pcb, routed on its own (station_board_sw130.ses)
 
 Routing comes from freerouting and is kept in station_board[_sw75].ses (the board file itself is always generated):
     python3 build_board.py [sw75] dsn   # placement only -> .dsn (feed it to freerouting -> .ses)
@@ -45,9 +56,11 @@ from kicad_ses import import_ses  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 PF = 'pf' in sys.argv[1:]
 SW75 = 'sw75' in sys.argv[1:]
+SW130 = 'sw130' in sys.argv[1:]
 REV = 'r12'
-NAME = 'station_board_pf' if PF else 'station_board_sw75' if SW75 else 'station_board'
-SES = 'station_board_sw75.ses' if SW75 else 'station_board.ses'
+NAME = ('station_board_pf' if PF else 'station_board_sw75' if SW75 else 'station_board_sw130' if SW130
+        else 'station_board')
+SES = f'{NAME}.ses' if SW75 or SW130 else 'station_board.ses'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
 mm = pcbnew.FromMM
@@ -84,6 +97,19 @@ if SW75:
            'C4': (-8.0, -4.0, 90), 'C5': (-16.5, 8.5, 0),
            'SW1': (13.0, 25.5, 90)}             # above the DB9, under the cover (not under the vein module)
     EDGE = [(X0, Y0), (X1, Y0), (X1, Y1), (TX, Y1), (TX, TY), (-TX, TY), (-TX, Y1), (X0, Y1)]
+if SW130:
+    X0, X1, Y0, Y1 = -17.4, 17.4, -61.7, 61.0     # inside 35.5 × 125.5 at the floor; DB9 flange on Y0, 0.05 off the wall
+    DB9_BX = 0.0
+    AX, AY = 0.0, 49.2                          # VoiceS3R centre (its +y face 61.2, 0.2 inside the cover's skirt)
+    HOLES = [(-9.0, -26.0), (9.0, -26.0), (-9.0, 9.0), (9.0, 9.0),      # H1..H4 under the vein module (y -38..21)
+             (0.0, 54.2), (-13.8, -18.0), (13.5, -47.5)]                # H5 under the VoiceS3R, H6 / H7 to the edges
+    POS = {'J1': (AX - 7.62, AY - 2.54, 180), 'J2': (AX + 7.62, AY, 180),   # half a turn: USB-C / PORT.A to +y
+           'J3': (-0.15, -34.5, 0),             # under the vein socket, opening -y (the spare cable lies in front)
+           'J6': (X0 + 4.45 + 2.3, -45.0, 270),   # Grove for the Unit NFC, opening -x, between the DB9 and the vein
+           'R1': (-3.5, -48.5, 90), 'R2': (-1.7, -48.5, 90),
+           'U1': (-8.0, 26.0, 90), 'C1': (-12.5, 20.3, 0), 'C2': (-9.5, 20.3, 0), 'C3': (-6.5, 20.3, 0),
+           'C4': (-3.5, 20.3, 0), 'C5': (-8.0, 31.8, 0),
+           'SW1': (8.0, 26.0, 90)}
 
 
 def P(x, y):
@@ -171,6 +197,14 @@ else:
 wire(J4, {'2': 'D2', '3': 'D3', '5': 'GND', '0': 'GND'})
 print('J4 pin1', xy(p1.GetPosition()), 'pin5', xy([p for p in J4.Pads() if p.GetNumber() == '5'][0].GetPosition()))
 
+# ---- sw130: Grove for the Unit NFC on G38 (SDA) / G39 (SCL), with pull-ups
+if SW130:
+    J6 = load('Connector_JST.pretty', 'JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal', 'J6',
+              'Grove HY2.0-4P RA (NFC: G38 SDA, G39 SCL)', 0, 0)
+    wire(J6, {'1': 'G38', '2': 'G39', '3': '5V', '4': 'GND', 'MP': 'GND'})
+    for ref, n in (('R1', 'G38'), ('R2', 'G39')):
+        wire(load('Resistor_SMD.pretty', 'R_0603_1608Metric', ref, '4.7k', 0, 0), {'1': '3V3', '2': n})
+
 # ---- pf: M3 holes for the hex spacers (non-plated, no pad) and the M2.3 holes over the case's bosses
 for i, (x, y) in enumerate(HOLES, 1):
     load('MountingHole.pretty', 'MountingHole_3.2mm_M3', f'H{i}', 'M3 spacer', x, y)
@@ -202,6 +236,12 @@ if SW75:
     text('SW1 1+2 PASS / 3+4 CROSS', 13.0, 31.5, size=0.8)
     text('J3 vein: 1RX 2TX 3V3 4G', -8.35, -17.6, size=0.8)
     text(f'vein-station board {REV} (SW-75B)', -6.0, 0.0, layer=pcbnew.B_SilkS)
+elif SW130:
+    text('VoiceS3R: USB-C / PORT.A this way', 0.0, Y1 - 1.2, size=0.8)
+    text('SW1 1+2 PASS / 3+4 CROSS', 8.0, 33.2, size=0.8)
+    text('J3 vein: 1RX 2TX 3V3 4G', -0.15, -29.8, size=0.8)
+    text('NFC: G38 G39 5V G', -9.0, -52.0, size=0.8)
+    text(f'vein-station board {REV} (SW-130B)', 0.0, 0.0, layer=pcbnew.B_SilkS)
 else:
     text('USB-C / PORT.A side', 0, -13.2, size=0.8)
     text('SW1 1+2 PASS(FC-1200) / 3+4 CROSS', -41.2, 14.0, size=0.8)
@@ -227,7 +267,9 @@ else:
     b.Add(z)
     pcbnew.ZONE_FILLER(b).Fill(b.Zones())
     b.Save(f'{NAME}.kicad_pcb')
-LIBS['MountingHole'] = FP + 'MountingHole.pretty'   # the table is shared by both outlines
+LIBS['MountingHole'] = FP + 'MountingHole.pretty'   # the table is shared by all outlines
+for lib in ('Connector_JST', 'Resistor_SMD'):         # sw130's J6 / R1 / R2
+    LIBS[lib] = FP + lib + '.pretty'
 with open('fp-lib-table', 'w') as f:
     f.write('(fp_lib_table\n  (version 7)\n')
     for nick, uri in sorted(LIBS.items()):
