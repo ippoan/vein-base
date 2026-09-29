@@ -19,8 +19,8 @@ skirt (3 deep, the cover 5.5 in all) narrows it to 32.8 × 122.8 up to the cover
 Stack (z): M3 × 3 spacers stuck to the floor (VHB 1.14) | board 4.1..5.7 (THT tails down to the floor: cut them to 4) |
 vein module on a 1.0 washer + M3 × 5 over H1..H4 + VHB, 12.9..27.9: 5.4 proud of the cover through a window of its
 outline + 0.2 | VoiceS3R 8.2..25.0 on the pin headers (plastic 2.5), through a window of its outline + 0.2 | DB9 up to
-18.2, 1.2 into the skirt's height: the skirt's lower edge is filed back 1.4 over the DB9 (the only cut in the cover's
-skirt).
+18.2, 1.2 into the skirt's height: the skirt's lower edge is filed back 1.4 over the DB9; the USB-C shell (up to
+17.2) also runs above the body, so the cover's +y edge is filed back 0.5 over the USB notch.
 The DB9 notch in the -y end wall is open to the top of the body, so the board drops in from above; the USB-C / PORT.A
 notch in the +y end is open to the top as well (a closed hole would leave a 0.3 bridge under the body's top edge).
 """
