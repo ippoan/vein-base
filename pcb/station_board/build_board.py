@@ -37,8 +37,8 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  J1 / J2 at the +y end, centred, its USB-C / PORT.A edge to +y (through the +y end wall). The Unit NFC
                  plugs into J6 on the -x edge by the DB9 instead of the VoiceS3R's PORT.A (NFC and USB on different
                  faces): J6 = G38 (SDA) / G39 (SCL) / 5V / GND from the Ext.Pin, 4.7 k pull-ups R1 / R2, so the
-                 firmware opens that I2C on G38 / G39. J6 sits 2.3 inside the edge (JLC's HY2.0 body is ~2 longer than
-                 the footprint's, as on the vein unit board). Its own BOM (jlc_bom_sw130.csv). The board
+                 firmware opens that I2C on G38 / G39. J6 is the genuine JST S4B-PH-SM4-TB (C265102; JLC found the
+                 HY2.0 C722729's pins off the pads), its front 2.3 inside the edge. Its own BOM (jlc_bom_sw130.csv). The board
                  stands 3.0 off the floor on M3 × 3 spacers (H1..H7). Board coords = case coords (origin = case
                  centre, x across the 40 side, y along the 130 side); keep the numbers together with that script.
                  -> station_board_sw130.kicad_pcb, routed on its own (station_board_sw130.ses)
