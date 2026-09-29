@@ -146,9 +146,9 @@ RESET_CUT = (AY - 7.0, AY - 1.0, Z_ATOM + 1.0, Z_ATOM + 9.0, 1.0)               
 wall_cut = (box(*DB9_CUT[:2], OUT[2] - 1, BY0 - 0.5, *DB9_CUT[2:4])
             .union(box(*USB_CUT[:2], YF + 0.5, OUT[3] + 1, *USB_CUT[2:4])))
 wall_cut = wall_cut.union(rbox(AX + 12.5, OUT[1] + 1, *RESET_CUT)).union(rbox(OUT[0] - 1, IN[0] + 0.2, *GROVE_CUT))
-# the USB-C shell's top (Z_ATOM + 9) runs above the body's top edge: the cover's +y end is filed back over it as well
+# the USB-C shell's top (Z_ATOM + 9) runs above the body's top edge: the cover's +y edge and skirt are filed back over it
 COVER_USB = round(Z_ATOM + 9.0 + 0.2 - SKIRT + 0.04, 1)          # 0.5
-USB_FILE = box(*USB_CUT[:2], YF + 0.5, OUT[3] + 1, SKIRT - 0.1, SKIRT + COVER_USB)
+USB_FILE = box(*USB_CUT[:2], YF - 0.2, OUT[3] + 1, SKIRT - 0.1, SKIRT + COVER_USB)
 case = body.cut(cover_cut).cut(SKIRT_FILE).cut(USB_FILE).cut(wall_cut)
 
 # ---- interference ------------------------------------------------------------------------------------------
