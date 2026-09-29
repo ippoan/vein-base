@@ -30,7 +30,7 @@ from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
 from template import cut_template, edge_row
 from drawing import face, sheet
 
-REV = 'sw130g'
+REV = 'sw130h'
 
 # ---- case (Takachi SW-130B, from the drawing) ------------------------------------------------------------
 OUT = (-20.0, 20.0, -65.0, 65.0)
@@ -112,9 +112,9 @@ YF = AY + 12                                                # the USB-C / PORT.A
 usb_plug = box(AX - 6, AX + 6, YF + 6.5, YF + 24.2, Z_ATOM + 4.0, Z_ATOM + 11.0).union(
     box(AX - 4.2, AX + 4.2, YF, YF + 6.5, Z_ATOM + 6.0, Z_ATOM + 9.0))
 porta_plug = box(AX - 4.9, AX + 4.9, YF, YF + 10.2, Z_ATOM + 0.0, Z_ATOM + 4.0)   # PORT.A (spare) under the USB-C
-# J6: JLC's HY2.0 body runs ~2.1 further out than the footprint's (the vein unit board's measurement); JLC's assembly
-# preview shows its front ~0.5 past the board edge, so take 0.6 (into the wall; the Grove cut takes the whole body)
-GF = BX0 - 0.6                                              # its front, 0.6 outside the board edge
+# J6: the genuine JST S4B-PH-SM4-TB (C265102, since the HY2.0 C722729's pins missed the pads), its front at the
+# footprint's, 2.3 inside the board edge; the Grove plug reaches in through the side cut (sized for the old HY2.0 body)
+GF = BX0 + 2.3                                              # its front, 2.3 inside the board edge
 grove = on(GF, J6[0] + 3.25, J6[1] - 6.0, J6[1] + 6.0, 0, 6.0)
 grove_plug = on(GF - 8.1, GF, J6[1] - 4.5, J6[1] + 4.5, 0.6, 5.4)
 
