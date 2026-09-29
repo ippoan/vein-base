@@ -3,7 +3,7 @@ along it: the DB9 on the -y end with the DIP beside the vein cable, the vein mod
 VoiceS3R at the +y end. The
 station board (pcb/station_board, `build_board.py sw130`, one-sided, Economic PCBA) fills the case floor; the VoiceS3R
 stands on it on its Ext.Pin (J1 / J2, stock pin headers), centred, its USB-C / PORT.A edge to +y (both through
-one hole in the +y end wall), its top 1.4 proud of the cover through a window. The Unit NFC plugs into the board's Grove J6 on the -x
+one hole in the +y end wall), its top 2.5 proud of the cover through a window. The Unit NFC plugs into the board's Grove J6 on the -x
 side by the DB9 (G38 / G39 as I2C), so NFC and USB leave on different faces; the VoiceS3R's PORT.A is spare, reachable through the USB hole. Its
 reset button (a U-shaped flap on the face left of the ports) faces the +x side, where a 6 × 8 hole takes a screwdriver.
 Run from the repository root:  python3 station/build_station_sw130.py
@@ -16,10 +16,11 @@ Case coordinates = the board's: x across the 40 side, y along the 130 side, orig
 of the floor. The case is written from Takachi's drawing (SW-130□, 2024/07/16, DXF/PDF on takachi-el.co.jp): outside
 40 × 130 R3 × 25, floor 2.5 and cover 2.5 thick, no bosses or ribs; inside 35.5 × 125.5 up to 17, where the cover's
 skirt (3 deep, the cover 5.5 in all) narrows it to 32.8 × 122.8 up to the cover's underside at 20; top face 22.5.
-Stack (z): M3 × 3 spacers stuck to the floor (VHB) | board 3.0..4.6 (THT tails down to the floor: cut them to 3) |
-vein module on M3 × 5 spacers over H1..H4 + 0.7 VHB, 10.3..25.3: 2.8 proud of the cover through a window of its outline
-+ 0.2 | VoiceS3R 7.1..23.9 on the pin headers (plastic 2.5), through a window of its outline + 0.2 | DB9 up to 17.1,
-0.1 into the skirt's height: the skirt's lower edge is filed back 0.8 over the DB9 (the only cut in the cover's skirt).
+Stack (z): M3 × 3 spacers stuck to the floor (VHB 1.14) | board 4.1..5.7 (THT tails down to the floor: cut them to 4) |
+vein module on a 1.0 washer + M3 × 5 over H1..H4 + VHB, 12.9..27.9: 5.4 proud of the cover through a window of its
+outline + 0.2 | VoiceS3R 8.2..25.0 on the pin headers (plastic 2.5), through a window of its outline + 0.2 | DB9 up to
+18.2, 1.2 into the skirt's height: the skirt's lower edge is filed back 1.4 over the DB9; the USB-C shell (up to
+17.2) also runs above the body, so the cover's +y edge is filed back 0.5 over the USB notch.
 The DB9 notch in the -y end wall is open to the top of the body, so the board drops in from above; the USB-C / PORT.A
 notch in the +y end is open to the top as well (a closed hole would leave a 0.3 bridge under the body's top edge).
 """
@@ -29,7 +30,7 @@ from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
 from template import cut_template, edge_row
 from drawing import face, sheet
 
-REV = 'sw130f'
+REV = 'sw130g'
 
 # ---- case (Takachi SW-130B, from the drawing) ------------------------------------------------------------
 OUT = (-20.0, 20.0, -65.0, 65.0)
@@ -49,13 +50,18 @@ U1 = (-8.0, 26.0)                            # MAX3232, turned (along x)
 SW1 = (11.3, -44.3)                          # DIP (pads across x), between the vein module and the DB9, reached with the cover off
 J1X, J2X = AX - 7.62, AX + 7.62              # Ext.Pin rows (J1 5 pins from AY - 2.54, J2 4 pins from AY, both to +y)
 
-ZB = 3.0                                     # M3 × 3 spacers on the floor
+# the fixings (Marutsu): M3 × 3 female-female (ASB-303E) on the floor on VHB (3M 5952, 1.14 thick); over H1..H4 an
+# M3 × 5 male-female (BSB-305E) on a 1.0 nylon washer (WN-5), its 6 long male through the board into the floor spacer
+# (the washer keeps its tip off the floor), its top taped to the vein module; over H5..H7 an M3 × 4 binding screw
+TAPE = 1.14                                  # VHB 5952, under the floor spacers and on top of H1..H4
+ZB = TAPE + 3.0                              # ASB-303E on the floor
 ZBT = ZB + 1.6
-SP_VEIN, TAPE = 5.0, 0.7
+WASHER, SP_VEIN = 1.0, 5.0
+assert ZBT + WASHER - 6.0 > 0.2, 'the BSB-305E male reaches the floor'
 VEIN = (-13.0, 13.0, -30.0, 29.0)            # 26 across, 59 along y, the socket end at -y; 8 towards the VoiceS3R so
                                              # the cable's slack fits before the DB9 (VHB on H1..H4, no screws)
-VEIN_Z0 = ZBT + SP_VEIN + TAPE               # 10.3, top 25.3
-Z_ATOM = ZBT + 2.5                           # VoiceS3R bottom (header plastic 2.5), top 23.9
+VEIN_Z0 = ZBT + WASHER + SP_VEIN + TAPE      # 12.9, top 27.9
+Z_ATOM = ZBT + 2.5                           # VoiceS3R bottom (header plastic 2.5), top 25.0
 
 pcb = box(BX0, BX1, BY0, BY1, ZB, ZBT)
 for x, y in HOLES:
@@ -112,12 +118,13 @@ GF = BX0 - 0.6                                              # its front, 0.6 out
 grove = on(GF, J6[0] + 3.25, J6[1] - 6.0, J6[1] + 6.0, 0, 6.0)
 grove_plug = on(GF - 8.1, GF, J6[1] - 4.5, J6[1] + 4.5, 0.6, 5.4)
 
-# spacers: M3 × 3 (hex 5.5 as r 3.2) on the floor under every hole; over H1..H4 an M3 × 5 for the vein module (its
-# top taped to the module), over the others a pan head screw (r 2.8 × 2; H5's is under the VoiceS3R, 0.5 clear)
+# spacers (hex 5.5 as r 3.2) with their tape under every hole; over H1..H4 the washer (r 3) and the M3 × 5 for the vein
+# module, over the others a binding screw head (r 3 × 2; H5's is under the VoiceS3R)
 spacers = None
 for i, (x, y) in enumerate(HOLES, 1):
     parts = [cyl_z(x, y, 3.2, 0, ZB)]
-    parts.append(cyl_z(x, y, 3.2, ZBT, ZBT + SP_VEIN) if i in VEIN_H else cyl_z(x, y, 2.8, ZBT, ZBT + 2.0))
+    parts += ([cyl_z(x, y, 3.0, ZBT, ZBT + WASHER), cyl_z(x, y, 3.2, ZBT + WASHER, ZBT + WASHER + SP_VEIN)] if i in VEIN_H
+              else [cyl_z(x, y, 3.0, ZBT, ZBT + 2.0)])
     for s in parts:
         spacers = s if spacers is None else spacers.union(s)
 
@@ -127,7 +134,8 @@ vein = rbox(*VEIN, VEIN_Z0, VEIN_Z0 + 15.0, 2.0)
 VEIN_WIN = (VEIN[0] - 0.2, VEIN[1] + 0.2, VEIN[2] - 0.2, VEIN[3] + 0.2, 2.2)
 ATOM_WIN = (AX - 12.2, AX + 12.2, AY - 12.2, AY + 12.2, 3.2)
 cover_cut = rbox(*VEIN_WIN[:4], CEIL - 1, TOP + 1, VEIN_WIN[4]).union(rbox(*ATOM_WIN[:4], SKIRT, TOP + 1, ATOM_WIN[4]))
-SKIRT_FILE = box(-16.0, 16.0, IN[2] - 0.5, SK[2] + 0.2, SKIRT - 0.1, SKIRT + 0.8)   # the skirt filed back over the DB9
+SKIRT_DB9 = round(ZBT + 12.5 + 0.2 - SKIRT, 1)                   # how far the skirt is filed back over the DB9 (1.4)
+SKIRT_FILE = box(-16.0, 16.0, IN[2] - 0.5, SK[2] + 0.2, SKIRT - 0.1, SKIRT + SKIRT_DB9)
 # wall cut-outs as (along the wall 0, 1, z0, z1, R) in case coords: x on the ends, y on the +x side
 DB9_CUT = (-15.65, 15.65, ZBT - 1.5, CEIL, 0)                                            # DB9 hood (-y), open to the top
 USB_CUT = (AX - 5.3, AX + 5.3, Z_ATOM - 0.4, SKIRT, 0)                                    # USB-C over PORT.A (+y), open to the top
@@ -138,7 +146,10 @@ RESET_CUT = (AY - 7.0, AY - 1.0, Z_ATOM + 1.0, Z_ATOM + 9.0, 1.0)               
 wall_cut = (box(*DB9_CUT[:2], OUT[2] - 1, BY0 - 0.5, *DB9_CUT[2:4])
             .union(box(*USB_CUT[:2], YF + 0.5, OUT[3] + 1, *USB_CUT[2:4])))
 wall_cut = wall_cut.union(rbox(AX + 12.5, OUT[1] + 1, *RESET_CUT)).union(rbox(OUT[0] - 1, IN[0] + 0.2, *GROVE_CUT))
-case = body.cut(cover_cut).cut(SKIRT_FILE).cut(wall_cut)
+# the USB-C shell's top (Z_ATOM + 9) runs above the body's top edge: the cover's +y end is filed back over it as well
+COVER_USB = round(Z_ATOM + 9.0 + 0.2 - SKIRT + 0.04, 1)          # 0.5
+USB_FILE = box(*USB_CUT[:2], YF + 0.5, OUT[3] + 1, SKIRT - 0.1, SKIRT + COVER_USB)
+case = body.cut(cover_cut).cut(SKIRT_FILE).cut(USB_FILE).cut(wall_cut)
 
 # ---- interference ------------------------------------------------------------------------------------------
 checks = [('指静脈', vein), ('vein cable', vein_cable), ('cable slack', cable_slack), ('board', pcb), ('J3', j3), ('J3 plug', j3_plug), ('MAX3232', u1),
@@ -238,7 +249,7 @@ def template():
              'Cut the views apart. Cover: face up on the cover, grey outline (40 x 130, R3) on the cover edges.',
              'Side / ends: the grey line is the whole case (cover on, 25 high): its BOTTOM edge on the desk side of the body,',
              'its ends on the case ends. All wall cuts are in the body; the DB9 and USB cuts are open to the body\'s top edge.',
-             'Also file the cover\'s skirt back 0.8 over the DB9 (32 wide, at the -y end).',
+             f'Also file the cover\'s skirt back {SKIRT_DB9:g} over the DB9 (32 wide, -y end) and its edge {COVER_USB:g} over the USB ({USB_CUT[1] - USB_CUT[0]:.1f} wide, +y end).',
              'Red = cut through; + = corner drill centres. Unit mm.',
              'Distances: cover from the outline edges; side / ends from the ends, the bottom (floor outside) and the top.',
              ''] + rows
@@ -250,7 +261,7 @@ dxf = {}
 for name, title, notes, draw, x0, y0 in (
         ('cover', 'SW-130B cover - seen from OUTSIDE (above), origin = case centre, +y = the VoiceS3R end',
          ['CUT: vein window and VoiceS3R window (corner R as dimensioned), through',
-          'dimensions: centres from the case centre, sizes', 'file the skirt back 0.8 over the DB9 (-y end, 32 wide)',
+          'dimensions: centres from the case centre, sizes', f'file the skirt back {SKIRT_DB9:g} over the DB9 (-y end, 32 wide)', f'file the edge back {COVER_USB:g} over the USB-C / PORT.A notch (+y end, {USB_CUT[1] - USB_CUT[0]:.1f} wide)',
           'unit mm'], draw_cover, OUT[0], OUT[2] - 44),
         ('side', 'SW-130B body, +x side - seen from OUTSIDE, datum = bottom left (-y end, floor outside)',
          ['CUT: the reset hole (a screwdriver to the VoiceS3R\'s reset), through',
@@ -293,7 +304,7 @@ parts = [
     ('u1', 'U1 MAX3232 と C1〜C5', '#202326', 1, 'mods', u1.union(caps)),
     ('sw1', 'SW1 ストレート / クロス DIP(指静脈と DB9 の間の +x 側、カバーを外して切り替え)', '#c0392b', 1, 'mods', sw1),
     ('db9', 'J4 DB9 オス(−y の端面)', '#8a8f96', 1, 'mods', db9_body.union(db9_flange).union(db9_shell).union(db9_posts)),
-    ('spacers', 'M3 × 3(床に VHB)と M3 × 5(指静脈、上面に VHB)', '#c9a227', 1, 'mods', spacers),
+    ('spacers', '床に ASB-303E(M3 × 3、VHB 1.14 で貼る)、H1〜H4 は座金 1.0 + BSB-305E(M3 × 5、上面に VHB で指静脈)、H5〜H7 は M3 × 4 バインド', '#c9a227', 1, 'mods', spacers),
     ('db9plug', 'DB9 プラグ(FC-1200 へ)', '#5c6166', 1, 'mods', db9_plug),
     ('usbplug', 'USB-C プラグ(Windows PC へ)', '#24292d', 1, 'mods', usb_plug),
     ('portaplug', 'PORT.A Grove プラグ(予備、USB-C の下)', '#c47f0e', 1, 'mods', porta_plug),
@@ -305,10 +316,10 @@ SUB = ('細い案: タカチ SW-130B(40 × 25 × 130)に、DB9・指静脈・Voi
        '−x 側面の Grove、USB-C と PORT.A は +y の端面)。ドラッグで回転、ホイール/ピンチで拡大。')
 DIMS = [('ケース', 'タカチ SW-130B(40 × 25 × 130、ABS、はめ込み式、¥360)'),
         ('内側', '35.5 × 125.5、高さ 17(その上 20 まではカバーの縁で 32.8 × 122.8)。ボス・リブなし'),
-        ('基板', 'station 基板 sw130(34.8 × 122.7)、部品は全部上面。床に VHB で貼った M3 × 3 の上(3.0)'),
+        ('基板', 'station 基板 sw130(34.8 × 122.7)、部品は全部上面。床に VHB(1.14)で貼った M3 × 3 の上(4.1)'),
         ('VoiceS3R', '基板に Ext.Pin(J1 / J2、普通のピンヘッダー)で立てる。カバーの窓から 1.4 出る。USB-C とその下の PORT.A(予備)は +y の端面の 1 つの穴から、リセットは +x の側面の穴からドライバーで'),
         ('NFC', '基板の Grove J6(−x の側面、DB9 の近く)。G38 = SDA / G39 = SCL(4.7k プルアップ)、ファームで I2C をこのピンで開く'),
-        ('指静脈', 'M3 × 5 の上に VHB 0.7、カバーから 2.8 突き出す。VoiceS3R 側へ寄せ(y −30〜29)、手前に J3 とケーブル(MX1.25 4P・約 10 cm)の余りを置く'),
+        ('指静脈', '座金 1.0 + M3 × 5 の上に VHB 1.14、カバーから 5.4 突き出す。VoiceS3R 側へ寄せ(y −30〜29)、手前に J3 とケーブル(MX1.25 4P・約 10 cm)の余りを置く'),
         ('DB9', '−y の端面(切り欠きはボディの上縁まで開いていて、基板を上から落とし込む)。カバーの縁をその上だけ 0.8 削る'),
         ('加工', 'カバーに窓 2 つ、−y 端面に DB9、+y 端面に USB-C / PORT.A(1 つの穴)、−x 側面に NFC の Grove、+x 側面にリセットの穴 6 × 8')]
 NOTE = ('ケースはタカチの外形図(SW-130□)からの簡略形状です。VoiceS3R と NFC Unit の形は M5Stack 公式 STL'
