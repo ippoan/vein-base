@@ -130,6 +130,7 @@ NFC Unit を箱の外に置き(Grove ケーブルで J6 へ)、SW-75B(50 × 30 �
 - **ピン割り当て:** VoiceS3R 本体底面のシルク印刷による。
 - **KiCad DRC:** 未接続 0、クリアランス違反なし。
 - **干渉チェック:** 基板、部品、ケーブル、ネジ、VoiceS3R の外形との干渉は体積 0(問題なし)。
+- **station 基板の RS232(実機テスト済み、2026-10-01):** 届いた station 基板 r10 に VoiceS3R を挿し、[alc-app-s3](https://github.com/ippoan/alc-app-s3) の `atoms3-timecard` の `station` 版(`0.1.0+74579fe`、Pages の `firmware/alc-hub-atoms3-timecard-station-merged.bin` を `espflash write-bin 0x0` で書き込み)で確認。SW1 は 1+2 ON(Passthrough)。DB9 に FC-1200B をつなぎ、G7 = 送信 / G8 = 受信(MAX3232、9600 8N1)で接続応答 → 暖機 → 吹き込み待ち → 測定 → 測定値(0.000 mg/L)まで USB コンソールに出た。未確認: 指静脈(J3、G5/G6。`vein` 版のファームが要る)、NFC、SW1 の Cross(3+4 ON)。
 
 ## 発注前の確認(未検証の項目)
 
