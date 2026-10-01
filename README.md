@@ -52,6 +52,7 @@ VoiceS3R(Ext.Pin メス)
 
 - **発注対象は `fab/atomic/vein_base_atomic_v<版>_*`**(ガーバー zip・BOM・CPL)。カップ版の `vein_base_v<版>_*` と取り違えない。
 - **JLCPCB では板厚 1.0 mm を選ぶ**(カップ版は 1.6 mm)。
+- **J1 / J2 は差し込み側 4 mm の XFCN PZ254V-11-05P-A40(C42419912)/ -04P-A40(C42419911)**(v0.16〜)。v0.14 の ZHOURI(差し込み側 6 mm)は VoiceS3R が 1〜2 mm 浮いたため。
 - 手で確かめる項目: J3 に挿したプラグがケース端面の開口 16 × 9.3 mm を通るか、ケースの柱 φ4.84 が基板の切り欠きに入るか。
 
 ## Vein Station(一体筐体・案)
