@@ -29,7 +29,7 @@ jobs:
       - name: Install KiCad 7 and CadQuery
         run: |
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends kicad kicad-footprints
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends kicad kicad-footprints fonts-ipaexfont-gothic
           pip install --break-system-packages cadquery numpy trimesh scipy rtree matplotlib
 
       - name: Build PCB (KiCad)
