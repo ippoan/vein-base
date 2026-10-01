@@ -91,7 +91,7 @@ NFC Unit を箱の外に置き(Grove ケーブルで J6 へ)、SW-75B(50 × 30 �
 
 ### Vein Station SW130(タカチ SW-130B・全部入りの細い案)
 
-タカチ SW-130B(40 × 25 × 130、¥360)に、−y から DB9 → DIP と指静脈のケーブル → 指静脈 → VoiceS3R を一列に全部入れる。`station/build_station_sw130.py` が干渉チェック・3D プレビュー(https://ippoan.github.io/vein-base/station-sw130/)・加工図(DXF / PDF)と A4 原寸の型紙、基板は `build_board.py sw130`(34.8 × 122.7、片面、`fab/station_sw130/`、BOM は `jlc_bom_sw130.csv`)。詳細は `CLAUDE.md` の SW130 案の節。
+タカチ SW-130B(40 × 25 × 130、¥360)に、−y から DB9 → DIP と指静脈のケーブル → 指静脈 → VoiceS3R を一列に全部入れる。`station/build_station_sw130.py` が干渉チェック・3D プレビュー(https://ippoan.github.io/vein-base/station-sw130/)・加工図(DXF / PDF)と A4 原寸の型紙、タカチへの見積もり依頼に付ける加工位置図(A4 横 1 枚・日本語、`vein_station_<REV>_positions.pdf`)を作る。基板は `build_board.py sw130`(34.8 × 122.7、片面、`fab/station_sw130/`、BOM は `jlc_bom_sw130.csv`)。詳細は `CLAUDE.md` の SW130 案の節。
 
 ### Vein Station SE(CoreS3 SE 版・案)
 
