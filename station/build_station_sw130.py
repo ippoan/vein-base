@@ -30,7 +30,7 @@ from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
 from template import cut_template, edge_row
 from drawing import face, sheet
 
-REV = 'sw130h'
+REV = 'sw130i'
 
 # ---- case (Takachi SW-130B, from the drawing) ------------------------------------------------------------
 OUT = (-20.0, 20.0, -65.0, 65.0)
@@ -102,11 +102,11 @@ u1 = on(U1[0] - 4.95, U1[0] + 4.95, U1[1] - 1.95, U1[1] + 1.95, 0, 1.75)
 caps = on(-14.0, -2.0, 19.6, 21.0, 0, 0.9).union(on(-9.5, -6.5, 31.1, 32.5, 0, 0.9))
 sw1 = on(SW1[0] - 5.6, SW1[0] + 5.6, SW1[1] - 3.35, SW1[1] + 3.35, 0, 3.0)   # gull-wing pads across x
 
-# Ext.Pin headers (plastic 2.54 × 2.5, pins up 6 into the VoiceS3R, tails 3 under the board)
+# Ext.Pin headers (plastic 2.54 × 2.5, pins up 4 into the VoiceS3R, tails 3 under the board)
 hdr_plastic = on(J1X - 1.27, J1X + 1.27, AY - 3.81, AY + 8.89, 0, 2.5).union(
     on(J2X - 1.27, J2X + 1.27, AY - 1.27, AY + 8.89, 0, 2.5))
-hdr_pins = on(J1X - 0.32, J1X + 0.32, AY - 2.86, AY + 7.94, -4.6, 8.5).union(
-    on(J2X - 0.32, J2X + 0.32, AY - 0.32, AY + 7.94, -4.6, 8.5))
+hdr_pins = on(J1X - 0.32, J1X + 0.32, AY - 2.86, AY + 7.94, -4.6, 6.5).union(
+    on(J2X - 0.32, J2X + 0.32, AY - 0.32, AY + 7.94, -4.6, 6.5))
 atom = rbox(AX - 12, AX + 12, AY - 12, AY + 12, Z_ATOM, Z_ATOM + 16.8, 3.0)
 YF = AY + 12                                                # the USB-C / PORT.A face
 usb_plug = box(AX - 6, AX + 6, YF + 6.5, YF + 24.2, Z_ATOM + 4.0, Z_ATOM + 11.0).union(

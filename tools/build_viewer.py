@@ -20,7 +20,7 @@ def header(x, ys):
     pl = pins = None
     for y in ys:
         b = box(x - 1.27, x + 1.27, y - 1.27, y + 1.27, -2.5, 0)
-        p = box(x - 0.32, x + 0.32, y - 0.32, y + 0.32, -7.1, 6.0)
+        p = box(x - 0.32, x + 0.32, y - 0.32, y + 0.32, -7.1, 4.0)
         pl = b if pl is None else pl.union(b)
         pins = p if pins is None else pins.union(p)
     return pl, pins
