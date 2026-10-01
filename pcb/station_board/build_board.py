@@ -68,6 +68,7 @@ mm = pcbnew.FromMM
 
 # outline (board coords): the VoiceS3R and, beside it on -x, the DB9 on the -y edge (the station's back wall)
 X0, X1, Y0, Y1 = -48.0, 12.0, -11.0, 24.0
+X0_60 = X0                   # the 60 × 35 area's -x edge (pf widens X0, its parts and silk stay put)
 J3_EDGE = Y1                 # J3 stays on the 60 × 35 front edge in both outlines
 DB9_BX = -27.9               # DB9 centre (r10: -31.9)
 # pf: holes in board coords, all outside the 60 × 35 area's tracks. The same lists are in station/build_station_pf.py
@@ -223,10 +224,12 @@ for (a, c), (d, e) in zip(EDGE, EDGE[1:] + EDGE[:1]):
     s.SetStart(P(a, c)); s.SetEnd(P(d, e)); s.SetLayer(pcbnew.Edge_Cuts); s.SetWidth(mm(0.1)); b.Add(s)
 
 
-def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
+def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0, left=False):
     t = pcbnew.PCB_TEXT(b); t.SetText(s); t.SetPosition(P(x, y)); t.SetLayer(layer)
     t.SetTextSize(pcbnew.VECTOR2I(mm(size), mm(size))); t.SetTextThickness(mm(0.15))
     t.SetTextAngleDegrees(rot)
+    if left:               # x = the text's left end (a centred text is about 0.8 × size wide per character)
+        t.SetHorizJustify(pcbnew.GR_TEXT_H_ALIGN_LEFT)
     if layer == pcbnew.B_SilkS:
         t.SetMirrored(True)
     b.Add(t)
@@ -234,9 +237,11 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 if SW75:
     text('VoiceS3R: USB-C / PORT.A this way', 0.0, TY - 1.2, size=0.8)
-    text('SW1 1+2 PASS / 3+4 CROSS', 13.0, 31.5, size=0.8)
+    # two short lines over SW1: one line of 24 characters (19.2 wide) ran 2.2 past the +x edge
+    text('1+2 ON = PASS', 13.0, 32.8, size=0.8)
+    text('3+4 ON = CROSS', 13.0, 31.6, size=0.8)
     text('J3 vein: 1RX 2TX 3V3 4G', -8.35, -17.6, size=0.8)
-    text(f'vein-station board {REV} (SW-75B)', -6.0, 0.0, layer=pcbnew.B_SilkS)
+    text(f'vein-station board {REV}b (SW-75B)', -6.0, 0.0, layer=pcbnew.B_SilkS)
 elif SW130:
     text('VoiceS3R: USB-C / PORT.A this way', 0.0, Y1 - 1.2, size=0.8)
     text('SW1 12=PASS 34=CROSS', 3.0, -44.3, size=0.8, rot=90)
@@ -245,9 +250,13 @@ elif SW130:
     text(f'vein-station board {REV}b (SW-130B)', 0.0, 0.0, layer=pcbnew.B_SilkS)
 else:
     text('USB-C / PORT.A side', 0, -13.2, size=0.8)
-    text('SW1 1+2 PASS(FC-1200) / 3+4 CROSS', -41.2, 14.0, size=0.8)
+    # r10..r12 had one centred line of 33 characters (26.4 wide) here: its first 8 ('SW1 1+2 ') fell off the -x edge and
+    # SW1's reference sat on the rest. Two lines from 1.0 inside the edge instead, the reference hidden (the text names it).
+    SW1.Reference().SetVisible(False)
+    text('SW1 1+2 ON = PASS (FC-1200)', X0_60 + 1.0, 14.6, size=0.8, left=True)
+    text('3+4 ON = CROSS', X0_60 + 1.0 + 4 * 0.8, 13.4, size=0.8, left=True)
     text('J3 vein: 1RX 2TX 3V3 4G', -30.0, 16.2, size=0.8)
-    text(f'vein-station board {REV}' + (' (PF13-4-9)' if PF else ''), -20.0, 18.0, layer=pcbnew.B_SilkS)
+    text(f'vein-station board {REV}b' + (' (PF13-4-9)' if PF else ''), -20.0, 18.0, layer=pcbnew.B_SilkS)
 
 os.chdir(HERE)
 if 'dsn' in sys.argv[1:]:
