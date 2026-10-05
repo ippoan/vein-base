@@ -60,9 +60,10 @@ jobs:
         # the same circuit in three outlines: the printed enclosure (fab/station/), the Takachi PF13-4-9 case
         # (station_board_pf -> fab/station_pf/) and the SW-75B with the VoiceS3R on a tongue outside the case
         # (station_board_sw75 -> fab/station_sw75/, placed and routed on its own), and all of it inside a Takachi
-        # SW-130B (station_board_sw130 -> fab/station_sw130/, with a Grove for the NFC, its own BOM)
+        # SW-130B (station_board_sw130 -> fab/station_sw130/, with a Grove for the NFC, its own BOM), and the printed
+        # case A (station_board_print_a -> fab/station_print_a/, sw130's parts and BOM)
         run: |
-          cd pcb/station_board && python3 build_board.py && python3 build_board.py pf && python3 build_board.py sw75 && python3 build_board.py sw130 && cd ../..
+          cd pcb/station_board && python3 build_board.py && python3 build_board.py pf && python3 build_board.py sw75 && python3 build_board.py sw130 && python3 build_board.py print_a && cd ../..
           sfab() {  # $1 = board name, $2 = output dir, $3 = BOM
             local B=pcb/station_board/$1.kicad_pcb
             mkdir -p $2/gerber
@@ -78,6 +79,7 @@ jobs:
           sfab station_board_pf fab/station_pf
           sfab station_board_sw75 fab/station_sw75
           sfab station_board_sw130 fab/station_sw130 jlc_bom_sw130.csv
+          sfab station_board_print_a fab/station_print_a jlc_bom_sw130.csv
 
       - name: Vein Station board DRC
         # silk_edge_clearance: the DB9 footprint's outline silk runs off the board edge; only this board is exempt.
@@ -86,6 +88,7 @@ jobs:
           python3 tools/check_drc.py --board pcb/station_board/station_board_pf.kicad_pcb --report fab/station_pf/drc.rpt --ignore silk_edge_clearance
           python3 tools/check_drc.py --board pcb/station_board/station_board_sw75.kicad_pcb --report fab/station_sw75/drc.rpt --ignore silk_edge_clearance
           python3 tools/check_drc.py --board pcb/station_board/station_board_sw130.kicad_pcb --report fab/station_sw130/drc.rpt --ignore silk_edge_clearance
+          python3 tools/check_drc.py --board pcb/station_board/station_board_print_a.kicad_pcb --report fab/station_print_a/drc.rpt --ignore silk_edge_clearance
 
       - name: Build Vein Station ESP boards (KiCad) + DRC
         # the station board with the VoiceS3R's circuit on it (ESP32-S3-WROOM-1, ES8311, NS4150B, mic, speaker), in three
@@ -172,6 +175,7 @@ jobs:
             fab/station_pf/*
             fab/station_sw75/*
             fab/station_sw130/*
+            fab/station_print_a/*
             fab/station_esp/*
             fab/station_esp_sw/*
             fab/station_esp_sw75/*
