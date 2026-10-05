@@ -173,7 +173,7 @@ def concept_a():
     sw1 = on(-16.2, -5.0, yi0 + 12.5, yi0 + 19.2, 0, 3.0)          # DIP on -x behind the DB9 (lid off)
     j3 = on(-4.0, 6.0, yi0 + 21.5, yi0 + 25.4, 0, 3.4)             # under the vein socket's end, opening -y
     j3p = on(-2.0, 4.0, yi0 + 21.5 - 6.0, yi0 + 21.5, 0.3, 3.1)
-    slack = box(-16.0, 4.5, yi0 + 12.0, yi0 + 26.0, ZBT + 4.0, ZBT + 9.0)   # the vein cable's slack over SW1 / J3
+    slack = box(-16.0, 4.5, yi0 + 12.0, yi0 + 26.0, ZBT + 3.7, ZBT + 8.7)   # the vein cable's slack over SW1 / J3, under the lid's screw ledges
     gy = yi0 + 19.0                                                 # J6 (Grove) on +x behind the DB9
     grove = on(xi1 - 0.3 - 2.3 - 7.7, xi1 - 0.3 - 2.3, gy - 6.0, gy + 6.0, 0, 6.0)
     groveplug = on(xi1 - 2.6, xi1 + 6.0, gy - 4.5, gy + 4.5, 0.6, 5.4)
