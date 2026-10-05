@@ -17,6 +17,8 @@ M5Stack **Atom VoiceS3R** の下に積むベースです。**指静脈モジュ�
 | Vein Station SW(タカチ SW-85B) | https://ippoan.github.io/vein-base/station-sw/ |
 | Vein Station SW75(タカチ SW-75B) | https://ippoan.github.io/vein-base/station-sw75/ |
 | Vein Station SW130(タカチ SW-130B) | https://ippoan.github.io/vein-base/station-sw130/ |
+| Vein Station 3D 印刷の試作 A(一列・薄型) | https://ippoan.github.io/vein-base/station-print-a/ |
+| Vein Station 3D 印刷の試作 B(2 列・短い) | https://ippoan.github.io/vein-base/station-print-b/ |
 | 指静脈 Unit(CS75N-B) | https://ippoan.github.io/vein-base/vein-unit-cs/ |
 | 指静脈 Unit(SIC5-9-2B) | https://ippoan.github.io/vein-base/vein-unit-sic/ |
 

@@ -148,11 +148,14 @@ jobs:
       - name: Build Vein Station SW130 (Takachi SW-130B, all inside, slim) 3D preview + interference check
         run: python3 station/build_station_sw130.py
 
+      - name: Build Vein Station printed concepts A / B (MJF PA12, board drawn anew) 3D previews + interference check
+        run: python3 station/build_station_print.py
+
       - name: Build Vein Unit (finger vein module alone in a small Takachi case) cutting templates + 3D previews + interference check
         run: python3 station/build_vein_unit.py cs && python3 station/build_vein_unit.py sic
 
       - name: Minimum wall thickness of the printed parts (DMM resin SLA needs 1.0 mm)
-        run: python3 tools/check_thickness.py 1.0 case/vein_base_v*_cup.stl station/vein_station_r*_shell.stl station/vein_station_r*_lid.stl
+        run: python3 tools/check_thickness.py 1.0 case/vein_base_v*_cup.stl station/vein_station_r*_shell.stl station/vein_station_r*_lid.stl station/vein_station_print_*.stl
 
       - uses: actions/upload-artifact@v4
         with:
@@ -175,6 +178,8 @@ jobs:
             site/station-sw/*
             site/station-sw75/*
             site/station-sw130/*
+            site/station-print-a/*
+            site/station-print-b/*
             fab/vein_unit/*
 
       - uses: actions/upload-pages-artifact@v3
