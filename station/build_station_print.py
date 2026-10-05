@@ -14,7 +14,7 @@ import numpy as np
 import cadquery as cq
 from shapes import ROOT, box, rbox, cyl_z, stl_tris, vein_parts, write_page
 
-T_WALL, T_FLOOR, T_TOP = 1.8, 1.6, 1.8
+T_WALL, T_FLOOR, T_TOP = 1.8, 1.6, 2.2       # the lid 2.2: 1.25 left under a screw's countersink
 BOSS = 2.0                       # the board stands on printed bosses (M2 self-tapping screws)
 ZB = BOSS
 ZBT = ZB + 1.6                   # board top
@@ -57,11 +57,59 @@ def db9(cx, y_face, facing):
     return body.union(flange), shell, plug
 
 
+# the lid's screws: an M2 countersunk tapping screw (M2 x 5) from the top into a ledge on the inside of a wall
+LEDGE_D, LEDGE_W, LEDGE_H = 3.9, 6.0, 4.5     # out from the wall, along it, down from the lid (M2 x 5)
+SCREW_IN = 1.9                                 # the screw's axis from the wall's inside face (in the wall's 1.8 + ledge)
+PILOT, CLEAR, CSK = 1.6, 2.3, 4.2              # tapping pilot, the lid's clearance hole, the countersink (90 deg)
+
+
+def ledges(xi0, xi1, yi0, yi1, avoid, lid_cuts=(), n_max=4):
+    """Screw ledges along the inside of the walls, clear of every part and wall cut in `avoid` (by bounding box,
+    0.3 margin): the free place nearest to each inside corner. Returns [(x, y, ledge box)]."""
+    z0 = Z_IN - LEDGE_H
+    bbs = []
+    for o in avoid:
+        bb = o.val().BoundingBox()
+        if bb.zmax > z0 - 0.15:
+            bbs.append((bb.xmin - 0.3, bb.xmax + 0.3, bb.ymin - 0.3, bb.ymax + 0.3))
+    m = CSK / 2 + 1.0                       # the countersink stays 1.0 off the lid's windows
+    wins = [(bb.xmin - m, bb.xmax + m, bb.ymin - m, bb.ymax + m) for bb in (o.val().BoundingBox() for o in lid_cuts)]
+    cands = []
+    for wall in ('x-', 'x+', 'y-', 'y+'):
+        lo, hi = (yi0, yi1) if wall[0] == 'x' else (xi0, xi1)
+        for t in np.arange(lo + LEDGE_W / 2 + 1.2, hi - LEDGE_W / 2 - 1.2 + 1e-6, 0.5):
+            if wall == 'x-':
+                r, (sx, sy) = (xi0, xi0 + LEDGE_D, t - LEDGE_W / 2, t + LEDGE_W / 2), (xi0 + SCREW_IN, t)
+            elif wall == 'x+':
+                r, (sx, sy) = (xi1 - LEDGE_D, xi1, t - LEDGE_W / 2, t + LEDGE_W / 2), (xi1 - SCREW_IN, t)
+            elif wall == 'y-':
+                r, (sx, sy) = (t - LEDGE_W / 2, t + LEDGE_W / 2, yi0, yi0 + LEDGE_D), (t, yi0 + SCREW_IN)
+            else:
+                r, (sx, sy) = (t - LEDGE_W / 2, t + LEDGE_W / 2, yi1 - LEDGE_D, yi1), (t, yi1 - SCREW_IN)
+            if all(r[1] <= a or r[0] >= b or r[3] <= c or r[2] >= d for a, b, c, d in bbs) and \
+                    all(sx <= a or sx >= b or sy <= c or sy >= d for a, b, c, d in wins):
+                cands.append((sx, sy, r))
+    picked = []
+    for cx, cy in ((xi0, yi0), (xi1, yi0), (xi0, yi1), (xi1, yi1)):
+        best = min(cands, key=lambda c: (c[0] - cx) ** 2 + (c[1] - cy) ** 2, default=None)
+        if best and all((best[0] - p[0]) ** 2 + (best[1] - p[1]) ** 2 > 15 ** 2 for p in picked):
+            picked.append(best)
+    return [(x, y, box(*r, z0, Z_IN)) for x, y, r in picked[:n_max]]
+
+
 def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, keep_clear=()):
-    """A tray (floor + walls up to Z_IN) and a flat lid (Z_IN..Z_TOP) with a locating rim, all corners R3 outside."""
+    """A tray (floor + walls up to Z_IN) and a flat lid (Z_IN..Z_TOP) with a locating rim, all corners R3 outside,
+    screwed down through the lid into ledges on the walls. keep_clear: every part, for the rim and the ledges."""
     xo0, xo1, yo0, yo1 = xi0 - T_WALL, xi1 + T_WALL, yi0 - T_WALL, yi1 + T_WALL
     tray = rbox(xo0, xo1, yo0, yo1, -T_FLOOR, Z_IN, 3.0).cut(rbox(xi0, xi1, yi0, yi1, 0, Z_IN + 1, 1.2))
     lid = rbox(xo0, xo1, yo0, yo1, Z_IN, Z_TOP, 3.0)
+    screws = ledges(xi0, xi1, yi0, yi1, list(keep_clear) + list(wall_cuts), lid_cuts)
+    for x, y, led in screws:
+        tray = tray.union(led).cut(cyl_z(x, y, PILOT / 2, Z_IN - LEDGE_H + 1.2, Z_IN + 1))
+        cone = cq.Workplane().add(cq.Solid.makeCone(CLEAR / 2, CSK / 2, (CSK - CLEAR) / 2,
+                                                    cq.Vector(x, y, Z_TOP - (CSK - CLEAR) / 2), cq.Vector(0, 0, 1)))
+        lid = lid.cut(cyl_z(x, y, CLEAR / 2, Z_IN - 3, Z_TOP + 1)).cut(cone)
+    keep_clear = list(keep_clear) + [led for _, _, led in screws]
     # the locating rim: bars along the walls, clear of the corners and of anything near the walls; stubs dropped
     z0, z1, a, b = Z_IN - 2.0, Z_IN + 0.01, 0.2, 1.4
     rim = (box(xi0 + a, xi0 + b, yi0 + 4, yi1 - 4, z0, z1).union(box(xi1 - b, xi1 - a, yi0 + 4, yi1 - 4, z0, z1))
@@ -82,7 +130,7 @@ def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, keep_clear=()):
         tray = tray.cut(c)
     for c in lid_cuts:
         lid = lid.cut(c)
-    return tray, lid, (xo1 - xo0, yo1 - yo0, Z_TOP + T_FLOOR)
+    return tray, lid, (xo1 - xo0, yo1 - yo0, Z_TOP + T_FLOOR), [(x, y) for x, y, _ in screws]
 
 
 def bosses(pts):
@@ -110,7 +158,7 @@ def check(case_parts, parts):
 
 def concept_a():
     # inside 34 wide; along y: DB9 | electronics, J3 and the cable | vein module | VoiceS3R
-    xi0, xi1 = -17.0, 17.0
+    xi0, xi1 = -17.5, 17.5                  # 35: room for the lid screws beside the VoiceS3R's window
     yi0 = -56.4
     ydb = yi0 + 0.05                         # DB9 flange on the -y wall
     vein = (-13.0, 13.0, yi0 + 27.0, yi0 + 86.0)   # socket at -y
@@ -146,14 +194,13 @@ def concept_a():
                  box(xi1 - 1, xi1 + 5, ay - 7.0, ay - 1.0, Z_ATOM + 1.0, Z_IN + 0.1)]    # the reset, open to the lid
     lid_cuts = [rbox(vein[0] - 0.2, vein[1] + 0.2, vein[2] - 0.2, vein[3] + 0.2, Z_IN - 3, Z_TOP + 1, 2.2),
                 rbox(-12.2, 12.2, ay - 12.2, ay + 12.2, Z_IN - 3, Z_TOP + 1, 3.2)]
-    tray, lid, size = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts,
-                                    (d9, d9plug, usb, porta, grove, groveplug, atom_box, vbox))
-    tray = tray.union(bs)
-    parts = [('pcb', pcb), ('DB9', d9), ('DB9 plug', d9plug), ('MAX3232', u1), ('caps', caps), ('SW1', sw1), ('J3', j3),
+    parts = [('DB9', d9), ('DB9 plug', d9plug), ('MAX3232', u1), ('caps', caps), ('SW1', sw1), ('J3', j3),
              ('J3 plug', j3p), ('cable slack', slack), ('Grove', grove), ('Grove plug', groveplug), ('headers', hdr),
              ('VoiceS3R', atom_box), ('USB plug', usb), ('PORT.A plug', porta), ('vein', vbox), ('vein frame', frame)]
-    bad = check((tray.cut(bs), lid), [p for p in parts if p[0] not in ('pcb',)])
-    view = [('lid', 'ふた(天板・指静脈と VoiceS3R の窓)', '#2b2f33', 0.45, 'shell', lid),
+    tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, [o for _, o in parts] + [d9shell])
+    tray = tray.union(bs)
+    bad = check((tray.cut(bs), lid), parts)
+    view = [('shell', 'ふた(天板・指静脈と VoiceS3R の窓、M2 皿ねじで本体の受けに締める)', '#2b2f33', 0.45, 'shell', lid),
             ('atom', 'VoiceS3R(公式 CAD、USB-C は +y)', '#1fa49a', 1, 'mods', atom_at(0, ay, 'y+'))] + \
         vein_parts(vein, VEIN_Z0, along_y=True) + [
         ('pcb', '新しい基板(配置だけ、未配線)', '#1f7a4d', 1, 'mods', pcb),
@@ -165,8 +212,8 @@ def concept_a():
         ('slack', '指静脈のケーブルの余り(SW1 と J3 の上)', '#d9775c', 1, 'mods', slack),
         ('grove', 'J6 Grove とプラグ(+x の側面、DB9 の後ろ)', '#c47f0e', 1, 'mods', grove.union(groveplug)),
         ('usb', 'USB-C / PORT.A プラグ', '#24292d', 1, 'mods', usb.union(porta)),
-        ('tray', '本体(床・壁・ボス、MJF PA12 で造形)', '#8fa09c', 0.9, 'lid', tray)]
-    return view, bad, size, tray, lid
+        ('lid', '本体(床・壁・ボス・ふたのねじの受け、MJF PA12 で造形)', '#8fa09c', 0.9, 'lid', tray)]
+    return view, bad, size, tray, lid, screws
 
 
 def concept_b():
@@ -193,7 +240,7 @@ def concept_b():
     gy1 = yi1 - 0.3 - 2.3                                                 # J6 on the back wall, left of the DB9
     grove = on(xi0 + 1.0, xi0 + 13.0, gy1 - 7.7, gy1, 0, 6.0)
     groveplug = on(xi0 + 2.5, xi0 + 11.5, gy1, yi1 + 6.0, 0.6, 5.4)
-    slack = box(xi0 + 1.5, dcx - 16.0, vy1 + 2.0, yi1 - 1.5, ZBT + 7.0, ZBT + 11.5)   # over J6 and J3
+    slack = box(xi0 + 1.5, dcx - 16.0, vy1 + 2.0, yi1 - 1.5, ZBT + 6.1, ZBT + 8.9)    # one layer (2.5) over J6 and J3
     # J1 / J2 turned a quarter with the VoiceS3R (approximate)
     hdr = on(ax - 8.9, ax + 3.8, ay - 8.9, ay - 6.3, 0, 2.5).union(on(ax - 8.9, ax + 1.3, ay + 6.3, ay + 8.9, 0, 2.5))
     atom_box = rbox(ax - 12, ax + 12, ay - 12, ay + 12, Z_ATOM, Z_ATOM + 16.8, 3.0)
@@ -212,17 +259,16 @@ def concept_b():
                  box(xi0 + 2.0, xi0 + 12.0, yi1 - 1, yi1 + 5, ZBT - 0.3, ZBT + 6.4)]           # the Grove plug (back)
     lid_cuts = [rbox(vein[0] - 0.2, vein[1] + 0.2, vein[2] - 0.2, vein[3] + 0.2, Z_IN - 3, Z_TOP + 1, 2.2),
                 rbox(ax - 12.2, ax + 12.2, ay - 12.2, ay + 12.2, Z_IN - 3, Z_TOP + 1, 3.2)]
-    tray, lid, size = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts,
-                                    (d9, d9plug, usb, porta, grove, groveplug, atom_box, vbox))
-    tray = tray.union(bs)
     parts = [('DB9', d9), ('DB9 plug', d9plug), ('MAX3232', u1), ('caps', caps), ('SW1', sw1), ('J3', j3),
              ('J3 plug', j3p), ('cable slack', slack), ('Grove', grove), ('Grove plug', groveplug), ('headers', hdr),
              ('VoiceS3R', atom_box), ('USB plug', usb), ('PORT.A plug', porta), ('vein', vbox), ('vein frame', frame)]
+    tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, [o for _, o in parts] + [d9shell])
+    tray = tray.union(bs)
     bad = check((tray.cut(bs), lid), parts)
     vp = [(k, l, c, o, g, s.rotate(((vein[0] + vein[1]) / 2, (vy0 + vy1) / 2, 0),
                                    ((vein[0] + vein[1]) / 2, (vy0 + vy1) / 2, 1), 180))
           for k, l, c, o, g, s in vein_parts(vein, VEIN_Z0, along_y=True)]
-    view = [('lid', 'ふた(天板・指静脈と VoiceS3R の窓)', '#2b2f33', 0.45, 'shell', lid),
+    view = [('shell', 'ふた(天板・指静脈と VoiceS3R の窓、M2 皿ねじで本体の受けに締める)', '#2b2f33', 0.45, 'shell', lid),
             ('atom', 'VoiceS3R(公式 CAD、USB-C は右 +x、リセットは手前)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'x+'))] + vp + [
         ('pcb', '新しい基板(配置だけ、未配線)', '#1f7a4d', 1, 'mods', pcb),
         ('frame', '指静脈を載せる枠(箱と一体で造形)', '#8fa09c', 1, 'mods', frame),
@@ -233,16 +279,19 @@ def concept_b():
         ('slack', '指静脈のケーブルの余り(左奥、J6 と J3 の上)', '#d9775c', 1, 'mods', slack),
         ('grove', 'J6 Grove とプラグ(奥の端面、DB9 の左)', '#c47f0e', 1, 'mods', grove.union(groveplug)),
         ('usb', 'USB-C / PORT.A プラグ(右の側面)', '#24292d', 1, 'mods', usb.union(porta)),
-        ('tray', '本体(床・壁・ボス、MJF PA12 で造形)', '#8fa09c', 0.9, 'lid', tray)]
-    return view, bad, size, tray, lid
+        ('lid', '本体(床・壁・ボス・ふたのねじの受け、MJF PA12 で造形)', '#8fa09c', 0.9, 'lid', tray)]
+    return view, bad, size, tray, lid, screws
 
 
 out = os.path.join(ROOT, 'station')
 failed = []
 for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B 2 列(短い)')):
-    view, bad, size, tray, lid = fn()
+    view, bad, size, tray, lid, screws = fn()
     vol = (tray.val().Volume() + lid.val().Volume()) / 1000
-    print(key, 'outer %.1f x %.1f x %.1f' % size, 'volume %.1f cm3' % vol, 'interference:', bad or 'none')
+    print(key, 'outer %.1f x %.1f x %.1f' % size, 'volume %.1f cm3' % vol, 'screws', [(round(x, 1), round(y, 1)) for x, y in screws],
+          'interference:', bad or 'none')
+    if len(screws) < 3:
+        failed.append(f'{key}: only {len(screws)} places for the lid screws')
     failed += [f'{key}: {b}' for b in bad]
     stls = []
     for n, s, label in (('body', tray, '本体'), ('lid', lid, 'ふた')):
@@ -253,6 +302,8 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
             ('肉厚', f'壁 {T_WALL}、床 {T_FLOOR}、天板 {T_TOP}(MJF PA12)'),
             ('基板', '箱に合わせて作り直す(この図は配置だけ、未配線)。床のボス(高さ 2)に M2 のタッピングねじで留める。THT の足は 2 に切る'),
             ('指静脈', 'ふたから 2.5 出る。箱と一体の枠に載せる(スペーサー・VHB なし)'),
+            ('ふた', f'M2 皿タッピングねじ × {len(screws)} 本(M2 × 5)で、上から壁の内側の受け({LEDGE_D:g} × {LEDGE_W:g}、高さ {LEDGE_H:g})に締める。'
+                     '受けの位置は部品と壁の穴を避けて四隅の近くを自動で選ぶ: ' + ', '.join(f'({x:.1f}, {y:.1f})' for x, y in screws)),
             ('干渉', 'なし' if not bad else ', '.join(bad))]
     write_page(f'station-print-{key}', f'案 {title}', view,
                f'Vein Station を 3D 印刷の箱にする試作案 {title}。基板も作り直す前提で、部品の置き場所だけを決めた形。'
