@@ -40,7 +40,8 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  the firmware opens that I2C on G38 / G39. J6 is the genuine JST S4B-PH-SM4-TB (C265102; JLC found the
                  HY2.0 C722729's pins off the pads), its front 2.3 inside the edge. v0.17 (silk r12c) moved J6 from the
                  -x edge by the DB9 to the +x edge, the face of the VoiceS3R's reset, so the case is machined on four
-                 faces instead of five (v0.15 / r12b, the first four cases, has it on -x). Its own BOM (jlc_bom_sw130.csv). The board
+                 faces instead of five (v0.15 / r12b, the first four cases, has it on -x); v0.18 (silk r12d) moved it
+                 on along that edge to just short of the VoiceS3R, so one notch in the +x side serves J6 and the reset. Its own BOM (jlc_bom_sw130.csv). The board
                  stands 3.0 off the floor on M3 × 3 spacers (H1..H7). Board coords = case coords (origin = case
                  centre, x across the 40 side, y along the 130 side); keep the numbers together with that script.
                  -> station_board_sw130.kicad_pcb, routed on its own (station_board_sw130.ses)
@@ -109,9 +110,9 @@ if SW130:
              (0.0, 54.2), (-13.8, -18.0), (14.0, -34.0)]                # H5 under the VoiceS3R, H6 / H7 to the edges
     POS = {'J1': (AX - 7.62, AY - 2.54, 180), 'J2': (AX + 7.62, AY, 180),   # half a turn: USB-C / PORT.A to +y
            'J3': (-0.15, -34.5, 0),             # in front of the vein socket, opening -y (the spare cable beside it)
-           'J6': (X1 - 4.45 - 2.3, -10.0, 90),    # Grove for the Unit NFC, opening +x (the reset's face), under the
-                                                  # vein module (its top 11.7 < 12.9), between the spacers H2 and H4
-           'R1': (4.0, -11.8, 90), 'R2': (4.0, -8.2, 90),
+           'J6': (X1 - 4.45 - 2.3, 30.8, 90),     # Grove for the Unit NFC, opening +x (the reset's face), just short
+                                                  # of the VoiceS3R (37.2), its top 11.7 under the vein module's 12.9
+           'R1': (4.0, 29.0, 90), 'R2': (4.0, 32.6, 90),
            'U1': (-8.0, 26.0, 90), 'C1': (-12.5, 20.3, 0), 'C2': (-9.5, 20.3, 0), 'C3': (-6.5, 20.3, 0),
            'C4': (-3.5, 20.3, 0), 'C5': (-8.0, 31.8, 0),
            'SW1': (11.3, -44.3, 0)}             # between the vein module and the DB9, clear of it: cover off to set
@@ -249,8 +250,8 @@ elif SW130:
     text('VoiceS3R: USB-C / PORT.A this way', 0.0, Y1 - 1.2, size=0.8)
     text('SW1 12=PASS 34=CROSS', 3.0, -44.3, size=0.8, rot=90)
     text('J3 vein: 1RX 2TX 3V3 4G', -0.15, -29.8, size=0.8)
-    text('NFC: G38 G39 5V G', 9.5, -2.0, size=0.8)
-    text(f'vein-station board {REV}c (SW-130B)', 0.0, 0.0, layer=pcbnew.B_SilkS)
+    text('NFC: G38 G39 5V G', 9.5, 22.6, size=0.8)
+    text(f'vein-station board {REV}d (SW-130B)', 0.0, 0.0, layer=pcbnew.B_SilkS)
 else:
     text('USB-C / PORT.A side', 0, -13.2, size=0.8)
     # r10..r12 had one centred line of 33 characters (26.4 wide) here: its first 8 ('SW1 1+2 ') fell off the -x edge and
