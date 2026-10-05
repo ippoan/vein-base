@@ -3,13 +3,14 @@ along it: the DB9 on the -y end with the DIP beside the vein cable, the vein mod
 VoiceS3R at the +y end. The
 station board (pcb/station_board, `build_board.py sw130`, one-sided, Economic PCBA) fills the case floor; the VoiceS3R
 stands on it on its Ext.Pin (J1 / J2, stock pin headers), centred, its USB-C / PORT.A edge to +y (both through
-one hole in the +y end wall), its top 2.5 proud of the cover through a window. The Unit NFC plugs into the board's Grove J6 on the -x
-side by the DB9 (G38 / G39 as I2C), so NFC and USB leave on different faces; the VoiceS3R's PORT.A is spare, reachable through the USB hole. Its
-reset button (a U-shaped flap on the face left of the ports) faces the +x side, where a 6 wide notch in the body's
-top edge takes a screwdriver.
+one hole in the +y end wall), its top 2.5 proud of the cover through a window. The Unit NFC plugs into the board's Grove J6 on the +x
+side under the vein module (G38 / G39 as I2C), so NFC and USB leave on different faces; the VoiceS3R's PORT.A is spare, reachable through the USB hole. Its
+reset button (a U-shaped flap on the face left of the ports) faces the +x side too, where a 6 wide notch in the body's
+top edge takes a screwdriver. sw130k (board v0.17) moved J6 from the -x side by the DB9 to the +x side, so the case is
+machined on four faces (cover, +x side, both ends) instead of five; the first four cases (sw130j, board v0.15) have it on -x.
 Run from the repository root:  python3 station/build_station_sw130.py
 Writes the 3D preview site/station-sw130/index.html, the dimensioned hole drawings of the four machined faces
-(station/vein_station_<REV>_{cover,side,side_nfc,end_db9,end_usb}.dxf / .pdf, each seen from outside), the same
+(station/vein_station_<REV>_{cover,side,end_db9,end_usb}.dxf / .pdf, each seen from outside), the same
 positions on one A4 sheet in Japanese, in chains from the outline's edges (station/vein_station_<REV>_positions.pdf,
 what Takachi asked for) and a 1:1 A4 paper template
 of the same faces (station/vein_station_<REV>_template_1to1.pdf), and fails if the case collides with a module, plug,
@@ -36,7 +37,7 @@ from template import cut_template, edge_row, save
 from drawing import face, sheet
 import position_sheet as ps
 
-REV = 'sw130j'
+REV = 'sw130k'
 
 # ---- case (Takachi SW-130B, from the drawing) ------------------------------------------------------------
 OUT = (-20.0, 20.0, -65.0, 65.0)
@@ -51,7 +52,8 @@ AX, AY = 0.0, 49.2                           # VoiceS3R centre, USB-C / PORT.A e
 HOLES = [(-9.0, -26.0), (9.0, -26.0), (-9.0, 9.0), (9.0, 9.0), (0.0, 54.2), (-13.8, -18.0), (14.0, -34.0)]
 VEIN_H = (1, 2, 3, 4)                        # the vein module's spacers; the others hold the board only
 J3 = (-0.15, -34.5)                          # opening -y, just in front of the vein socket
-J6 = (BX0 + 4.45 + 2.3, -45.0)               # Grove (NFC), opening -x: its footprint's front 2.3 inside the edge
+J6 = (BX1 - 4.45 - 2.3, -10.0)               # Grove (NFC), opening +x (the reset's side), under the vein module:
+                                             # its footprint's front 2.3 inside the edge
 U1 = (-8.0, 26.0)                            # MAX3232, turned (along x)
 SW1 = (11.3, -44.3)                          # DIP (pads across x), between the vein module and the DB9, reached with the cover off
 J1X, J2X = AX - 7.62, AX + 7.62              # Ext.Pin rows (J1 5 pins from AY - 2.54, J2 4 pins from AY, both to +y)
@@ -102,7 +104,7 @@ ZS, ZP = VEIN_Z0 + 3.2, ZBT + 1.7
 vein_cable = (box(*VCX, YL, YS, ZS - 0.5, ZS + 0.5).union(box(*VCX, YL - 1.0, YL, ZP - 0.5, ZS + 0.5))
               .union(box(*VCX, YL - 1.0, YP, ZP - 0.5, ZP + 0.5)))
 # its slack (~70 of the 100: the loop takes ~30), 4 passes of ~18 side by side (a 4-wire bundle is ~2.5 across) in front
-# of the vein module on the -x side, over J6 and beside the loop; no cable hole in the case
+# of the vein module on the -x side, beside the loop; no cable hole in the case
 cable_slack = box(-15.0, -3.0, BY0 + 11.2, VEIN[2] - 1.0, ZBT + 6.9, ZBT + 12.9)
 u1 = on(U1[0] - 4.95, U1[0] + 4.95, U1[1] - 1.95, U1[1] + 1.95, 0, 1.75)
 caps = on(-14.0, -2.0, 19.6, 21.0, 0, 0.9).union(on(-9.5, -6.5, 31.1, 32.5, 0, 0.9))
@@ -120,9 +122,10 @@ usb_plug = box(AX - 6, AX + 6, YF + 6.5, YF + 24.2, Z_ATOM + 4.0, Z_ATOM + 11.0)
 porta_plug = box(AX - 4.9, AX + 4.9, YF, YF + 10.2, Z_ATOM + 0.0, Z_ATOM + 4.0)   # PORT.A (spare) under the USB-C
 # J6: the genuine JST S4B-PH-SM4-TB (C265102, since the HY2.0 C722729's pins missed the pads), its front at the
 # footprint's, 2.3 inside the board edge; the Grove plug reaches in through the side cut (sized for the old HY2.0 body)
-GF = BX0 + 2.3                                              # its front, 2.3 inside the board edge
-grove = on(GF, J6[0] + 3.25, J6[1] - 6.0, J6[1] + 6.0, 0, 6.0)
-grove_plug = on(GF - 8.1, GF, J6[1] - 4.5, J6[1] + 4.5, 0.6, 5.4)
+GF = BX1 - 2.3                                              # its front, 2.3 inside the board edge
+grove = on(J6[0] - 3.25, GF, J6[1] - 6.0, J6[1] + 6.0, 0, 6.0)
+grove_plug = on(GF, GF + 8.1, J6[1] - 4.5, J6[1] + 4.5, 0.6, 5.4)
+assert ZBT + 6.0 < VEIN_Z0 - 0.5, 'J6 reaches the vein module'
 
 # spacers (hex 5.5 as r 3.2) with their tape under every hole; over H1..H4 the washer (r 3) and the M3 × 5 for the vein
 # module, over the others a binding screw head (r 3 × 2; H5's is under the VoiceS3R)
@@ -144,14 +147,15 @@ cover_cut = rbox(*VEIN_WIN[:4], CEIL - 1, TOP + 1, VEIN_WIN[4]).union(rbox(*ATOM
 # reset ones are notches in the body, open to its top edge (SKIRT, the joint with the cover)
 DB9_CUT = (-15.65, 15.65, ZBT - 1.5, SKIRT, 0)                                           # DB9 hood (-y), open to the top
 USB_CUT = (AX - 5.3, AX + 5.3, Z_ATOM - 0.4, SKIRT, 0)                                    # USB-C over PORT.A (+y), open to the top
-GROVE_CUT = (J6[1] - 6.3, J6[1] + 6.3, ZBT - 0.3, ZBT + 6.4, 0.5)                          # Grove body 12 × 6 (-x)
+GROVE_CUT = (J6[1] - 6.3, J6[1] + 6.3, ZBT - 0.3, ZBT + 6.4, 1.0)                          # Grove body 12 × 6 (+x);
+# R1, not R0.5: Takachi's milling notes say an R0.5 needs a fine end mill, slow and dearer (the plug is 9 × 4.8)
 # the reset: a U-shaped flap on the face left of the ports (official STL: 1.5..6.5 from the centre away from the
 # ports, 1.4..8.4 up), on the +x face here (the VoiceS3R turned half a turn); the notch takes a screwdriver
 RESET_CUT = (AY - 7.0, AY - 1.0, Z_ATOM + 1.0, SKIRT, 1.0)                               # the reset (+x), open to the top
 assert Z_ATOM + 8.4 < SKIRT, 'the reset flap reaches above the body\'s top edge'
 wall_cut = (box(*DB9_CUT[:2], OUT[2] - 1, BY0 - 0.5, *DB9_CUT[2:4])
             .union(box(*USB_CUT[:2], YF + 0.5, OUT[3] + 1, *USB_CUT[2:4])))
-wall_cut = wall_cut.union(rbox(AX + 12.5, OUT[1] + 1, *RESET_CUT)).union(rbox(OUT[0] - 1, IN[0] + 0.2, *GROVE_CUT))
+wall_cut = wall_cut.union(rbox(AX + 12.5, OUT[1] + 1, *RESET_CUT)).union(rbox(IN[1] - 0.2, OUT[1] + 1, *GROVE_CUT))
 # the DB9 (to ZBT + 12.5) and its plug's hood (to ZBT + 13.25) stand above the body's top edge: the cover's -y end wall
 # is cut away over the notch, all of its height up to the top plate
 COVER_DB9 = CEIL - SKIRT                                         # 3.0
@@ -196,8 +200,8 @@ COVER = (*OUT, 3.0)
 SIDE_FACE = (OUT[2], OUT[3], 0, H, 0)
 END_FACE = (OUT[0], OUT[1], 0, H, 0)
 cover_cuts = [('vein', ('rect', *VEIN_WIN)), ('VoiceS3R', ('rect', *ATOM_WIN))]
-side_cuts = [('reset', ('rect', *RESET_CUT[:2], RESET_CUT[2] - FLOOR, RESET_CUT[3] - FLOOR, 0))]   # R: its bottom corners only
-nfc_cuts = [('NFC', ('rect', -GROVE_CUT[1], -GROVE_CUT[0], GROVE_CUT[2] - FLOOR, GROVE_CUT[3] - FLOOR, GROVE_CUT[4]))]
+side_cuts = [('NFC', ('rect', *GROVE_CUT[:2], GROVE_CUT[2] - FLOOR, GROVE_CUT[3] - FLOOR, GROVE_CUT[4])),
+             ('reset', ('rect', *RESET_CUT[:2], RESET_CUT[2] - FLOOR, RESET_CUT[3] - FLOOR, 0))]   # R: its bottom corners only
 end_db9_cuts = [('DB9', ('rect', *DB9_CUT[:2], DB9_CUT[2] - FLOOR, DB9_CUT[3] - FLOOR, DB9_CUT[4]))]
 end_usb_cuts = [('USB / PORT.A', ('rect', -USB_CUT[1], -USB_CUT[0], USB_CUT[2] - FLOOR, USB_CUT[3] - FLOOR, USB_CUT[4]))]
 SIDE_NAMES, END_NAMES = ('-y end', '+y end', 'bottom', 'top'), ('left', 'right', 'bottom', 'top')
@@ -218,9 +222,12 @@ def draw_cover(msp):
 
 
 def wall_sheet(outline, cuts, title, corners=None):
+    """corners: {cut name: what to say instead of its corner radius}."""
+    corners = corners or {}
+
     def draw(msp):
         face(msp, outline, [dict(cut=c, at=(c[1] + 1.0, c[4] - 3.5), wdim=H + 3,
-                                 text=(f'{n}, through', size(c) if corners is None else size(c).split(',')[0] + corners))
+                                 text=(f'{n}, through', size(c) if n not in corners else size(c).split(',')[0] + corners[n]))
                             for n, c in cuts], titles=[(title, (0, -24)), BOTTOM], datum=(outline[0], 0))
         msp.add_line((outline[0], JOINT), (outline[1], JOINT), dxfattribs={'layer': 'CENTER', 'linetype': 'DASHED'})
     return draw
@@ -250,7 +257,7 @@ def position_sheet():
     txt(8, 12, f'SW-130B 加工位置図(Vein Station {REV}、合同会社一歩庵)', 4.6, 'left')
     txt(8, 18, '単位 mm・原寸(A4 横)。どの図も外側から見た図。側面・端面の高さは底面(ボディーの床の外面)から。', 2.7, 'left')
     txt(8, 22.5, 'ケースの向き: 貴社図面 SW-130□「外視」の ②カバー の図の上端を「VoiceS3R・USB 側」としています'
-        '(ケースは上下・左右対称と理解しています)。①はカバー、②〜⑤はボディーの加工です。', 2.7, 'left')
+        '(ケースは上下・左右対称と理解しています)。①はカバー、②〜④はボディーの加工です。', 2.7, 'left')
     ps.legend(ax, txt, 27.8, JOINT)
 
     # ① the cover from above, +y (the VoiceS3R / USB end) up
@@ -271,7 +278,7 @@ def position_sheet():
     ps.hdim(ax, txt, [X(OUT[0]), X(OUT[1])], Y(OUT[2]) + 7, ext=Y(OUT[2]))
     txt(X(OUT[1]) + 3, Y(0) - 6, '右 =', 2.3, 'left')
     txt(X(OUT[1]) + 3, Y(0) - 2.5, '②の側面', 2.3, 'left')
-    txt(X(OUT[0]) - 17, Y(0) + 14, '左 = ③の側面', 2.3, rot=90)
+    txt(X(OUT[0]) - 17, Y(0) + 18, '左の側面は加工なし', 2.3, rot=90)
 
     def chain(px, py, w, a0, a1, zs, x_at):
         """A wall's dimensions: along it over the top, the heights zs down the line x_at, the overall length below."""
@@ -280,28 +287,29 @@ def position_sheet():
         ps.hdim(ax, txt, [px(0), px(w)], py(0) + 6, ext=py(0))
 
     WX, L, E = 96.0, OUT[3] - OUT[2], OUT[1] - OUT[0]
-    # ② the +x side (right of the cover): the reset notch
+    # ② the +x side (right of the cover): the Grove hole and the reset notch
+    g0, g1, gz0, gz1 = GROVE_CUT[0] - OUT[2], GROVE_CUT[1] - OUT[2], hz(GROVE_CUT[2]), hz(GROVE_CUT[3])
     a0, a1, z0 = RESET_CUT[0] - OUT[2], RESET_CUT[1] - OUT[2], hz(RESET_CUT[2])
-    px, py = ps.wall(ax, txt, WX, 51, L, H, JOINT, '② 側面(①のカバーを上にして右側の面を外から見た図) — リセット用の切り欠き', 'DB9 側', 'USB 側')
+    px, py = ps.wall(ax, txt, WX, 51, L, H, JOINT, '② 側面(①のカバーを上にして右側の面を外から見た図) — Grove コネクタ用の穴とリセット用の切り欠き', 'DB9 側', 'USB 側')
+    ps.cut(ax, px(g0), px(g1), py(gz1), py(gz0), GROVE_CUT[4])
     ps.notch(ax, px, py, a0, a1, z0, JOINT, RESET_CUT[4])
-    chain(px, py, L, a0, a1, [JOINT, z0, 0], px(a0) - 5)
-    txt(px(a0) - 9, py(JOINT) - 1.5, f'幅 {n1(a1 - a0)}、底の角 R{RESET_CUT[4]:g}、ボディー上縁まで開く', 2.4, 'right', ps.RED)
-    # ③ the -x side (left of the cover): the Grove hole
-    a0, a1, z0, z1 = OUT[3] - GROVE_CUT[1], OUT[3] - GROVE_CUT[0], hz(GROVE_CUT[2]), hz(GROVE_CUT[3])
-    px, py = ps.wall(ax, txt, WX, 103, L, H, JOINT, '③ 側面(①のカバーを上にして左側の面を外から見た図) — Grove コネクタ用の穴', 'USB 側', 'DB9 側')
-    ps.cut(ax, px(a0), px(a1), py(z1), py(z0), GROVE_CUT[4])
-    chain(px, py, L, a0, a1, [z1, z0, 0], px(a0) - 5)
-    txt(px(a0) - 9, py((z0 + z1) / 2) + 1, f'{n1(a1 - a0)} × {n1(z1 - z0)}、4-R{GROVE_CUT[4]:g}、貫通', 2.4, 'right', ps.RED)
-    # ④ the -y end: the DB9 notch, and the cover's end wall over it
+    ps.hdim(ax, txt, [px(0), px(g0), px(g1), px(a0), px(a1), px(L)], py(H) - 4, ext=py(H))
+    ps.vdim(ax, txt, [py(z) for z in (gz1, gz0, 0)], px(g0) - 5, ext=px(g0),
+            labels=[n1(gz1 - gz0), n1(gz0)])
+    ps.vdim(ax, txt, [py(z) for z in (JOINT, z0, 0)], px(a0) - 5, ext=px(a0), labels=[n1(JOINT - z0), n1(z0)])
+    ps.hdim(ax, txt, [px(0), px(L)], py(0) + 6, ext=py(0))
+    txt(px(g1) + 2, py((gz0 + gz1) / 2) + 1, f'{n1(g1 - g0)} × {n1(gz1 - gz0)}、4-R{GROVE_CUT[4]:g}、貫通', 2.4, 'left', ps.RED)
+    txt(px(a0) - 7, py(JOINT) - 1.5, f'幅 {n1(a1 - a0)}、底の角 R{RESET_CUT[4]:g}、ボディー上縁まで開く', 2.4, 'right', ps.RED)
+    # ③ the -y end: the DB9 notch, and the cover's end wall over it
     a0, a1, z0 = DB9_CUT[0] - OUT[0], DB9_CUT[1] - OUT[0], hz(DB9_CUT[2])
-    px, py = ps.wall(ax, txt, WX, 156, E, H, JOINT, '④ 端面(DB9 側)外から見た図')
+    px, py = ps.wall(ax, txt, WX, 104, E, H, JOINT, '③ 端面(DB9 側)外から見た図')
     ps.cut(ax, px(a0), px(a1), py(JOINT + COVER_DB9), py(JOINT), color=ps.BLUE)
     ps.notch(ax, px, py, a0, a1, z0, JOINT)
     chain(px, py, E, a0, a1, [JOINT + COVER_DB9, JOINT, z0, 0], px(0) - 6)
     txt(px(E / 2), py((z0 + JOINT) / 2) + 1, 'DB9', 2.6, color=ps.RED)
-    # ⑤ the +y end: the USB-C / PORT.A notch, and the cover's edge over it
+    # ④ the +y end: the USB-C / PORT.A notch, and the cover's edge over it
     b0, b1, y0 = OUT[1] - USB_CUT[1], OUT[1] - USB_CUT[0], hz(USB_CUT[2])
-    px, py = ps.wall(ax, txt, WX + 67, 156, E, H, JOINT, '⑤ 端面(USB 側)外から見た図')
+    px, py = ps.wall(ax, txt, WX + 67, 104, E, H, JOINT, '④ 端面(USB 側)外から見た図')
     ps.cut(ax, px(b0), px(b1), py(JOINT + COVER_USB), py(JOINT), color=ps.BLUE)
     ps.notch(ax, px, py, b0, b1, y0, JOINT)
     chain(px, py, E, b0, b1, [JOINT, y0, 0], px(0) - 6)
@@ -309,15 +317,17 @@ def position_sheet():
     txt(px(b1) + 1.5, py(JOINT) - 0.3, f'{COVER_USB:g}', 2.0, 'left', ps.BLUE)
 
     for i, t in enumerate([
-            f'④ DB9: 幅 {n1(a1 - a0)}(中央)。ボディーは底面から {n1(z0)} より上を、',
+            f'③ DB9: 幅 {n1(a1 - a0)}(中央)。ボディーは底面から {n1(z0)} より上を、',
             f' 上縁まで切り欠き(深さ {n1(JOINT - z0)}、角は直角)。',
-            f' カバーの端面の縁(高さ {COVER_DB9:g})も同じ幅で、天板の裏まで',
-            f' 切り欠き(青)。合わせて {n1(a1 - a0)} × {n1(JOINT + COVER_DB9 - z0)} の開口。',
-            f'⑤ USB: 幅 {n1(b1 - b0)}(中央)。ボディーは底面から {n1(y0)} より上を、',
+            f' カバーの端面の縁(高さ {COVER_DB9:g})も同じ幅で天板の裏まで、',
+            f' 内側の面まで(外から {n1(SK[2] - OUT[2])})切り欠き(青)。',
+            f' 合わせて {n1(a1 - a0)} × {n1(JOINT + COVER_DB9 - z0)} の開口。',
+            f'④ USB: 幅 {n1(b1 - b0)}(中央)。ボディーは底面から {n1(y0)} より上を、',
             f' 上縁まで切り欠き(深さ {n1(JOINT - y0)}、角は直角)。',
             f' カバーの端面の縁を同じ幅で {COVER_USB:g} 削る(青)。',
+            '左の側面は加工なし。',
             '同じ寸法の面ごとの図(DXF / PDF)が別にあります。']):
-        txt(225, 152 + i * 4.3, t, 2.3, 'left')
+        txt(WX + 130, 104 + i * 4.3, t, 2.3, 'left')
     return save(fig, os.path.join(out, f'vein_station_{REV}_positions.pdf'))
 
 
@@ -328,17 +338,15 @@ def template():
     cover = dict(outline=COVER, at=(-75, -12), holes=[('rect', *VEIN_WIN, 'vein'), ('rect', *ATOM_WIN, 'VoiceS3R')],
                  lines=[([x0 + 4, x1 - 4], [0, 0], g), ([0, 0], [y0 + 4, y1 - 4], g)],
                  text=[(x0, y1 + 3, 'COVER, from above', dict(fs=8, weight='bold')),
-                       (0, y0 - 5.5, '-y END (DB9)', b), (x1 + 2, AY, '+x SIDE\n(reset)', dict(ha='left', va='center', fs=6.5))])
-    side = wall_view(SIDE_FACE, side_cuts, (22, 27), '+x SIDE (reset), seen from outside', '-y', '+y')
-    side_nfc = wall_view(SIDE_FACE, nfc_cuts, (22, -9), '-x SIDE (NFC), seen from outside', '+y', '-y')
+                       (0, y0 - 5.5, '-y END (DB9)', b), (x1 + 2, AY, '+x SIDE\n(NFC, reset)', dict(ha='left', va='center', fs=6.5))])
+    side = wall_view(SIDE_FACE, side_cuts, (22, 27), '+x SIDE (NFC, reset), seen from outside', '-y', '+y')
     end_db9 = wall_view(END_FACE, end_db9_cuts, (-5, -45), '-y END (DB9), from outside', '-x', '+x')
     end_usb = wall_view(END_FACE, end_usb_cuts, (55, -45), '+y END (USB-C / PORT.A), from outside', '+x', '-x')
     rows = ([edge_row(n, c, COVER, ('-x', '+x', '-y', '+y')) for n, c in cover_cuts] + [''] +
             [edge_row(n, c, SIDE_FACE, SIDE_NAMES) for n, c in side_cuts] +
-            [edge_row(n, c, SIDE_FACE, ('+y end', '-y end', 'bottom', 'top')) for n, c in nfc_cuts] +
             [edge_row(n, c, END_FACE, ('-x side', '+x side', 'bottom', 'top')) for n, c in end_db9_cuts] +
             [edge_row(n, c, END_FACE, ('+x side', '-x side', 'bottom', 'top')) for n, c in end_usb_cuts])
-    notes = [f'Vein Station {REV} - Takachi SW-130B cutting template, 1:1 (cover, both sides, both ends, from outside)',
+    notes = [f'Vein Station {REV} - Takachi SW-130B cutting template, 1:1 (cover, +x side, both ends, from outside)',
              'PRINT AT 100% / ACTUAL SIZE (no "fit to page", no scaling).',
              'Cut the views apart. Cover: face up on the cover, grey outline (40 x 130, R3) on the cover edges.',
              'Side / ends: the grey line is the whole case (cover on, 25 high): its BOTTOM edge on the desk side of the body,',
@@ -348,7 +356,7 @@ def template():
              'Distances: cover from the outline edges; side / ends from the ends, the bottom (floor outside) and the top.',
              ''] + rows
     return cut_template(os.path.join(out, f'vein_station_{REV}_template_1to1.pdf'), 60,
-                        [cover, side, side_nfc, end_db9, end_usb], -64, -92, notes, rows)
+                        [cover, side, end_db9, end_usb], -64, -92, notes, rows)
 
 
 dxf = {}
@@ -358,14 +366,12 @@ for name, title, notes, draw, x0, y0 in (
           'dimensions: centres from the case centre, sizes', f'cut the -y end wall away over the DB9 ({DB9_CUT[1] - DB9_CUT[0]:.1f} wide, all {COVER_DB9:g} up to the top plate)', f'file the edge back {COVER_USB:g} over the USB-C / PORT.A notch (+y end, {USB_CUT[1] - USB_CUT[0]:.1f} wide)',
           'unit mm'], draw_cover, OUT[0], OUT[2] - 44),
         ('side', 'SW-130B body, +x side - seen from OUTSIDE, datum = bottom left (-y end, floor outside)',
-         [f'CUT: the reset notch (a screwdriver to the VoiceS3R\'s reset), open to the top of the body, bottom corners R{RESET_CUT[4]:g}',
-          'heights from the bottom (the floor\'s outside face)', f'dashed line = the body\'s top edge (its joint with the cover), {JOINT:g} from the bottom', 'unit mm'],
+         [f'CUT: the Grove (NFC) socket body and plug, 4-R{GROVE_CUT[4]:g}, through',
+          f'CUT: the reset notch (a screwdriver to the VoiceS3R\'s reset), open to the top of the body, bottom corners R{RESET_CUT[4]:g}',
+          'heights from the bottom (the floor\'s outside face)', f'dashed line = the body\'s top edge (its joint with the cover), {JOINT:g} from the bottom',
+          'the -x side is not machined', 'unit mm'],
          wall_sheet(SIDE_FACE, side_cuts, '+x SIDE seen from outside: -y (DB9) end left, +y end right',
-                    f', open to the top, bottom corners R{RESET_CUT[4]:g}'),
-         SIDE_FACE[0], -36),
-        ('side_nfc', 'SW-130B body, -x side - seen from OUTSIDE, datum = bottom left (+y end, floor outside)',
-         [f'CUT: the Grove (NFC) socket body and plug, R{GROVE_CUT[4]:g}, through', 'heights from the bottom (the floor\'s outside face)', f'dashed line = the body\'s top edge (its joint with the cover), {JOINT:g} from the bottom', 'unit mm'],
-         wall_sheet(SIDE_FACE, nfc_cuts, '-x SIDE seen from outside: +y (USB) end left, -y (DB9) end right'),
+                    {'reset': f', open to the top, bottom corners R{RESET_CUT[4]:g}'}),
          SIDE_FACE[0], -36),
         ('end_db9', 'SW-130B body, -y end - seen from OUTSIDE, datum = bottom left (-x side, floor outside)',
          ['CUT: DB9 hood (square corners), open to the top of the body', 'heights from the bottom', f'dashed line = the body\'s top edge (its joint with the cover), {JOINT:g} from the bottom', 'unit mm'],
@@ -374,21 +380,21 @@ for name, title, notes, draw, x0, y0 in (
          ['CUT: USB-C over PORT.A (square corners), open to the top of the body', 'heights from the bottom', f'dashed line = the body\'s top edge (its joint with the cover), {JOINT:g} from the bottom', 'unit mm'],
          wall_sheet(END_FACE, end_usb_cuts, '+y END seen from outside: +x left, -x right'), END_FACE[0], -36)):
     dxf[name] = sheet(os.path.join(out, f'vein_station_{REV}_{name}.dxf'), title, notes, draw, x0, y0)
-downloads = [('加工位置図(PDF、A4 横 1 枚、日本語。5 面を外形の端からの寸法で。タカチへの見積もり依頼に付ける)', position_sheet()),
-             ('型紙(PDF、A4 原寸 — 拡大縮小なしで印刷。カバー・両側面・両端面)', template())]
-for name, label in (('cover', 'カバー'), ('side', '+x 側面(リセット)'), ('side_nfc', '−x 側面(NFC の Grove)'),
+downloads = [('加工位置図(PDF、A4 横 1 枚、日本語。4 面を外形の端からの寸法で。タカチへの見積もり依頼に付ける)', position_sheet()),
+             ('型紙(PDF、A4 原寸 — 拡大縮小なしで印刷。カバー・+x 側面・両端面)', template())]
+for name, label in (('cover', 'カバー'), ('side', '+x 側面(NFC の Grove・リセット)'),
                     ('end_db9', '−y 端面(DB9)'), ('end_usb', '+y 端面(USB-C / PORT.A)')):
     downloads += [(f'加工図 {label}(DXF、寸法入り)', dxf[name][0]), (f'加工図 {label}(PDF、DXF と同じ図)', dxf[name][1])]
 
 # ---- 3D preview ------------------------------------------------------------------------------------------
 cover = case.intersect(box(-21, 21, -66, 66, SKIRT, TOP + 1))
 shell = case.intersect(box(-21, 21, -66, 66, FLOOR - 1, SKIRT))
-NFC_X, NFC_Y = BX0 - 38.0, J6[1]              # the Unit NFC on the desk beside the -x side, by J6
+NFC_X, NFC_Y = BX1 + 38.0, J6[1]              # the Unit NFC on the desk beside the +x side, by J6
 parts = [
     ('shell', 'カバー(タカチ SW-130B、指静脈・VoiceS3R の窓)', '#2b2f33', 0.45, 'shell', cover),
     ('atom', 'VoiceS3R(公式 CAD、ケースの中で基板に立つ。USB-C / PORT.A は +y、リセットは +x)', '#1fa49a', 1, 'mods',
      stl_at('voice', AX, AY, Z_ATOM, TOP, turn=True)),                     # CAD z 0..16.8
-    ('nfc', 'NFC Unit(公式 CAD、机の上。Grove ケーブルで −x 側面の J6 へ)', '#f2f2ee', 1, 'mods',
+    ('nfc', 'NFC Unit(公式 CAD、机の上。Grove ケーブルで +x 側面の J6 へ)', '#f2f2ee', 1, 'mods',
      stl_at('nfc', NFC_X, NFC_Y, FLOOR + 2.8, TOP)),   # CAD z -2.8..5.2
 ] + vein_parts(VEIN, VEIN_Z0, along_y=True) + [
     ('pcb', 'station 基板 sw130(34.8 × 122.7、片面実装)', '#1f7a4d', 1, 'mods', pcb),
@@ -396,7 +402,7 @@ parts = [
     ('j3', 'J3 MX1.25 4P(指静脈)', '#f1efe8', 1, 'mods', j3),
     ('j3plug', 'J3 プラグ(指静脈ケーブル)', '#e7e1cf', 1, 'mods', j3_plug),
     ('veincable', '指静脈のケーブル(MX1.25 4P、約 10 cm。DB9 との間で折り返す、おおよその通り道)', '#b04a2f', 1, 'mods', vein_cable),
-    ('slack', '指静脈のケーブルの余り(約 7 cm を 18 mm で 4 本並べて指静脈の手前・J6 の上に置く、おおよその形)', '#d9775c', 1, 'mods', cable_slack),
+    ('slack', '指静脈のケーブルの余り(約 7 cm を 18 mm で 4 本並べて指静脈の手前の −x 側に置く、おおよその形)', '#d9775c', 1, 'mods', cable_slack),
     ('u1', 'U1 MAX3232 と C1〜C5', '#202326', 1, 'mods', u1.union(caps)),
     ('sw1', 'SW1 ストレート / クロス DIP(指静脈と DB9 の間の +x 側、カバーを外して切り替え)', '#c0392b', 1, 'mods', sw1),
     ('db9', 'J4 DB9 オス(−y の端面)', '#8a8f96', 1, 'mods', db9_body.union(db9_flange).union(db9_shell).union(db9_posts)),
@@ -404,20 +410,20 @@ parts = [
     ('db9plug', 'DB9 プラグ(FC-1200 へ)', '#5c6166', 1, 'mods', db9_plug),
     ('usbplug', 'USB-C プラグ(Windows PC へ)', '#24292d', 1, 'mods', usb_plug),
     ('portaplug', 'PORT.A Grove プラグ(予備、USB-C の下)', '#c47f0e', 1, 'mods', porta_plug),
-    ('grove', 'J6 Grove(NFC、G38 / G39、−x の側面)', '#f1efe8', 1, 'mods', grove),
+    ('grove', 'J6 Grove(NFC、G38 / G39、+x の側面、指静脈の下)', '#f1efe8', 1, 'mods', grove),
     ('groveplug', 'Grove プラグ(NFC へ)', '#c47f0e', 1, 'mods', grove_plug),
-    ('lid', 'ボディ(タカチ SW-130B、端面に DB9 と USB-C / PORT.A、−x の側面に NFC、+x の側面にリセットの穴)', '#8fa09c', 0.9, 'lid', shell),
+    ('lid', 'ボディ(タカチ SW-130B、端面に DB9 と USB-C / PORT.A、+x の側面に NFC とリセットの穴)', '#8fa09c', 0.9, 'lid', shell),
 ]
 SUB = ('細い案: タカチ SW-130B(40 × 25 × 130)に、DB9・指静脈・VoiceS3R を一列に全部入れる版(片面実装、NFC は '
-       '−x 側面の Grove、USB-C と PORT.A は +y の端面)。ドラッグで回転、ホイール/ピンチで拡大。')
+       '+x 側面の Grove、USB-C と PORT.A は +y の端面。加工はカバー・+x 側面・両端面の 4 面)。ドラッグで回転、ホイール/ピンチで拡大。')
 DIMS = [('ケース', 'タカチ SW-130B(40 × 25 × 130、ABS、はめ込み式、¥360)'),
         ('内側', '35.5 × 125.5、高さ 17(その上 20 まではカバーの縁で 32.8 × 122.8)。ボス・リブなし'),
         ('基板', 'station 基板 sw130(34.8 × 122.7)、部品は全部上面。床に VHB(1.14)で貼った M3 × 3 の上(4.1)'),
         ('VoiceS3R', '基板に Ext.Pin(J1 / J2、普通のピンヘッダー)で立てる。カバーの窓から 1.4 出る。USB-C とその下の PORT.A(予備)は +y の端面の 1 つの穴から、リセットは +x の側面の穴からドライバーで'),
-        ('NFC', '基板の Grove J6(−x の側面、DB9 の近く)。G38 = SDA / G39 = SCL(4.7k プルアップ)、ファームで I2C をこのピンで開く'),
+        ('NFC', '基板の Grove J6(+x の側面、指静脈の下。リセットと同じ面)。G38 = SDA / G39 = SCL(4.7k プルアップ)、ファームで I2C をこのピンで開く。sw130j(基板 v0.15、最初の 4 台)は −x の側面'),
         ('指静脈', '座金 1.0 + M3 × 5 の上に VHB 1.14、カバーから 5.4 突き出す。VoiceS3R 側へ寄せ(y −30〜29)、手前に J3 とケーブル(MX1.25 4P・約 10 cm)の余りを置く'),
         ('DB9', '−y の端面(切り欠きはボディの上縁まで開いていて、基板を上から落とし込む)。カバーの −y 端面の縁(高さ 3)を同じ幅で切り取る'),
-        ('加工', 'カバーに窓 2 つ、−y 端面に DB9、+y 端面に USB-C / PORT.A(1 つの穴)、−x 側面に NFC の Grove、+x 側面にリセットの切り欠き(幅 6、ボディの上縁まで)')]
+        ('加工', '4 面: カバーに窓 2 つ、−y 端面に DB9、+y 端面に USB-C / PORT.A(1 つの穴)、+x 側面に NFC の Grove(4-R1)とリセットの切り欠き(幅 6、ボディの上縁まで)。−x 側面は加工なし')]
 NOTE = ('ケースはタカチの外形図(SW-130□)からの簡略形状です。VoiceS3R と NFC Unit の形は M5Stack 公式 STL'
         '(m5stack/M5_Hardware、Copyright (c) 2021 M5Stack、MIT License)、干渉チェックは VoiceS3R の外形の箱で行う。'
         'リセットボタンの位置は公式 STL から読んだ値。指静脈の外形は公式値(細部は写真からのイメージ)、基板上の部品は '
