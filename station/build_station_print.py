@@ -3,7 +3,8 @@ two concepts to compare, the case and the parts' places only (the board is not r
   A  one row like SW130 (DB9 | SW1, J3 and the cable | vein module | VoiceS3R), lower: the MAX3232 and its caps go
      under the vein module inside its printed frame, so the module sits 2.9 over the board instead of on spacers.
   B  two rows: the vein module front-left, the VoiceS3R front-right (USB-C to +x, the reset to the front), the DB9
-     and the Grove (NFC) on the back wall, MAX3232 / SW1 behind the VoiceS3R, J3 and the cable back-left.
+     on the back wall, the Grove (NFC) on the +x wall between the VoiceS3R and the DB9 (the USB-C's side),
+     MAX3232 / SW1 behind the VoiceS3R, J3 and the cable back-left.
 Both: a tray (floor 1.6, walls 1.8) with bosses for the board (2 high, M2 self-tapping), a flat lid (1.8) with a
 locating rim, the vein module 2.5 proud of the lid. Writes site/station-print-{a,b}/ and
 station/vein_station_print_{a,b}_{body,lid}.stl, and fails on any interference.
@@ -237,9 +238,9 @@ def concept_b():
     sw1 = on(ax + 0.5, ax + 11.7, ay + 14.0, ay + 20.7, 0, 3.0)      # DIP behind the VoiceS3R (lid off)
     j3 = on(dcx - 25.5, dcx - 15.5, vy1 + 1.7, vy1 + 5.6, 0, 3.4)        # behind the vein socket, opening +y
     j3p = on(dcx - 23.5, dcx - 17.5, vy1 + 5.6, vy1 + 11.6, 0.3, 3.1)
-    gy1 = yi1 - 0.3 - 2.3                                                 # J6 on the back wall, left of the DB9
-    grove = on(xi0 + 1.0, xi0 + 13.0, gy1 - 7.7, gy1, 0, 6.0)
-    groveplug = on(xi0 + 2.5, xi0 + 11.5, gy1, yi1 + 6.0, 0.6, 5.4)
+    gy = ay + 30.0                                                        # J6 on the +x wall (the USB-C's side),
+    grove = on(xi1 - 0.3 - 2.3 - 7.7, xi1 - 0.3 - 2.3, gy - 6.0, gy + 6.0, 0, 6.0)   # between the VoiceS3R and the DB9
+    groveplug = on(xi1 - 2.6, xi1 + 6.0, gy - 4.5, gy + 4.5, 0.6, 5.4)
     slack = box(xi0 + 1.5, dcx - 16.0, vy1 + 2.0, yi1 - 1.5, ZBT + 6.1, ZBT + 8.9)    # one layer (2.5) over J6 and J3
     # J1 / J2 turned a quarter with the VoiceS3R (approximate)
     hdr = on(ax - 8.9, ax + 3.8, ay - 8.9, ay - 6.3, 0, 2.5).union(on(ax - 8.9, ax + 1.3, ay + 6.3, ay + 8.9, 0, 2.5))
@@ -256,7 +257,7 @@ def concept_b():
     wall_cuts = [box(dcx - 15.65, dcx + 15.65, yi1 - 1, yi1 + 5, ZBT - 1.5, Z_IN + 0.1),        # DB9 at the back
                  box(xi1 - 1, xi1 + 5, ay - 5.3, ay + 5.3, Z_ATOM - 0.4, Z_ATOM + 9.4),        # USB-C / PORT.A (+x)
                  box(ax - 7.0, ax - 1.0, yi0 - 5, yi0 + 1, Z_ATOM + 1.0, Z_IN + 0.1),           # the reset (front)
-                 box(xi0 + 2.0, xi0 + 12.0, yi1 - 1, yi1 + 5, ZBT - 0.3, ZBT + 6.4)]           # the Grove plug (back)
+                 box(xi1 - 1, xi1 + 5, gy - 5.0, gy + 5.0, ZBT - 0.3, ZBT + 6.4)]             # the Grove plug (+x)
     lid_cuts = [rbox(vein[0] - 0.2, vein[1] + 0.2, vein[2] - 0.2, vein[3] + 0.2, Z_IN - 3, Z_TOP + 1, 2.2),
                 rbox(ax - 12.2, ax + 12.2, ay - 12.2, ay + 12.2, Z_IN - 3, Z_TOP + 1, 3.2)]
     parts = [('DB9', d9), ('DB9 plug', d9plug), ('MAX3232', u1), ('caps', caps), ('SW1', sw1), ('J3', j3),
@@ -276,8 +277,8 @@ def concept_b():
         ('u1', 'MAX3232 と C1〜C5(VoiceS3R の後ろ)', '#202326', 1, 'mods', u1.union(caps)),
         ('sw1', 'SW1 DIP(VoiceS3R の後ろ、ふたを開けて切り替え)', '#c0392b', 1, 'mods', sw1),
         ('j3', 'J3 とプラグ(指静脈のソケットの後ろ)', '#f1efe8', 1, 'mods', j3.union(j3p)),
-        ('slack', '指静脈のケーブルの余り(左奥、J6 と J3 の上)', '#d9775c', 1, 'mods', slack),
-        ('grove', 'J6 Grove とプラグ(奥の端面、DB9 の左)', '#c47f0e', 1, 'mods', grove.union(groveplug)),
+        ('slack', '指静脈のケーブルの余り(左奥、J3 の上)', '#d9775c', 1, 'mods', slack),
+        ('grove', 'J6 Grove とプラグ(右の側面、VoiceS3R と DB9 の間。USB-C と同じ面)', '#c47f0e', 1, 'mods', grove.union(groveplug)),
         ('usb', 'USB-C / PORT.A プラグ(右の側面)', '#24292d', 1, 'mods', usb.union(porta)),
         ('lid', '本体(床・壁・ボス・ふたのねじの受け、MJF PA12 で造形)', '#8fa09c', 0.9, 'lid', tray)]
     return view, bad, size, tray, lid, screws
