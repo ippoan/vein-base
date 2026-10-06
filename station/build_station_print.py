@@ -146,7 +146,7 @@ def bb_xy(o, m):
     return (bb.xmin - m, bb.xmax + m, bb.ymin - m, bb.ymax + m)
 
 
-def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, keep_clear=(), tht=(), floor=()):
+def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, keep_clear=(), tht=(), floor=(), rib_floor=RIB_FLOOR):
     """A tray (floor + walls up to Z_IN) and a flat lid (Z_IN..Z_TOP) with a locating rim, all corners R3 outside,
     screwed down through the lid into ledges on the walls, both stiffened with a grid of ribs. keep_clear: every part,
     for the rim, the ledges and the lid's ribs; tht: the parts with legs through the board, floor: what stands on the
@@ -178,7 +178,7 @@ def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, keep_clear=(), tht=()
     for v in bars:
         lid = lid.union(cq.Workplane().add(v))
     # ribs: on the floor clear of the THT legs under the board, under the lid clear of every part below it
-    fr = rib_grid(xi0, xi1, yi0, yi1, -0.01, RIB_FLOOR, [bb_xy(o, 1.0) for o in tht] + [bb_xy(cq.Workplane().add(v), 1.0) for o in floor for v in o.solids().vals()])
+    fr = rib_grid(xi0, xi1, yi0, yi1, -0.01, rib_floor, [bb_xy(o, 1.0) for o in tht] + [bb_xy(cq.Workplane().add(v), 1.0) for o in floor for v in o.solids().vals()])
     if fr is not None:
         tray = tray.union(fr)
     z0 = Z_IN - RIB_LID
@@ -340,30 +340,36 @@ def concept_b():
         box(ax + 12, ax + 12 + 6.5, ay - 4.2, ay + 4.2, Z_ATOM + 6, Z_ATOM + 9))
     porta = box(ax + 12, ax + 12 + 10.2, ay - 4.9, ay + 4.9, Z_ATOM, Z_ATOM + 4)
     # the vein module is stuck straight on the board with VHB (no spacers): its top 0.3 over the lid's (the box's
-    # height is set by the DB9's hood). The lid's frame (two bars hanging from the lid along its +x and +y sides,
-    # the walls take -x and -y) holds it sideways; a pad from the floor under its middle takes the finger's push.
+    # height is set by the DB9's hood). The lid stops at the module's +x and +y sides (no thin strips round it): the
+    # body's -x and front walls run up to the lid's top face beside it, two bars hanging from the lid's edges hold it
+    # on +x and +y, and the floor ribs come up to the board (2.0) to take the finger's push.
     vz0 = ZBT + VHB_B
     vbox = rbox(*vein, vz0, vz0 + 15.0, 2.0)
     fz0 = Z_IN - FRAME_H
-    frame = box(vein[1] + 0.2, vein[1] + 0.2 + FRAME_T, vein[2] + 4.0, vein[3] + 0.2 + FRAME_T, fz0, Z_IN + 0.01).union(
+    frame = box(vein[1] + 0.2, vein[1] + 0.2 + FRAME_T, ay + 12.3, vein[3] + 0.2 + FRAME_T, fz0, Z_IN + 0.01).union(
         box(vein[0] + 4.0, vein[1] + 0.2 + FRAME_T, vein[3] + 0.2, vein[3] + 0.2 + FRAME_T, fz0, Z_IN + 0.01))
     holes = [(-24.7, 35.2), (20.5, 14.0), (5.0, 3.0), (6.0, -27.0)]     # the board's M2 screws (H1..H4)
-    pad = cyl_z((vein[0] + vein[1]) / 2, (vy0 + vy1) / 2, 2.5, 0, ZB)       # under the vein module, no screw
-    bs = bosses(holes).union(pad)
+    bs = bosses(holes)
     corner = box(ax - 12.3, xi1 + T_WALL + 1, yi0 - T_WALL - 1, ay + 12.3, 0, Z_TOP + 1)   # open round the VoiceS3R
     wall_cuts = [box(dcx - 15.65, dcx + 15.65, yi1 - 1, yi1 + 5, ZBT - 1.5, Z_IN + 0.1),        # DB9 at the back
                  corner,
                  box(xi1 - 1, xi1 + 5, gy - 5.0, gy + 5.0, ZBT - 0.3, ZBT + 6.4)]             # the Grove plug (+x)
     # the DB9 stands up through a notch in the lid at the back (its body and the plug's hood over the lid), and the
     # VoiceS3R's window runs out over the +x wall for the USB-C / PORT.A plugs (they are over the lid too)
-    lid_cuts = [rbox(vein[0] - 0.2, vein[1] + 0.2, vein[2] - 0.2, vein[3] + 0.2, Z_IN - 3, Z_TOP + 1, 2.2),
+    xo0, yo0 = xi0 - T_WALL, yi0 - T_WALL
+    lid_cuts = [box(xo0 - 1, vein[1] + 0.2, yo0 - 1, vein[3] + 0.2, Z_IN - 3, Z_TOP + 1),        # the vein module
+                box(xo0 - 1, xi1 + T_WALL + 1, yo0 - 1, ay + 12.3, Z_IN - 3, Z_TOP + 1),        # all of the front
                 corner,
                 box(dcx - 15.65, xi1 + T_WALL + 1, yi1 - 11.0, yi1 + T_WALL + 1, Z_IN - 3, Z_TOP + 1)]   # no arm on +x
     parts = [('DB9', d9), ('DB9 plug', d9plug), ('MAX3232', u1), ('caps', caps), ('SW1', sw1), ('J3', j3),
              ('J3 plug', j3p), ('cable slack', slack), ('Grove', grove), ('Grove plug', groveplug), ('headers', hdr),
              ('VoiceS3R', atom_box), ('USB plug', usb), ('PORT.A plug', porta), ('vein', vbox)]
     tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts,
-                                            [o for _, o in parts] + [d9shell, frame, corner], tht=[d9, hdr], floor=[bs])
+                                            [o for _, o in parts] + [d9shell, frame, corner], tht=[d9, hdr], floor=[bs],
+                                            rib_floor=ZB)
+    # the -x and front walls beside the vein module up to the lid's top face (where the lid is cut away)
+    hi = box(xo0, xi0, yo0, vein[3] + 0.2, Z_IN - 0.01, Z_TOP).union(box(xo0, ax - 12.3, yo0, yi0, Z_IN - 0.01, Z_TOP))
+    tray = tray.union(hi.intersect(rbox(xo0, xi1 + T_WALL, yo0, yi1 + T_WALL, Z_IN - 1, Z_TOP, 3.0)))
     tray = tray.union(bs)
     lid = lid.union(frame)
     pcb_v = pcb
@@ -376,8 +382,7 @@ def concept_b():
     view = [('shell', 'ふた(天板・指静脈と VoiceS3R の窓、M2 皿ねじで本体の受けに締める)', '#2b2f33', 0.45, 'shell', lid),
             ('atom', 'VoiceS3R(公式 CAD、USB-C は右 +x、リセットは手前。右手前の角は壁なしで、右の面は箱の面とそろう。横はピンヘッダーだけで支える)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'x+'))] + vp + [
         ('pcb', 'station 基板 print_b(build_board.py print_b)', '#1f7a4d', 1, 'mods', pcb_v),
-        ('frame', f'指静脈の横を押さえる枠(ふたと一体、天板の裏から {FRAME_H:g} 下がる。−x と手前は本体の壁)', '#2b2f33', 1, 'mods', frame),
-        ('pad', '指静脈の真下の台(本体と一体、基板を下から支える。ねじなし)', '#8fa09c', 1, 'mods', pad),
+        ('frame', f'指静脈の +x と奥を押さえる枠(ふたの縁から {FRAME_H:g} 下がる。−x と手前は天板の高さまで上げた本体の壁)', '#2b2f33', 1, 'mods', frame),
         ('db9', 'DB9 オス(奥の端面、右寄り)', '#8a8f96', 1, 'mods', d9.union(d9shell)), ('db9plug', 'DB9 プラグ', '#5c6166', 1, 'mods', d9plug),
         ('u1', 'MAX3232 と C1〜C5(VoiceS3R の後ろ)', '#202326', 1, 'mods', u1.union(caps)),
         ('sw1', 'SW1 DIP(VoiceS3R の後ろ、ふたを開けて切り替え)', '#c0392b', 1, 'mods', sw1),
@@ -393,8 +398,9 @@ VEIN_NOTE = {'a': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフ
                   f'指静脈はふたから {VEIN_Z0 + 15.0 - (Z_IN_A + T_TOP):.1f} 出る。本体と一体の柱 4 本(基板の穴を通す)に VHB で載せる',
              'b': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフードはふたより上に出る)、中のケーブルの余りの上まで下げた。'
                   f'指静脈は基板に VHB({VHB_B:g})でじかに貼る(上面はふたより {VHB_B + 15.0 - (Z_IN_B + T_TOP - ZBT):.1f} 出る)。'
-                  f'横はふたの枠(天板の裏から {FRAME_H:g} 下がる、厚さ {FRAME_T:g})と本体の壁で押さえ、'
-                  '指で押す力は真下の台(本体と一体)が基板の下から受ける'}
+                  f'ふたは指静脈のまわりと手前を切り、−x と手前は本体の壁を天板の高さまで上げた(ふたに細い部分を作らない)。'
+                  f'+x と奥はふたの縁から下がる枠(深さ {FRAME_H:g}、厚さ {FRAME_T:g})で押さえる。'
+                  '指で押す力は、基板の下面まで上げた床のリブ(高さ 2.0)が受ける'}
 out = os.path.join(ROOT, 'station')
 failed = []
 for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B 2 列(短い)')):
