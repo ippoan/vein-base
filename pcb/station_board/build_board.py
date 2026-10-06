@@ -156,24 +156,24 @@ if PRINT_A:
            'R1': (9.5, -12.0, 90), 'R2': (9.5, -8.5, 90)}
 if PRINT_B:
     # case B (concept_b): inside x -28..21.2, y -37..38.5; the VoiceS3R (0.5 beside the vein module) and its corner
-    # (x >= -1.0, y <= -14.8) run out to the outer faces (23.0 / -38.8)
-    X0, X1, Y0, Y1 = -27.7, 20.9, -36.7, 38.45      # the DB9 flange on Y1, 0.05 off the back wall
+    # (x >= -1.0, y <= -14.8) run out to the outer faces (23.0 / -38.8); the DB9 on the +x edge behind it
+    X0, X1, Y0, Y1 = -27.7, 21.15, -36.7, 38.2       # the DB9 flange on X1, 0.05 off the +x wall
     AX, AY = 11.0, -26.8                            # VoiceS3R centre, USB-C / PORT.A to +x (flush with the case's +x)
-    DB9_ROT, DB9_BX = 180, 3.9                      # mating face to +y
+    DB9_ROT, DB9_BY = 90, 1.5                       # mating face to +x, behind the VoiceS3R (flange y -13.9..16.9)
     HOLE_FP = 'MountingHole_2.2mm_M2'
-    HOLES = [(-24.7, 35.2), (16.5, 14.0), (2.0, 3.0), (3.5, -27.0)]   # H4 under the VoiceS3R (2.5 below it)
+    HOLES = [(-24.7, 35.2), (12.0, 34.5), (5.0, 15.0), (3.5, -27.0)]   # H4 under the VoiceS3R (2.5 below it)
     EDGE = [(X0, Y0), (AX - 12.0, Y0), (AX - 12.0, AY - 12.0), (AX + 11.0, AY - 12.0), (AX + 12.0, AY - 11.0),
             (AX + 12.0, AY + 12.0), (X1, AY + 12.0), (X1, Y1), (X0, Y1)]
     # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
     POS = {'J1': (AX - 2.54, AY + 7.62, 90), 'J2': (AX, AY - 7.62, 90),
-           'SW1': (14.6, -9.45, 90),            # behind the VoiceS3R (lid off to set)
-           'J6': (X1 - 4.45 - 2.3, 3.2, 90),    # +x edge, opening +x, between the VoiceS3R and the DB9
-           'R1': (7.5, 2.0, 90), 'R2': (7.5, 5.0, 90),
-           'U1': (4.2, 15.5, 90),               # behind J6 / H3, the caps behind it
-           'C1': (-0.4, 21.5, 90), 'C2': (1.8, 21.5, 90), 'C3': (4.0, 21.5, 90), 'C4': (6.2, 21.5, 90),
-           'C5': (8.4, 21.5, 90),
+           # between the vein module and the DB9's body (x -1.3..10.6)
+           'C1': (2.0, -11.0, 0), 'C2': (2.0, -8.8, 0), 'C3': (2.0, -6.6, 0), 'C4': (2.0, -4.4, 0),
+           'C5': (2.0, -2.2, 0),
+           'U1': (4.0, 6.0, 0),
+           'R1': (5.0, 20.0, 0), 'R2': (5.0, 22.0, 0),
+           'J6': (X1 - 4.45 - 2.3, 25.0, 90),   # behind the DB9 on the +x edge, opening +x
+           'SW1': (2.0, 30.0, 90),              # behind the vein module's +x end (lid off to set)
            'J3': (-18.2, 26.4, 180)}            # behind the vein socket (y 22.5), opening +y
-
 
 def P(x, y):
     return pcbnew.VECTOR2I(mm(OX + x), mm(OY - y))
@@ -319,10 +319,13 @@ elif PRINT_A:
 elif PRINT_B:
     text('VoiceS3R: USB-C / PORT.A this way', AX + 10.8, AY, size=0.8, rot=90)
     SW1.Reference().SetVisible(False)
-    text('SW1 1+2 ON = PASS', 4.0, 9.2, size=0.8)     # free space left of J6 (SW1 is under its own pads)
-    text('3+4 ON = CROSS', 4.0, 8.0, size=0.8)
+    text('SW1 1+2 ON = PASS', 2.0, 36.5, size=0.8)    # behind SW1 (it is under its own pads)
+    text('3+4 ON = CROSS', 2.0, 37.6, size=0.8)
+    for fp in b.GetFootprints():                       # the holes' references sat on the labels
+        if fp.GetReference().startswith('H'):
+            fp.Reference().SetVisible(False)
     text('J3 vein: 1RX 2TX 3V3 4G', -18.2, 20.6, size=0.8)
-    text('NFC: G38 G39 5V G', 14.1, 10.6, size=0.8)
+    text('NFC: G38 G39 5V G', 15.6, 37.5, size=0.8)
     text(f'vein-station board {REV} (print B)', 0.0, 20.0, layer=pcbnew.B_SilkS)
 elif SW130:
     text('VoiceS3R: USB-C / PORT.A this way', 0.0, Y1 - 1.2, size=0.8)
