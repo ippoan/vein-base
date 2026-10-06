@@ -54,6 +54,14 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  J1 / J2 at the +y end. M2 self-tapping screws into floor bosses (H1..H5). Board coords = case coords; keep the numbers
                  together with concept_a() in station/build_station_print.py. Its BOM is jlc_bom_sw130.csv (same parts).
                  -> station_board_print_a.kicad_pcb, routed on its own (station_board_print_a.ses)
+  'print_b'      the same parts again for the printed case B (concept_b() in station/build_station_print.py, two rows,
+                 55.3 x 79.1 x 16.7): the vein module front-left (VHB straight on the board), the VoiceS3R front-right
+                 on J1 / J2 turned a quarter (USB-C / PORT.A to +x), its corner of the board running out to the case's
+                 outer faces (the case has no walls round it, like an M5Stack ATOMIC base), MAX3232 / C1..C5 / SW1
+                 behind it, J6 on the +x edge (opening +x), the DB9 on the +y edge (the back wall, facing +y) and J3
+                 behind the vein socket (opening +y). M2 self-tapping screws into floor bosses (H1..H4). Board coords =
+                 case coords; keep the numbers together with concept_b(). BOM jlc_bom_sw130.csv.
+                 -> station_board_print_b.kicad_pcb, routed on its own (station_board_print_b.ses)
 
 Routing comes from freerouting and is kept in station_board[_sw75].ses (the board file itself is always generated):
     python3 build_board.py [sw75] dsn   # placement only -> .dsn (feed it to freerouting -> .ses)
@@ -71,10 +79,11 @@ PF = 'pf' in sys.argv[1:]
 SW75 = 'sw75' in sys.argv[1:]
 SW130 = 'sw130' in sys.argv[1:]
 PRINT_A = 'print_a' in sys.argv[1:]
+PRINT_B = 'print_b' in sys.argv[1:]
 REV = 'r12'
 NAME = ('station_board_pf' if PF else 'station_board_sw75' if SW75 else 'station_board_sw130' if SW130
-        else 'station_board_print_a' if PRINT_A else 'station_board')
-SES = f'{NAME}.ses' if SW75 or SW130 or PRINT_A else 'station_board.ses'
+        else 'station_board_print_a' if PRINT_A else 'station_board_print_b' if PRINT_B else 'station_board')
+SES = f'{NAME}.ses' if SW75 or SW130 or PRINT_A or PRINT_B else 'station_board.ses'
 HOLE_FP = 'MountingHole_3.2mm_M3'     # print_a: M2
 POSTS = []                           # print_a: 4.3 holes (M4 footprints) for the case's posts under the vein module
 FP = '/usr/share/kicad/footprints/'
@@ -145,6 +154,24 @@ if PRINT_A:
            'U1': (0.0, -13.45, 90), 'C1': (-6.4, -7.0, 0), 'C2': (-3.2, -7.0, 0), 'C3': (0.0, -7.0, 0),
            'C4': (3.2, -7.0, 0), 'C5': (6.4, -7.0, 0),
            'R1': (9.5, -12.0, 90), 'R2': (9.5, -8.5, 90)}
+if PRINT_B:
+    # case B (concept_b): inside x -28..23.7, y -37..38.5; the VoiceS3R's corner (x >= 1.5, y <= -14.8) runs out to the
+    # outer faces (25.5 / -38.8)
+    X0, X1, Y0, Y1 = -27.7, 23.4, -36.7, 38.45      # the DB9 flange on Y1, 0.05 off the back wall
+    AX, AY = 13.5, -26.8                            # VoiceS3R centre, USB-C / PORT.A to +x (flush with the case's +x)
+    DB9_ROT, DB9_BX = 180, 6.4                      # mating face to +y
+    HOLE_FP = 'MountingHole_2.2mm_M2'
+    HOLES = [(-24.7, 35.2), (20.5, 14.0), (5.0, 3.0), (6.0, -27.0)]   # H4 under the VoiceS3R (2.5 below it)
+    EDGE = [(X0, Y0), (AX - 12.0, Y0), (AX - 12.0, AY - 12.0), (AX + 11.0, AY - 12.0), (AX + 12.0, AY - 11.0),
+            (AX + 12.0, AY + 12.0), (X1, AY + 12.0), (X1, Y1), (X0, Y1)]
+    # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
+    POS = {'J1': (AX - 2.54, AY + 7.62, 90), 'J2': (AX, AY - 7.62, 90),
+           'U1': (5.45, -9.85, 90), 'C1': (1.1, -3.6, 90), 'C2': (3.3, -3.6, 90), 'C3': (5.5, -3.6, 90),
+           'C4': (7.7, -3.6, 90), 'C5': (9.9, -3.6, 90),
+           'SW1': (17.0, -9.45, 90),            # behind the VoiceS3R (lid off to set)
+           'J6': (X1 - 4.45 - 2.3, 3.2, 90),    # +x edge, opening +x, between the VoiceS3R and the DB9
+           'R1': (9.5, 2.0, 90), 'R2': (9.5, 5.0, 90),
+           'J3': (-15.8, 26.4, 180)}            # behind the vein socket (y 22.5), opening +y
 
 
 def P(x, y):
@@ -227,13 +254,16 @@ px, py = xy(p1.GetPosition())
 if DB9_ROT == 90:      # sw75: mating face to +x, the pin row along +y, pin 1 7.70 in from the +x edge
     J4.SetOrientationDegrees(90); px, py = xy(p1.GetPosition())
     J4.Move(pcbnew.VECTOR2I(mm((X1 - 7.70) - px), -mm((DB9_BY - 5.54) - py)))
+elif DB9_ROT == 180:   # print_b: mating face to +y, pin 1 7.70 in from the +y edge, centre at DB9_BX
+    J4.SetOrientationDegrees(180); px, py = xy(p1.GetPosition())
+    J4.Move(pcbnew.VECTOR2I(mm((DB9_BX + 5.54) - px), -mm((Y1 - 7.70) - py)))
 else:
     J4.Move(pcbnew.VECTOR2I(mm((DB9_BX - 5.54) - px), -mm((Y0 + 7.70) - py)))
 wire(J4, {'2': 'D2', '3': 'D3', '5': 'GND', '0': 'GND'})
 print('J4 pin1', xy(p1.GetPosition()), 'pin5', xy([p for p in J4.Pads() if p.GetNumber() == '5'][0].GetPosition()))
 
 # ---- sw130 / print_a: Grove for the Unit NFC on G38 (SDA) / G39 (SCL), with pull-ups
-if SW130 or PRINT_A:
+if SW130 or PRINT_A or PRINT_B:
     J6 = load('Connector_JST.pretty', 'JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal', 'J6',
               'Grove HY2.0-4P RA (NFC: G38 SDA, G39 SCL)', 0, 0)
     wire(J6, {'1': 'G38', '2': 'G39', '3': '5V', '4': 'GND', 'MP': 'GND'})
@@ -285,6 +315,14 @@ elif PRINT_A:
     text('J3 vein: 1RX 2TX 3V3 4G', 0.0, VEIN_Y0 + 2.2, size=0.8)
     text('NFC: G38 G39 5V G', 10.6, ROW + 13.9, size=0.8)
     text(f'vein-station board {REV} (print A)', 0.0, 0.0, layer=pcbnew.B_SilkS)
+elif PRINT_B:
+    text('VoiceS3R: USB-C / PORT.A this way', AX + 10.8, AY, size=0.8, rot=90)
+    SW1.Reference().SetVisible(False)
+    text('SW1 1+2 ON = PASS', 5.0, 9.2, size=0.8)     # free space left of J6 (SW1 is under its own pads)
+    text('3+4 ON = CROSS', 5.0, 8.0, size=0.8)
+    text('J3 vein: 1RX 2TX 3V3 4G', -15.8, 20.6, size=0.8)
+    text('NFC: G38 G39 5V G', 16.6, 10.4, size=0.8)
+    text(f'vein-station board {REV} (print B)', 0.0, 20.0, layer=pcbnew.B_SilkS)
 elif SW130:
     text('VoiceS3R: USB-C / PORT.A this way', 0.0, Y1 - 1.2, size=0.8)
     text('SW1 12=PASS 34=CROSS', 3.0, -44.3, size=0.8, rot=90)
@@ -314,7 +352,9 @@ else:
     z = pcbnew.ZONE(b); z.SetLayer(pcbnew.B_Cu); z.SetNet(b.FindNet('GND'))
     ol = z.Outline(); ol.NewOutline()
     YT = TY if SW75 else Y1      # the fill is clipped to the outline (the sw75 tongue and notch)
-    for x, y in ((X0 + 0.3, Y0 + 0.3), (X1 - 0.3, Y0 + 0.3), (X1 - 0.3, YT - 0.3), (X0 + 0.3, YT - 0.3)):
+    corners = (EDGE if PRINT_B else       # print_b: the outline itself (the VoiceS3R's corner), clipped to the edge
+               ((X0 + 0.3, Y0 + 0.3), (X1 - 0.3, Y0 + 0.3), (X1 - 0.3, YT - 0.3), (X0 + 0.3, YT - 0.3)))
+    for x, y in corners:
         ol.Append(mm(OX + x), mm(OY - y))
     z.SetLocalClearance(mm(0.3)); z.SetMinThickness(mm(0.25))
     b.Add(z)
