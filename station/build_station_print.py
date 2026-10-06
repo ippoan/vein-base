@@ -102,6 +102,11 @@ def ledges(xi0, xi1, yi0, yi1, avoid, lid_cuts=(), n_max=4):
         best = min(cands, key=lambda c: (c[0] - cx) ** 2 + (c[1] - cy) ** 2, default=None)
         if best and all((best[0] - p[0]) ** 2 + (best[1] - p[1]) ** 2 > 15 ** 2 for p in picked):
             picked.append(best)
+    while len(picked) < 3 and cands:      # too few near the corners: the free place farthest from those taken
+        far = max(cands, key=lambda c: min((c[0] - p[0]) ** 2 + (c[1] - p[1]) ** 2 for p in picked) if picked else 0)
+        if picked and min((far[0] - p[0]) ** 2 + (far[1] - p[1]) ** 2 for p in picked) <= 15 ** 2:
+            break
+        picked.append(far)
     return [(x, y, box(*r, z0, Z_IN)) for x, y, r in picked[:n_max]]
 
 
@@ -184,7 +189,7 @@ def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, keep_clear=(), tht=()
     z0 = Z_IN - RIB_LID
     lr = rib_grid(xi0 + 0.5, xi1 - 0.5, yi0 + 0.5, yi1 - 0.5, z0, Z_IN + 0.01,
                   [bb_xy(o, 0.5) for o in keep_clear if o.val().BoundingBox().zmax > z0 - 0.3] +
-                  [bb_xy(o, 0.5) for o in lid_cuts])
+                  [bb_xy(o, 1.0) for o in lid_cuts])
     if lr is not None:
         lid = lid.union(lr)
     for c in wall_cuts:
@@ -304,7 +309,8 @@ def concept_a():
 def concept_b():
     set_lid(Z_IN_B)
     # two rows: the vein module on the left (finger end at the front, -y), the VoiceS3R front-right (USB-C to +x,
-    # the reset to the front), MAX3232 / SW1 behind it, the DB9 at the back on the right, J3 and the cable back-left.
+    # the reset to the front), the DB9 behind it on the +x wall (so the lid is cut along its +x edge only, no thin
+    # strip at the back), MAX3232 / C1..C5 between the vein module and the DB9, J6 (+x) / SW1 / J3 along the back.
     # The VoiceS3R's corner is open like an M5Stack ATOMIC base (no walls round it): its +x and front faces are the
     # box's, the board and the floor run out under it to them, and it is held sideways by its pin headers only.
     vw = 26.0
@@ -316,21 +322,23 @@ def concept_b():
     xi1 = ax + 12.0 - T_WALL                                             # the VoiceS3R flush with the +x face
     ay = yi0 - T_WALL + 12.0                                            # the VoiceS3R flush with the front face
     yi1 = vy1 + 16.0
-    bx0, bx1, by0, by1 = xi0 + 0.3, xi1 - 0.3, yi0 + 0.3, yi1 - 0.05      # the DB9 flange on the +y edge
+    bx0, bx1, by0, by1 = xi0 + 0.3, xi1 - 0.05, yi0 + 0.3, yi1 - 0.3      # the DB9 flange on the +x edge
     pcb = box(bx0, bx1, by0, by1, ZB, ZBT).union(box(ax - 12.0, ax + 12.0, ay - 12.0, ay + 12.0, ZB, ZBT))
-    dcx = xi1 - 0.3 - 17.0                                             # the notch 1.65 off the +x wall
-    d9, d9shell, d9plug = db9(dcx, yi1 - 0.05, 'y+')
     # the board is pcb/station_board/build_board.py print_b: these places are its footprints (keep them together)
-    u1 = on(-0.75, 9.15, 13.55, 17.45, 0, 1.75)                      # MAX3232 behind J6
-    caps = on(-1.2, 9.2, 20.0, 23.0, 0, 0.9).union(on(6.75, 8.25, 0.5, 6.5, 0, 0.5))   # C1..C5, R1 / R2
-    sw1 = on(8.74, 20.46, -12.8, -6.1, 0, 3.0)                        # DIP behind the VoiceS3R (lid off)
+    DY = 1.5                                                          # DB9 centre, mating face to +x on bx1
+    d9 = on(bx1 - 10.5, bx1 - 0.5, DY - 15.0, DY + 15.0, 0, 12.5).union(on(bx1 - 1.0, bx1, DY - 15.4, DY + 15.4, 0, 12.5))
+    d9shell = on(bx1, bx1 + 6.0, DY - 8.5, DY + 8.5, 2.0, 10.5)
+    d9plug = box(bx1 + 0.8, bx1 + 40.0, DY - 15.15, DY + 15.15, ZBT - 0.75, HOOD_TOP)
+    u1 = on(1.95, 6.05, 1.05, 10.95, 0, 1.75)                        # MAX3232 between the vein module and the DB9
+    caps = on(0.5, 3.5, -11.75, -1.44, 0, 0.9).union(on(3.5, 6.5, 19.25, 22.75, 0, 0.5))   # C1..C5, R1 / R2
+    sw1 = on(-3.86, 7.86, 26.65, 33.35, 0, 3.0)                       # DIP behind the vein module's +x end (lid off)
     j3x, j3y = -18.2, vy1 + 3.9                                       # behind the vein socket, opening +y
     j3 = on(j3x - 5.0, j3x + 5.0, j3y - 3.7, j3y + 3.1, 0, 3.4)
     j3p = on(j3x - 3.0, j3x + 3.0, j3y + 3.1, j3y + 9.1, 0.3, 3.1)
-    gy = ay + 30.0                                                        # J6 on the +x wall (the USB-C's side),
-    grove = on(xi1 - 0.3 - 2.3 - 7.7, xi1 - 0.3 - 2.3, gy - 6.0, gy + 6.0, 0, 6.0)   # between the VoiceS3R and the DB9
-    groveplug = on(xi1 - 2.6, xi1 + 6.0, gy - 4.5, gy + 4.5, 0.6, 5.4)
-    slack = box(xi0 + LEDGE_D + 0.8, dcx - 16.0, vy1 + 2.0, yi1 - 1.5, ZBT + 6.1, ZBT + 8.9)   # one layer (2.5) over J3,
+    gy = 25.0                                                         # J6 on the +x wall behind the DB9
+    grove = on(bx1 - 2.3 - 7.7, bx1 - 2.3, gy - 6.0, gy + 6.0, 0, 6.0)
+    groveplug = on(bx1 - 2.3, xi1 + 6.0, gy - 4.5, gy + 4.5, 0.6, 5.4)
+    slack = box(xi0 + LEDGE_D + 0.8, -12.0, vy1 + 2.0, yi1 - 1.5, ZBT + 6.1, ZBT + 8.9)   # one layer (2.5) over J3,
                                                                     # clear of a lid screw's ledge in the back-left corner
     # J1 / J2 turned a quarter with the VoiceS3R (vein-base's x_vb -> y, y_vb -> -x): J1 (5 pins) at y = ay + 7.62
     # from x = ax - 2.54, J2 (4 pins) at y = ay - 7.62 from x = ax, both to ax + 7.62 (the USB-C side)
@@ -348,19 +356,19 @@ def concept_b():
     fz0 = Z_IN - FRAME_H
     frame = box(vein[1] + 0.2, vein[1] + 0.2 + FRAME_T, ay + 12.3, vein[3] + 0.2 + FRAME_T, fz0, Z_IN + 0.01).union(
         box(vein[0] + 4.0, vein[1] + 0.2 + FRAME_T, vein[3] + 0.2, vein[3] + 0.2 + FRAME_T, fz0, Z_IN + 0.01))
-    holes = [(-24.7, 35.2), (16.5, 14.0), (2.0, 3.0), (3.5, -27.0)]     # the board's M2 screws (H1..H4)
+    holes = [(-24.7, 35.2), (12.0, 34.5), (5.0, 15.0), (3.5, -27.0)]     # the board's M2 screws (H1..H4)
     bs = bosses(holes)
     corner = box(ax - 12.3, xi1 + T_WALL + 1, yi0 - T_WALL - 1, ay + 12.3, 0, Z_TOP + 1)   # open round the VoiceS3R
-    wall_cuts = [box(dcx - 15.65, dcx + 15.65, yi1 - 1, yi1 + 5, ZBT - 1.5, Z_IN + 0.1),        # DB9 at the back
+    wall_cuts = [box(xi1 - 1, xi1 + 5, ay + 12.0, DY + 15.65, ZBT - 1.5, Z_IN + 0.1),           # DB9 on the +x wall,
+                                                                     # on into the open corner (no sliver between)
                  corner,
                  box(xi1 - 1, xi1 + 5, gy - 5.0, gy + 5.0, ZBT - 0.3, ZBT + 6.4)]             # the Grove plug (+x)
-    # the DB9 stands up through a notch in the lid at the back (its body and the plug's hood over the lid), and the
-    # VoiceS3R's window runs out over the +x wall for the USB-C / PORT.A plugs (they are over the lid too)
+    # the DB9 stands up through a notch in the lid along the +x edge (its body and the plug's hood over the lid)
     xo0, yo0 = xi0 - T_WALL, yi0 - T_WALL
     lid_cuts = [box(xo0 - 1, vein[1] + 0.2, yo0 - 1, vein[3] + 0.2, Z_IN - 3, Z_TOP + 1),        # the vein module
                 box(xo0 - 1, xi1 + T_WALL + 1, yo0 - 1, ay + 12.3, Z_IN - 3, Z_TOP + 1),        # all of the front
                 corner,
-                box(dcx - 15.65, xi1 + T_WALL + 1, yi1 - 11.0, yi1 + T_WALL + 1, Z_IN - 3, Z_TOP + 1)]   # no arm on +x
+                box(bx1 - 11.0, xi1 + T_WALL + 1, ay + 12.0, DY + 15.65, Z_IN - 3, Z_TOP + 1)]
     parts = [('DB9', d9), ('DB9 plug', d9plug), ('MAX3232', u1), ('caps', caps), ('SW1', sw1), ('J3', j3),
              ('J3 plug', j3p), ('cable slack', slack), ('Grove', grove), ('Grove plug', groveplug), ('headers', hdr),
              ('VoiceS3R', atom_box), ('USB plug', usb), ('PORT.A plug', porta), ('vein', vbox)]
@@ -383,12 +391,12 @@ def concept_b():
             ('atom', 'VoiceS3R(公式 CAD、USB-C は右 +x、リセットは手前。右手前の角は壁なしで、右の面は箱の面とそろう。横はピンヘッダーだけで支える)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'x+'))] + vp + [
         ('pcb', 'station 基板 print_b(build_board.py print_b)', '#1f7a4d', 1, 'mods', pcb_v),
         ('frame', f'指静脈の +x と奥を押さえる枠(ふたの縁から {FRAME_H:g} 下がる。−x と手前は天板の高さまで上げた本体の壁)', '#2b2f33', 1, 'mods', frame),
-        ('db9', 'DB9 オス(奥の端面、右寄り)', '#8a8f96', 1, 'mods', d9.union(d9shell)), ('db9plug', 'DB9 プラグ', '#5c6166', 1, 'mods', d9plug),
-        ('u1', 'MAX3232 と C1〜C5(VoiceS3R の後ろ)', '#202326', 1, 'mods', u1.union(caps)),
-        ('sw1', 'SW1 DIP(VoiceS3R の後ろ、ふたを開けて切り替え)', '#c0392b', 1, 'mods', sw1),
+        ('db9', 'DB9 オス(右の側面、VoiceS3R の後ろ。ふたの右の縁を切り欠いて上に出る)', '#8a8f96', 1, 'mods', d9.union(d9shell)), ('db9plug', 'DB9 プラグ', '#5c6166', 1, 'mods', d9plug),
+        ('u1', 'MAX3232 と C1〜C5(指静脈と DB9 の間)', '#202326', 1, 'mods', u1.union(caps)),
+        ('sw1', 'SW1 DIP(奥、指静脈の右端の後ろ。ふたを開けて切り替え)', '#c0392b', 1, 'mods', sw1),
         ('j3', 'J3 とプラグ(指静脈のソケットの後ろ)', '#f1efe8', 1, 'mods', j3.union(j3p)),
         ('slack', '指静脈のケーブルの余り(左奥、J3 の上)', '#d9775c', 1, 'mods', slack),
-        ('grove', 'J6 Grove とプラグ(右の側面、VoiceS3R と DB9 の間。USB-C と同じ面)', '#c47f0e', 1, 'mods', grove.union(groveplug)),
+        ('grove', 'J6 Grove とプラグ(右の側面、DB9 の後ろ。USB-C と同じ面)', '#c47f0e', 1, 'mods', grove.union(groveplug)),
         ('usb', 'USB-C / PORT.A プラグ(右の側面)', '#24292d', 1, 'mods', usb.union(porta)),
         ('lid', '本体(床・壁・ボス・ふたのねじの受け、MJF PA12 で造形)', '#8fa09c', 0.9, 'lid', tray)]
     return view, bad, size, tray, lid, screws
