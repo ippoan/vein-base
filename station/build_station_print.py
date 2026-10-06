@@ -105,9 +105,52 @@ def ledges(xi0, xi1, yi0, yi1, avoid, lid_cuts=(), n_max=4):
     return [(x, y, box(*r, z0, Z_IN)) for x, y, r in picked[:n_max]]
 
 
-def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, keep_clear=()):
+# stiffening ribs against warping (JLC3DP: nylon flat / framed / hollow parts shrink to the centre or warp along the
+# diagonal and the edges, ribs help): a grid on the floor under the board and on the underside of the lid
+RIB_W, RIB_PITCH = 1.2, 12.0
+RIB_FLOOR = 1.0                  # floor ribs' height: 1.0 under the board (on the bosses at ZB), clear of THT legs
+RIB_LID = 1.5                    # lid ribs' depth under the lid
+
+
+def rib_grid(xi0, xi1, yi0, yi1, z0, z1, avoid):
+    """Bars along x and y every RIB_PITCH inside (xi0..xi1, yi0..yi1), each cut over its whole width where it meets
+    an (x0, x1, y0, y1) in avoid (no slivers along a bar); stubs under 6 long dropped. Returns a solid or None."""
+    w = RIB_W / 2
+    bars = []
+    nx, ny = int((xi1 - xi0) // RIB_PITCH), int((yi1 - yi0) // RIB_PITCH)
+    for i in range(1, nx + 1):
+        x = xi0 + (xi1 - xi0) * i / (nx + 1)
+        b = box(x - w, x + w, yi0, yi1, z0, z1)
+        for x0, x1, y0, y1 in avoid:
+            if x0 < x + w and x1 > x - w:
+                b = b.cut(box(x - 1, x + 1, y0, y1, z0 - 1, z1 + 1))
+        bars += b.solids().vals()
+    for i in range(1, ny + 1):
+        y = yi0 + (yi1 - yi0) * i / (ny + 1)
+        b = box(xi0, xi1, y - w, y + w, z0, z1)
+        for x0, x1, y0, y1 in avoid:
+            if y0 < y + w and y1 > y - w:
+                b = b.cut(box(x0, x1, y - 1, y + 1, z0 - 1, z1 + 1))
+        bars += b.solids().vals()
+    keep = [v for v in bars if max(v.BoundingBox().xlen, v.BoundingBox().ylen) >= 6.0]
+    if not keep:
+        return None
+    r = cq.Workplane().add(keep[0])
+    for v in keep[1:]:
+        r = r.union(cq.Workplane().add(v))
+    return r
+
+
+def bb_xy(o, m):
+    bb = o.val().BoundingBox()
+    return (bb.xmin - m, bb.xmax + m, bb.ymin - m, bb.ymax + m)
+
+
+def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, keep_clear=(), tht=(), floor=()):
     """A tray (floor + walls up to Z_IN) and a flat lid (Z_IN..Z_TOP) with a locating rim, all corners R3 outside,
-    screwed down through the lid into ledges on the walls. keep_clear: every part, for the rim and the ledges."""
+    screwed down through the lid into ledges on the walls, both stiffened with a grid of ribs. keep_clear: every part,
+    for the rim, the ledges and the lid's ribs; tht: the parts with legs through the board, floor: what stands on the
+    floor (bosses, posts), both kept clear by the floor's ribs."""
     xo0, xo1, yo0, yo1 = xi0 - T_WALL, xi1 + T_WALL, yi0 - T_WALL, yi1 + T_WALL
     tray = rbox(xo0, xo1, yo0, yo1, -T_FLOOR, Z_IN, 3.0).cut(rbox(xi0, xi1, yi0, yi1, 0, Z_IN + 1, 1.2))
     lid = rbox(xo0, xo1, yo0, yo1, Z_IN, Z_TOP, 3.0)
@@ -134,6 +177,16 @@ def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, keep_clear=()):
     bars = [v for v in rim.solids().vals() if max(v.BoundingBox().xlen, v.BoundingBox().ylen) >= 6.0]
     for v in bars:
         lid = lid.union(cq.Workplane().add(v))
+    # ribs: on the floor clear of the THT legs under the board, under the lid clear of every part below it
+    fr = rib_grid(xi0, xi1, yi0, yi1, -0.01, RIB_FLOOR, [bb_xy(o, 1.0) for o in tht] + [bb_xy(cq.Workplane().add(v), 1.0) for o in floor for v in o.solids().vals()])
+    if fr is not None:
+        tray = tray.union(fr)
+    z0 = Z_IN - RIB_LID
+    lr = rib_grid(xi0 + 0.5, xi1 - 0.5, yi0 + 0.5, yi1 - 0.5, z0, Z_IN + 0.01,
+                  [bb_xy(o, 0.5) for o in keep_clear if o.val().BoundingBox().zmax > z0 - 0.3] +
+                  [bb_xy(o, 0.5) for o in lid_cuts])
+    if lr is not None:
+        lid = lid.union(lr)
     for c in wall_cuts:
         tray = tray.cut(c)
     for c in lid_cuts:
@@ -218,7 +271,8 @@ def concept_a():
     parts = [('DB9', d9), ('DB9 plug', d9plug), ('MAX3232', u1), ('caps', caps), ('SW1', sw1), ('J3', j3),
              ('J3 plug', j3p), ('cable slack', slack), ('Grove', grove), ('Grove plug', groveplug), ('headers', hdr),
              ('VoiceS3R', atom_box), ('USB plug', usb), ('PORT.A plug', porta), ('vein', vbox)]
-    tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, [o for _, o in parts] + [d9shell])
+    tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, [o for _, o in parts] + [d9shell],
+                                            tht=[d9, hdr], floor=[bs, frame])
     tray = tray.union(bs).union(frame)
     pcb_v = pcb
     for x, y in posts_xy:
@@ -300,7 +354,7 @@ def concept_b():
              ('J3 plug', j3p), ('cable slack', slack), ('Grove', grove), ('Grove plug', groveplug), ('headers', hdr),
              ('VoiceS3R', atom_box), ('USB plug', usb), ('PORT.A plug', porta), ('vein', vbox)]
     tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts,
-                                            [o for _, o in parts] + [d9shell, frame])
+                                            [o for _, o in parts] + [d9shell, frame], tht=[d9, hdr], floor=[bs])
     tray = tray.union(bs)
     lid = lid.union(frame)
     bad = check((tray.cut(bs), lid), parts)
@@ -345,6 +399,8 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
         stls.append((f'{label}の STL(MJF PA12 で造形)', p))
     dims = [('外形', '%.1f × %.1f × %.1f(幅 × 奥行 × 高さ、ふた込み)' % size), ('体積', '%.1f cm³(本体 + ふた)' % vol),
             ('肉厚', f'壁 {T_WALL}、床 {T_FLOOR}、天板 {T_TOP}(MJF PA12)'),
+            ('リブ', f'反り止め(JLC3DP の勧め)。幅 {RIB_W:g} を約 {RIB_PITCH:g} おきの格子に、床(高さ {RIB_FLOOR:g}、基板の下。THT の足とボスを避ける)と'
+                     f'ふたの裏(深さ {RIB_LID:g}、部品と窓を避ける)'),
             ('基板', '箱に合わせて作り直す(この図は配置だけ、未配線)。床のボス(高さ 2)に M2 のタッピングねじで留める。THT の足は 2 に切る'),
             ('指静脈', VEIN_NOTE[key]),
             ('ふた', f'M2 皿タッピングねじ × {len(screws)} 本(M2 × 5)で、上から壁の内側の受け({LEDGE_D:g} × {LEDGE_W:g}、高さ {LEDGE_H:g})に締める。'
