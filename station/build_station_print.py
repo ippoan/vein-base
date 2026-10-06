@@ -312,7 +312,7 @@ def concept_b():
     yi0 = -37.0
     vy0, vy1 = yi0 + 0.5, yi0 + 0.5 + 59.0               # the socket end at +y (the back)
     vein = (xi0 + 0.5, xi0 + 0.5 + vw, vy0, vy1)
-    ax = vein[1] + 3.0 + 12.0
+    ax = vein[1] + 0.5 + 12.0                                           # the VoiceS3R 0.5 beside the vein module
     xi1 = ax + 12.0 - T_WALL                                             # the VoiceS3R flush with the +x face
     ay = yi0 - T_WALL + 12.0                                            # the VoiceS3R flush with the front face
     yi1 = vy1 + 16.0
@@ -321,10 +321,10 @@ def concept_b():
     dcx = xi1 - 0.3 - 17.0                                             # the notch 1.65 off the +x wall
     d9, d9shell, d9plug = db9(dcx, yi1 - 0.05, 'y+')
     # the board is pcb/station_board/build_board.py print_b: these places are its footprints (keep them together)
-    u1 = on(0.5, 10.4, -11.8, -7.9, 0, 1.75)                         # MAX3232 behind the VoiceS3R
-    caps = on(0.35, 10.66, -5.1, -2.1, 0, 0.9).union(on(8.75, 10.25, 0.5, 6.5, 0, 0.5))   # C1..C5, R1 / R2
-    sw1 = on(11.14, 22.86, -12.8, -6.1, 0, 3.0)                       # DIP behind the VoiceS3R (lid off)
-    j3x, j3y = -15.8, vy1 + 3.9                                       # behind the vein socket, opening +y
+    u1 = on(-0.75, 9.15, 13.55, 17.45, 0, 1.75)                      # MAX3232 behind J6
+    caps = on(-1.2, 9.2, 20.0, 23.0, 0, 0.9).union(on(6.75, 8.25, 0.5, 6.5, 0, 0.5))   # C1..C5, R1 / R2
+    sw1 = on(8.74, 20.46, -12.8, -6.1, 0, 3.0)                        # DIP behind the VoiceS3R (lid off)
+    j3x, j3y = -18.2, vy1 + 3.9                                       # behind the vein socket, opening +y
     j3 = on(j3x - 5.0, j3x + 5.0, j3y - 3.7, j3y + 3.1, 0, 3.4)
     j3p = on(j3x - 3.0, j3x + 3.0, j3y + 3.1, j3y + 9.1, 0.3, 3.1)
     gy = ay + 30.0                                                        # J6 on the +x wall (the USB-C's side),
@@ -348,7 +348,7 @@ def concept_b():
     fz0 = Z_IN - FRAME_H
     frame = box(vein[1] + 0.2, vein[1] + 0.2 + FRAME_T, ay + 12.3, vein[3] + 0.2 + FRAME_T, fz0, Z_IN + 0.01).union(
         box(vein[0] + 4.0, vein[1] + 0.2 + FRAME_T, vein[3] + 0.2, vein[3] + 0.2 + FRAME_T, fz0, Z_IN + 0.01))
-    holes = [(-24.7, 35.2), (20.5, 14.0), (5.0, 3.0), (6.0, -27.0)]     # the board's M2 screws (H1..H4)
+    holes = [(-24.7, 35.2), (16.5, 14.0), (2.0, 3.0), (3.5, -27.0)]     # the board's M2 screws (H1..H4)
     bs = bosses(holes)
     corner = box(ax - 12.3, xi1 + T_WALL + 1, yi0 - T_WALL - 1, ay + 12.3, 0, Z_TOP + 1)   # open round the VoiceS3R
     wall_cuts = [box(dcx - 15.65, dcx + 15.65, yi1 - 1, yi1 + 5, ZBT - 1.5, Z_IN + 0.1),        # DB9 at the back

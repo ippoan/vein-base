@@ -57,8 +57,8 @@ Two outlines of the same circuit (same parts, same routing), both r12:
   'print_b'      the same parts again for the printed case B (concept_b() in station/build_station_print.py, two rows,
                  55.3 x 79.1 x 16.7): the vein module front-left (VHB straight on the board), the VoiceS3R front-right
                  on J1 / J2 turned a quarter (USB-C / PORT.A to +x), its corner of the board running out to the case's
-                 outer faces (the case has no walls round it, like an M5Stack ATOMIC base), MAX3232 / C1..C5 / SW1
-                 behind it, J6 on the +x edge (opening +x), the DB9 on the +y edge (the back wall, facing +y) and J3
+                 outer faces (the case has no walls round it, like an M5Stack ATOMIC base), SW1 behind it, MAX3232 /
+                 C1..C5 behind J6, J6 on the +x edge (opening +x), the DB9 on the +y edge (the back wall, facing +y) and J3
                  behind the vein socket (opening +y). M2 self-tapping screws into floor bosses (H1..H4). Board coords =
                  case coords; keep the numbers together with concept_b(). BOM jlc_bom_sw130.csv.
                  -> station_board_print_b.kicad_pcb, routed on its own (station_board_print_b.ses)
@@ -155,23 +155,24 @@ if PRINT_A:
            'C4': (3.2, -7.0, 0), 'C5': (6.4, -7.0, 0),
            'R1': (9.5, -12.0, 90), 'R2': (9.5, -8.5, 90)}
 if PRINT_B:
-    # case B (concept_b): inside x -28..23.7, y -37..38.5; the VoiceS3R's corner (x >= 1.5, y <= -14.8) runs out to the
-    # outer faces (25.5 / -38.8)
-    X0, X1, Y0, Y1 = -27.7, 23.4, -36.7, 38.45      # the DB9 flange on Y1, 0.05 off the back wall
-    AX, AY = 13.5, -26.8                            # VoiceS3R centre, USB-C / PORT.A to +x (flush with the case's +x)
-    DB9_ROT, DB9_BX = 180, 6.4                      # mating face to +y
+    # case B (concept_b): inside x -28..21.2, y -37..38.5; the VoiceS3R (0.5 beside the vein module) and its corner
+    # (x >= -1.0, y <= -14.8) run out to the outer faces (23.0 / -38.8)
+    X0, X1, Y0, Y1 = -27.7, 20.9, -36.7, 38.45      # the DB9 flange on Y1, 0.05 off the back wall
+    AX, AY = 11.0, -26.8                            # VoiceS3R centre, USB-C / PORT.A to +x (flush with the case's +x)
+    DB9_ROT, DB9_BX = 180, 3.9                      # mating face to +y
     HOLE_FP = 'MountingHole_2.2mm_M2'
-    HOLES = [(-24.7, 35.2), (20.5, 14.0), (5.0, 3.0), (6.0, -27.0)]   # H4 under the VoiceS3R (2.5 below it)
+    HOLES = [(-24.7, 35.2), (16.5, 14.0), (2.0, 3.0), (3.5, -27.0)]   # H4 under the VoiceS3R (2.5 below it)
     EDGE = [(X0, Y0), (AX - 12.0, Y0), (AX - 12.0, AY - 12.0), (AX + 11.0, AY - 12.0), (AX + 12.0, AY - 11.0),
             (AX + 12.0, AY + 12.0), (X1, AY + 12.0), (X1, Y1), (X0, Y1)]
     # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
     POS = {'J1': (AX - 2.54, AY + 7.62, 90), 'J2': (AX, AY - 7.62, 90),
-           'U1': (5.45, -9.85, 90), 'C1': (1.1, -3.6, 90), 'C2': (3.3, -3.6, 90), 'C3': (5.5, -3.6, 90),
-           'C4': (7.7, -3.6, 90), 'C5': (9.9, -3.6, 90),
-           'SW1': (17.0, -9.45, 90),            # behind the VoiceS3R (lid off to set)
+           'SW1': (14.6, -9.45, 90),            # behind the VoiceS3R (lid off to set)
            'J6': (X1 - 4.45 - 2.3, 3.2, 90),    # +x edge, opening +x, between the VoiceS3R and the DB9
-           'R1': (9.5, 2.0, 90), 'R2': (9.5, 5.0, 90),
-           'J3': (-15.8, 26.4, 180)}            # behind the vein socket (y 22.5), opening +y
+           'R1': (7.5, 2.0, 90), 'R2': (7.5, 5.0, 90),
+           'U1': (4.2, 15.5, 90),               # behind J6 / H3, the caps behind it
+           'C1': (-0.4, 21.5, 90), 'C2': (1.8, 21.5, 90), 'C3': (4.0, 21.5, 90), 'C4': (6.2, 21.5, 90),
+           'C5': (8.4, 21.5, 90),
+           'J3': (-18.2, 26.4, 180)}            # behind the vein socket (y 22.5), opening +y
 
 
 def P(x, y):
@@ -318,10 +319,10 @@ elif PRINT_A:
 elif PRINT_B:
     text('VoiceS3R: USB-C / PORT.A this way', AX + 10.8, AY, size=0.8, rot=90)
     SW1.Reference().SetVisible(False)
-    text('SW1 1+2 ON = PASS', 5.0, 9.2, size=0.8)     # free space left of J6 (SW1 is under its own pads)
-    text('3+4 ON = CROSS', 5.0, 8.0, size=0.8)
-    text('J3 vein: 1RX 2TX 3V3 4G', -15.8, 20.6, size=0.8)
-    text('NFC: G38 G39 5V G', 16.6, 10.4, size=0.8)
+    text('SW1 1+2 ON = PASS', 4.0, 9.2, size=0.8)     # free space left of J6 (SW1 is under its own pads)
+    text('3+4 ON = CROSS', 4.0, 8.0, size=0.8)
+    text('J3 vein: 1RX 2TX 3V3 4G', -18.2, 20.6, size=0.8)
+    text('NFC: G38 G39 5V G', 14.1, 10.6, size=0.8)
     text(f'vein-station board {REV} (print B)', 0.0, 20.0, layer=pcbnew.B_SilkS)
 elif SW130:
     text('VoiceS3R: USB-C / PORT.A this way', 0.0, Y1 - 1.2, size=0.8)
