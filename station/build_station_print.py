@@ -7,7 +7,7 @@ two concepts to compare, the case and the parts' places only (the board is not r
      MAX3232 / SW1 behind the VoiceS3R, J3 and the cable back-left.
 A's board is drawn and routed (pcb/station_board/build_board.py print_a); B's is placement only.
 Both: a tray (floor 1.6, walls 1.8) with bosses for the board (2 high, M2 self-tapping), a flat lid (1.8) with a
-locating rim. A: the vein module 2.5 proud of the lid on four posts from the floor. B: the vein module stuck on the
+locating rim. A: the vein module on four posts from the floor. B: the vein module stuck on the
 board with VHB, held sideways by a frame hanging from the lid, a pad from the floor under it; the lid is notched
 round the DB9 (which stands up through it) and the VoiceS3R's plugs, so it comes down to the cable's slack (16.7 high). Writes site/station-print-{a,b}/ and
 station/vein_station_print_{a,b}_{body,lid}.stl, and fails on any interference.
@@ -24,11 +24,11 @@ ZB = BOSS
 ZBT = ZB + 1.6                   # board top
 Z_ATOM = ZBT + 2.5               # VoiceS3R bottom on the pin headers (plastic 2.5), top + 16.8
 DB9_TOP, HOOD_TOP = ZBT + 12.5, ZBT + 13.25
-Z_IN_A = HOOD_TOP + 0.35         # A: inside of the top plate, over the DB9's plug hood
+Z_IN_A = ZBT + 8.7 + 0.4         # A: the DB9 outside the lid (a notch), so the lid goes down to the cable's slack
 Z_IN_B = ZBT + 8.9 + 0.4         # B: the DB9 outside the lid (a notch), so the lid goes down to the cable's slack
 Z_IN = Z_IN_A                    # the concept being built (set by concept_a / concept_b)
 Z_TOP = Z_IN + T_TOP             # the lid's top face
-VEIN_Z0 = Z_TOP + 2.5 - 15.0     # A: the vein module 2.5 proud of the lid, on printed posts
+VEIN_Z0 = ZBT + 3.3              # A: the vein module on printed posts, 2.9 over the MAX3232 / caps under it
 VHB_B = 1.1                      # B: the vein module on the board with VHB (5952, 1.1), top 0.3 over the lid's
 FRAME_H, FRAME_T = 5.0, 1.6      # B: the lid's frame round the vein module, down from the lid's inside / thick
 
@@ -243,7 +243,8 @@ def concept_a():
     j3x, j3y = -0.15, vein[2] - 3.9
     j3 = on(j3x - 5.0, j3x + 5.0, j3y - 3.1, j3y + 3.7, 0, 3.4)     # just in front of the vein socket, opening -y
     j3p = on(j3x - 3.0, j3x + 3.0, j3y - 9.1, j3y - 3.1, 0.3, 3.1)   # its plug between SW1 and J6
-    slack = box(-16.0, 4.5, row + 1.0, row + 15.0, ZBT + 3.7, ZBT + 8.7)   # the vein cable's slack over SW1 / J3
+    slack = box(xi0 + LEDGE_D + 0.8, 4.5, row + 1.0, row + 15.0, ZBT + 3.7, ZBT + 8.7)   # the vein cable's slack over
+                                                    # SW1 / J3, clear of a lid screw's ledge on the -x wall
     gy = row + 6.62                                                 # J6 (Grove) on +x behind the DB9
     gf = bx1 - 2.3                                                  # its front, 2.3 inside the board edge
     grove = on(gf - 7.7, gf, gy - 6.0, gy + 6.0, 0, 6.0)
@@ -266,8 +267,12 @@ def concept_a():
                  box(-5.3, 5.3, yi1 - 1, yi1 + 5, Z_ATOM - 0.4, Z_ATOM + 9.4),          # USB-C over PORT.A
                  box(xi1 - 1, xi1 + 5, gy - 5.0, gy + 5.0, ZBT - 0.3, ZBT + 6.4),        # the Grove plug
                  box(xi1 - 1, xi1 + 5, ay - 7.0, ay - 1.0, Z_ATOM + 1.0, Z_IN + 0.1)]    # the reset, open to the lid
+    # the DB9 stands up through a notch in the lid at the -y end, and the VoiceS3R's window runs out over the +y
+    # wall for the USB-C / PORT.A plugs (they are over the lid too)
     lid_cuts = [rbox(vein[0] - 0.2, vein[1] + 0.2, vein[2] - 0.2, vein[3] + 0.2, Z_IN - 3, Z_TOP + 1, 2.2),
-                rbox(-12.2, 12.2, ay - 12.2, ay + 12.2, Z_IN - 3, Z_TOP + 1, 3.2)]
+                rbox(-12.2, 12.2, ay - 12.2, ay + 12.2, Z_IN - 3, Z_TOP + 1, 3.2),
+                box(-6.2, 6.2, ay + 6.0, yi1 + T_WALL + 1, Z_IN - 3, Z_TOP + 1),
+                box(-15.65, 15.65, yi0 - T_WALL - 1, yi0 + 11.0, Z_IN - 3, Z_TOP + 1)]
     parts = [('DB9', d9), ('DB9 plug', d9plug), ('MAX3232', u1), ('caps', caps), ('SW1', sw1), ('J3', j3),
              ('J3 plug', j3p), ('cable slack', slack), ('Grove', grove), ('Grove plug', groveplug), ('headers', hdr),
              ('VoiceS3R', atom_box), ('USB plug', usb), ('PORT.A plug', porta), ('vein', vbox)]
@@ -377,7 +382,8 @@ def concept_b():
     return view, bad, size, tray, lid, screws
 
 
-VEIN_NOTE = {'a': 'ふたから 2.5 出る。本体と一体の柱 4 本(基板の穴を通す)に VHB で載せる',
+VEIN_NOTE = {'a': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフードはふたより上に出る)、中のケーブルの余りの上まで下げた。'
+                  f'指静脈はふたから {VEIN_Z0 + 15.0 - (Z_IN_A + T_TOP):.1f} 出る。本体と一体の柱 4 本(基板の穴を通す)に VHB で載せる',
              'b': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフードはふたより上に出る)、中のケーブルの余りの上まで下げた。'
                   f'指静脈は基板に VHB({VHB_B:g})でじかに貼る(上面はふたより {VHB_B + 15.0 - (Z_IN_B + T_TOP - ZBT):.1f} 出る)。'
                   f'横はふたの枠(天板の裏から {FRAME_H:g} 下がる、厚さ {FRAME_T:g})と本体の壁で押さえ、'
