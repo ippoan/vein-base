@@ -18,11 +18,12 @@ Routing is written here (a handful of tracks). Run with KiCad's python from pcb/
   python3 build_board.py p    u4 -> vein_unit_board_p.kicad_pcb: the board of Vein Unit P, the printed box
         (station/build_vein_unit_print.py). It lies on the box's floor ribs under the module (no holes, the walls
         locate it), every part on the top and none under the module (its bottom bears on the board):
-  - J1: MX1.25 4P vertical (Molex 53398-0471, LCSC C17617036) beside the module's +y side, 18..28 from the 9P end,
-        where the cable leaves the groove across the module's bottom, plugged from above. 1 = 3V3, 2 = GND,
+  - J1: MX1.25 4P vertical (Molex 53398-0471, LCSC C17617036) in the -x end just past the module's 9P plug (the plug
+        and its bent wires 2.0 out of the end face), plugged from above (vp2; vp1 had it beside the +y side, which
+        took a 6.6 strip). 1 = 3V3, 2 = GND,
         3 = RXD (<- G1), 4 = TXD (-> G2): the 9P's 3..6 in order, so the wires never cross (NOT the order of J3 on
         the station board, hence the silk)
-  - U1 / C1 / C2 as u3, in the same +y strip towards +x
+  - U1 / C1 / C2 as u3, beside J2 in the +x end (+y of it)
   - J2: Grove (JST S4B-PH-SM4-TB, C265102) in the +x end, opening +x: 1 = TXD (-> G2, white), 2 = RXD (<- G1,
         yellow), 3 = 5V, 4 = GND (the nets of u3)
   The outline, J1 and J2 are also in station/build_vein_unit_print.py (BRD, J1, J2): keep the two together.
@@ -44,12 +45,12 @@ HOLES = [(sx * 33.0, sy * 12.5) for sx in (1, -1) for sy in (1, -1)]
 POS = {}                             # p: ref -> (x, y, rot), overriding the places below
 if UNIT_P:
     # = BRD / J1 / J2 / U1 in station/build_vein_unit_print.py (keep them together); the module x -29.5..29.5,
-    # y -13..13, its cable round the -x end and along the -y side over the board
-    X0, X1, Y0, Y1, BR = -34.4, 39.8, -15.0, 19.6, 1.0
+    # y -13..13, its cable folded along both long sides (2.0) over the board
+    X0, X1, Y0, Y1, BR = -37.3, 39.8, -15.0, 15.0, 1.0
     HOLES = []
-    POS = {'J1': (-6.5, 16.0, 180),           # pads to -y (the module), the fitting nails' pads 0.6 off the +y edge
+    POS = {'J1': (-33.7, 0.0, 270),           # pads to +x, 0.3 off the 9P plug; the fitting nails' pads 0.6 in the edge
            'J2': (34.4, 0.0, 90),             # its back pads 0.3 clear of the module's +x end, front 1.0 in the edge
-           'U1': (8.0, 16.4, 0), 'C1': (11.0, 16.4, 90), 'C2': (5.0, 16.4, 90)}
+           'U1': (34.4, 10.5, 0), 'C1': (37.8, 10.5, 90), 'C2': (31.0, 10.5, 90)}
 VEIN = (-29.5, 29.5, -16.5, 9.5)
 JC = 14.3                            # J1's centre across (pads 9.6..19.0, nails 10.3..18.3)
 XJ = 2.65                            # J1's origin: its front (the opening) at x = 0
@@ -136,7 +137,7 @@ for i, (x, y) in enumerate(HOLES, 1):
 for fp in (J1, J2, U1, C1, C2):
     print(fp.GetReference(), {p.GetNumber(): pad(fp, p.GetNumber()) for p in fp.Pads()})
 
-# ---- outline: 78 × 39 rounded rectangle (p: 74.2 × 34.6, R1.0)
+# ---- outline: 78 × 39 rounded rectangle (p: 77.1 × 30.0, R1.0)
 
 
 def seg(a, c, layer=pcbnew.Edge_Cuts):
@@ -183,27 +184,26 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 
 if UNIT_P:
-    # RXD / TXD: down from J1's pads (on the module's side) to vias, along B.Cu under the module, vias before the
-    # Grove's pads; J1-2 GND down to a via beside them. 3V3: J1-1 along +x to C2-1 -> U1-2. 5V: J2-3 along F.Cu
-    # under the module, up at x = XP to C1-1 -> U1-3. GND is the pour on both layers.
-    YV = j1['1'][1] - 1.95                     # the vias under J1's pads (pitch 1.25: 0.65 between them)
+    # J1's pads face +x in a column (1 at +y): RXD / TXD / GND to vias just past them; RXD / TXD along B.Cu under the
+    # module to vias before the Grove's pads. 3V3: J1-1 along F.Cu under the module, up at x = 26.5 to C2-1 -> U1-2.
+    # 5V: J2-3 out to x = 28, up to y = 8 under U1, along to C1-1 -> U1-3. GND is the pour on both layers.
+    XV = j1['1'][0] + 1.85                     # the vias past J1's pads (pitch 1.25: 0.65 between them)
     XE = j2['1'][0] - 2.95                     # the vias before the Grove's pads
-    for net, pin, jp in (('RXD', '3', '2'), ('TXD', '4', '1')):
-        xv, y1 = j1[pin][0], j2[jp][1]
-        track([j1[pin], (xv, YV)], net); via(xv, YV, net)
-        track([(xv, YV), (xv, y1), (XE, y1)], net, layer=pcbnew.B_Cu); via(XE, y1, net)
+    for net, pin, jp, xd in (('RXD', '3', '2', 26.0), ('TXD', '4', '1', 25.0)):
+        y0, y1 = j1[pin][1], j2[jp][1]
+        track([j1[pin], (XV, y0)], net); via(XV, y0, net)
+        track([(XV, y0), (xd, y0), (xd, y1), (XE, y1)], net, layer=pcbnew.B_Cu); via(XE, y1, net)
         track([(XE, y1), j2[jp]], net)
-    track([j1['2'], (j1['2'][0], YV)], 'GND'); via(j1['2'][0], YV, 'GND')
-    track([j1['1'], (c2['1'][0], j1['1'][1]), (c2['1'][0], u1['2'][1]), u1['2']], '3V3')
-    XP = 12.5
-    track([j2['3'], (XP, j2['3'][1]), (XP, c1['1'][1]), (u1['3'][0] + 0.85, c1['1'][1]), (u1['3'][0] + 0.85, u1['3'][1]),
+    track([j1['2'], (XV, j1['2'][1])], 'GND'); via(XV, j1['2'][1], 'GND')
+    track([j1['1'], (26.5, j1['1'][1]), (26.5, c2['1'][1]), c2['1'], (u1['2'][0], c2['1'][1]), u1['2']], '3V3')
+    track([j2['3'], (28.0, j2['3'][1]), (28.0, 8.0), (c1['1'][0], 8.0), c1['1'], (36.5, c1['1'][1]), (36.5, u1['3'][1]),
            u1['3']], '5V')
-    for x, y in [(-30.0, 0.0), (-30.0, 15.0), (-20.0, -8.0), (-20.0, 6.0), (-20.0, 17.0), (0.0, -8.0), (0.0, 6.0),
-                 (20.0, -8.0), (20.0, 8.0), (25.0, 17.0), (9.0, 18.6), (36.5, 10.0), (36.5, -10.0)]:
+    for x, y in [(-35.5, 10.0), (-35.5, -10.0), (-20.0, -8.0), (-20.0, 8.0), (0.0, -8.0), (0.0, 8.0), (20.0, -8.0),
+                 (20.0, 8.0), (24.0, 12.0), (29.5, 12.5), (34.4, 13.5), (36.5, -10.0)]:
         via(x, y, 'GND')
-    text('VEIN MODULE', -6.0, 0.0, size=1.2)
-    # 22 characters at 0.8 (1 character ~0.8 × size): ~14.1 wide, x -13.6..0.5 under the module, below J1's vias
-    text('J1 1:3V3 2:G 3:RX 4:TX', -6.5, 11.0, size=0.8)
+    text('VEIN MODULE', -6.0, 4.5, size=1.2)
+    # 22 characters at 0.8 (1 character ~0.8 × size): ~14.1 wide, x -27.1..-12.9 under the module, clear of J1's vias
+    text('J1 1:3V3 2:G 3:RX 4:TX', -20.0, -5.0, size=0.8)
     # 21 characters at 0.8, turned: y -6.7..6.7 at x 27.4, in front of the Grove's pads
     text('J2 1:TX 2:RX 3:5V 4:G', 27.4, 0.0, size=0.8, rot=90)
     text(f'vein unit board {REV}', 0, 0, layer=pcbnew.B_SilkS)
