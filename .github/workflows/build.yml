@@ -146,6 +146,9 @@ jobs:
           ufab vein_unit_board fab/vein_unit jlc_bom.csv jlc_cpl_corrections.csv
           ufab vein_unit_board_p fab/vein_unit_p jlc_bom_p.csv jlc_cpl_corrections_p.csv
 
+      - name: Vein cable order (9P 3..6 -> 4P 1..4 straight, no twist) on print_b's J3 and Vein Unit P's J1
+        run: python3 tools/check_cable_order.py
+
       - name: Build case (CadQuery)
         run: cd case && python3 build_case.py
 
