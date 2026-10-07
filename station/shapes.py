@@ -145,6 +145,18 @@ SCREW_IN = 1.9                                 # the screw's axis from the wall'
 PILOT, CLEAR, CSK = 1.6, 2.3, 4.2              # tapping pilot, the lid's clearance hole, the countersink (90 deg)
 
 
+def ledge_rect(x, y, xi0, xi1, yi0, yi1):
+    """The (x0, x1, y0, y1) of the ledge under the lid screw at (x, y) (as placed by ledges())."""
+    if abs(x - (xi0 + SCREW_IN)) < 1e-6:
+        return (xi0, xi0 + LEDGE_D, y - LEDGE_W / 2, y + LEDGE_W / 2)
+    if abs(x - (xi1 - SCREW_IN)) < 1e-6:
+        return (xi1 - LEDGE_D, xi1, y - LEDGE_W / 2, y + LEDGE_W / 2)
+    if abs(y - (yi0 + SCREW_IN)) < 1e-6:
+        return (x - LEDGE_W / 2, x + LEDGE_W / 2, yi0, yi0 + LEDGE_D)
+    assert abs(y - (yi1 - SCREW_IN)) < 1e-6, 'not a ledge screw'
+    return (x - LEDGE_W / 2, x + LEDGE_W / 2, yi1 - LEDGE_D, yi1)
+
+
 def ledges(xi0, xi1, yi0, yi1, z_in, avoid, lid_cuts=(), n_max=4):
     """Screw ledges along the inside of the walls, clear of every part and wall cut in `avoid` (by bounding box,
     0.3 margin): the free place nearest to each inside corner. Returns [(x, y, ledge box)]."""
