@@ -112,6 +112,7 @@ POS = {}                     # sw75: ref -> (x, y, rot), overriding the places b
 DB9_ROT, DB9_BY = 0, 0.0     # sw75: the DB9 turned to the +x edge at y = DB9_BY
 DB9_X = None                 # print_b: its flange's x when not on X1
 POST_CUTS = []               # print_b: round cut-outs (Edge.Cuts, r 1.6) for the case's posts, no courtyard
+J3_NETS = {'1': 'G5', '2': 'G6', '3': '3V3', '4': 'GND', 'MP': 'GND'}   # print_b: as Vein Unit P's J1 (see there)
 EDGE = None                  # sw75: the outline as a polygon
 NOTCH = None                 # sw75: (x0, x1, depth) cut into the -y edge for the vein cable (not in the DSN)
 if SW75:
@@ -177,6 +178,9 @@ if PRINT_B:
     POST_CUTS = [(-22.8, 7.5), (-5.0, 12.0)]                            # posts under the window, beside SW1 / J3 (the
                                                     # middle, between them, has 3.5 where a 3.2 cut-out + 0.5 a side needs 4.2)
     DB9_X = 10.9                                  # pulled in to -x (its courtyard clear of H3's), mating face still +x
+    # J3 in the order of Vein Unit P's J1 (1 = 3V3, 2 = GND, 3 = RXD <- G5, 4 = TXD -> G6): the module's 9P 3..6 in
+    # order, so one straight cable (the same as Vein Unit P's) serves both; no wires cross
+    J3_NETS = {'1': '3V3', '2': 'GND', '3': 'G5', '4': 'G6', 'MP': 'GND'}
     POSTS = [(-5.0, 18.5)]                                              # the stand's post under the vein module
     POST_FP = 'MountingHole_3.2mm_M3'            # (an M4's courtyard ran into J6's and H2's)
     EDGE = [(X0, Y0), (-4.2, Y0), (-4.2, -41.7), (X1, -41.7), (X1, DB9_BY - 16.0), (DB9_X, DB9_BY - 16.0),
@@ -246,7 +250,7 @@ wire(J2, {'1': 'G39', '2': 'G38', '3': '5V', '4': 'GND'})
 # ---- J3 finger vein, on the +y edge (the station's front), opening towards the vein module
 J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal', 'J3',
           'MX1.25-4P RA (Molex 53261-0471)', -30.0, J3_EDGE - 3.1, rot=180)
-wire(J3, {'1': 'G5', '2': 'G6', '3': '3V3', '4': 'GND', 'MP': 'GND'})
+wire(J3, J3_NETS)
 
 # ---- MAX3232 + charge pump caps (0.1 uF at 3.3 V)
 U1 = load('Package_SO.pretty', 'SOIC-16_3.9x9.9mm_P1.27mm', 'U1', 'MAX3232', -26.0, 5.0, rot=90)
@@ -351,7 +355,7 @@ elif PRINT_B:
     for fp in b.GetFootprints():                       # the holes' references sat on the labels
         if fp.GetReference().startswith('H'):
             fp.Reference().SetVisible(False)
-    text('J3 vein: 1RX 2TX 3V3 4G', -13.5, 8.0, size=0.8)   # (clear of the post's cut-out at x -22.8)
+    text('J3 1:3V3 2:G 3:RX 4:TX', -13.5, 8.0, size=0.8)   # (clear of the post's cut-out at x -22.8)
     text('NFC: G38 G39 5V G', AX, AY + 13.3, size=0.8)
     text(f'vein-station board {REV} (print B)', 0.0, 20.0, layer=pcbnew.B_SilkS)
 elif SW130:
