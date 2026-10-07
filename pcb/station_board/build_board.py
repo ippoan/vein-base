@@ -55,7 +55,7 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  together with concept_a() in station/build_station_print.py. Its BOM is jlc_bom_sw130.csv (same parts).
                  -> station_board_print_a.kicad_pcb, routed on its own (station_board_print_a.ses)
   'print_b'      the same parts again for the printed case B (concept_b() in station/build_station_print.py, two rows,
-                 53.6 x 69.4 x 25.9 with the VoiceS3R): the vein module on the left, its 9P socket end at the front,
+                 54.5 x 69.4 x 25.9 with the VoiceS3R): the vein module on the left, its 9P socket end at the front,
                  on a stand 3.9 over the board (the case's shelf along -x and bar under its back end, which the board
                  keeps clear of, and a post through P1) under a hood screwed up from under the floor, with MAX3232 /
                  C1..C5 / R1 / R2, SW1 (hood and module off to set) and J3 (under its socket end, opening -y) under it;
@@ -169,32 +169,33 @@ if PRINT_A:
 if PRINT_B:
     # case B (concept_b): the vein module (x -27.5..-1.5, y -36.5..22.5, its 9P socket end at the front, -y) on a
     # stand 3.9 over the board (the case's shelf along -x and bar under its back end, which the board keeps clear of,
-    # and a post through P1) under a hood
+    # and a post through P1) under a hood walled all round (its +x wall, x -1.2..0.6, stands on the board)
     # screwed up from under the floor (its +x screws H1 / H2 through the board, which it clamps to the floor's bosses);
-    # the right column (x -4.2..24.0, out to the box's front, +x and back faces, under the hood's +x columns): the
+    # the right column (x -4.6..24.9, out to the box's front, +x and back faces, under the hood's +x columns): the
     # VoiceS3R at the front (its reset on the box's front face), the DB9 behind it (mating face +x, pulled in to -x,
     # the board cut before its face), J6 on the back edge behind that (opening +y)
-    X0, X1, Y0, Y1 = -25.2, 24.0, -36.5, 27.7       # (Y0 / Y1: under the vein module / the right column's back edge)
+    X0, X1, Y0, Y1 = -25.2, 24.9, -36.5, 27.7       # (Y0 / Y1: under the vein module / the right column's back edge)
     YL1 = 19.7                                      # the back edge under the vein module (clear of the stand's bar)
     # under the vein module everything is the mirror in y (about y -7.0) of the module turned the other way (its 9P end
     # at the back) before 2026-10-07; J3 turned half a turn with the module, so the cable runs straight as before
-    AX, AY = 12.0, -29.7                            # VoiceS3R centre at the front (its reset on the box's front face),
+    AX, AY = 12.9, -29.7                            # VoiceS3R centre at the front (its reset on the box's front face),
                                                     # USB-C / PORT.A to +x (flush with the box's +x)
     DB9_ROT, DB9_BY = 90, -2.0                      # mating face to +x, behind the VoiceS3R
     HOLE_FP = 'MountingHole_2.2mm_M2'
-    HOLES = [(-2.1, -38.6), (-2.1, 24.6)]                               # H1 / H2: the hood's screws through the board
+    HOLES = [(-2.5, -38.6), (-2.5, 24.6)]                               # H1 / H2: the hood's screws through the board
     POST_CUTS = [(-22.8, -21.5, 1.6), (-5.0, -26.0, 1.6),               # posts under the window, beside SW1 / J3 (the
                                                     # middle, between them, has 3.5 where a 3.2 cut-out + 0.5 a side needs 4.2)
                  (AX, AY, 2.4)]                     # the VoiceS3R's screw post (4.3) up to its M2 hole at its centre
                                                     # (concept_b's ATOM_POST_R + 0.25)
-    DB9_X = 10.9                                  # pulled in to -x (its courtyard clear of H1's), mating face still +x
+    DB9_X = 11.8                                  # pulled in to -x (its body 0.7 off the hood's +x wall), mating face still +x
     # J3 in the order of Vein Unit P's J1 (1 = 3V3, 2 = GND, 3 = RXD <- G5, 4 = TXD -> G6): the module's 9P 3..6 in
     # order, so one straight cable (the same as Vein Unit P's) serves both; no wires cross
     J3_NETS = {'1': '3V3', '2': 'GND', '3': 'G5', '4': 'G6', 'MP': 'GND'}
     POSTS = [(-5.0, -32.5)]                                             # the stand's post under the vein module
     POST_FP = 'MountingHole_3.2mm_M3'            # (an M4's courtyard ran into J6's and H2's)
-    EDGE = [(X0, Y0), (-4.2, Y0), (-4.2, -41.7), (X1, -41.7), (X1, DB9_BY - 16.0), (DB9_X, DB9_BY - 16.0),
-            (DB9_X, DB9_BY + 16.0), (X1, DB9_BY + 16.0), (X1, Y1), (-4.2, Y1), (-4.2, YL1), (X0, YL1)]
+    XR = -4.6                                       # the right column's -x edge (0.3 past the hood's +x columns)
+    EDGE = [(X0, Y0), (XR, Y0), (XR, -41.7), (X1, -41.7), (X1, DB9_BY - 16.0), (DB9_X, DB9_BY - 16.0),
+            (DB9_X, DB9_BY + 16.0), (X1, DB9_BY + 16.0), (X1, Y1), (XR, Y1), (XR, YL1), (X0, YL1)]
     # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
     POS = {'J1': (AX - 2.54, AY + 7.62, 90), 'J2': (AX, AY - 7.62, 90),
            # under the vein module (3.9 under it): MAX3232 with C1..C5 on its -x, R1 / R2, SW1 (hood and module off
