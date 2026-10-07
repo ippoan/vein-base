@@ -26,7 +26,7 @@ from shapes import ROOT, box, rbox, cyl_z, union, vein_parts, write_page
 from template import cut_template, arc_ends_xy, arc_ends_tangent
 import cadquery as cq
 
-REV = 'vu14'
+REV = 'vu15'
 VARIANT = sys.argv[1] if len(sys.argv) > 1 else 'cs'
 VEIN = (-29.5, 29.5, -13.0, 13.0)                 # 59 × 26, centred (sic moves it, see there)
 
@@ -130,12 +130,16 @@ else:
     # corners (Takachi's SIC5-9-2W.dxf, 2026-10-07; the sides run straight for 60.7, the drawing's 60.6). Only the
     # paper template uses it (the 3D keeps the R12.5 box, which holds the case's material in the corners)
     OUT_SHAPE = (34.0, 12.0)
-    END = dict(side=1, h=ZC, hole=('rect', -4.6, 4.6, Z_BT - 0.4, Z_BT + 6.2),
+    # outside, the body meets the cover at a ridge 16 up (Takachi's drawing: body 16 + cover 4); the rim at ZC is inside
+    # the cover's skirt and cannot be seen, so the template's end view stops at the ridge
+    SEAM = 16.0
+    END = dict(side=1, h=SEAM, hole=('rect', -4.6, 4.6, Z_BT - 0.4, Z_BT + 6.2),
                label='BODY, Grove end (+x) wall, seen from outside')
     TOP = ('module cable end (-x)', 'GROVE END (+x)', 'side (-y)', 'J1 side (+y): the window is off centre toward -y')
     TPL_NOTES = ['Cover: lay the sheet face up on the cover and line up the grey outline (90 x 45, R34 ends, R12 corners),',
                  'GROVE END to the right. The window is 3.5 off centre, away from J1: check the side before cutting.',
                  'Body: the Grove socket hole in the end wall at the Grove end (the R34 face between the dashed lines).',
+                 'Measure it from the bottom (desk side); the top of the end view is the ridge where the cover meets the body.',
                  'Red = cut through; + = drill centres (window corners: dia 4.4 or less; end hole: 2 holes, then file square).',
                  'Unit mm.']
     inner = [('plug', 'MX1.25 9P プラグ(付属ケーブル)', '#e7e1cf', plug),
@@ -189,7 +193,7 @@ def template(path, title, case, top, win, end, notes):
            (end arc radius, corner radius) for a case with arc ends (arc_ends_xy())
     top = (left label, right label, back label, front label) around the top view
     win = (x0, x1, y0, y1, r): the cover window
-    end = dict(side=+1 / -1 (which x end), h=body height, hole=('rect', y0, y1, z0, z1) or ('circle', y, z, r),
+    end = dict(side=+1 / -1 (which x end), h=height of the joint with the cover seen from outside, hole=('rect', y0, y1, z0, z1) or ('circle', y, z, r),
                label=the text over the end view); z from the bottom of the body."""
     L, W, R = case
     x0, x1, y0, y1, r = win
@@ -214,7 +218,7 @@ def template(path, title, case, top, win, end, notes):
         _, hy0, hy1, hz0, hz1 = hole
         cut = ('rect', *sorted((s * hy0, s * hy1)), hz0, hz1, 0)
         rows.append(f'end hole {hy1 - hy0:4.1f} x {hz1 - hz0:4.1f}  from the bottom {hz0:4.1f} .. {hz1:4.1f}  '
-                    f'(top edge {h - hz1:.1f} below the body rim)  centred')
+                    f'(top edge {h - hz1:.1f} below the joint with the cover)  centred')
     else:
         _, hy, hz, hr = hole
         cut = ('circle', s * hy, hz, hr)
