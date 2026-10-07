@@ -368,12 +368,16 @@ elif PRINT_A:
 elif PRINT_B:
     text('VoiceS3R: USB-C / PORT.A this way', AX + 10.8, AY, size=0.8, rot=90)
     SW1.Reference().SetVisible(False)
-    text('SW1 1+2 ON = PASS', -14.5, -9.6, size=0.8)  # behind SW1 (under the vein module: take it off to set)
-    text('3+4 ON = CROSS', -14.5, -8.5, size=0.8)
+    # behind SW1, in the 10.9 between the board's -x edge and C1..C5's references (under the vein module: take it off
+    # to set). At y -9.6 / -8.5 (to 2026-10-08) two lines sat on SW1's pads
+    text('SW1', -19.75, -2.9, size=0.8)
+    text('1+2 ON=PASS', -19.75, -4.3, size=0.8)
+    text('3+4 ON=CROSS', -19.75, -5.7, size=0.8)
     for fp in b.GetFootprints():                       # the holes' references sat on the labels
         if fp.GetReference().startswith('H'):
             fp.Reference().SetVisible(False)
-    text('J3 1:3V3 2:G 3:RX 4:TX', -13.5, -22.0, size=0.8)  # (clear of the post's cut-out at x -22.8)
+    J3.Reference().SetVisible(False)                   # (the text names it; it sat on J3's and R2's references)
+    text('J3 1:3V3 2:G 3:RX 4:TX', -15.5, -31.5, size=0.8)  # in front of J3 (clear of P1)
     text('NFC: G38 G39 5V G', AX, AY + 13.3, size=0.8)
     text(f'vein-station board {REV} (print B)', -6.0, 16.0, layer=pcbnew.B_SilkS)   # (inside the left part's back edge)
 elif SW130:

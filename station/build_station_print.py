@@ -54,8 +54,10 @@ ATOM_POST_R0 = 3.5               # its foot under the board (the shoulder the bo
 ATOM_CUT_R = ATOM_POST_R + 0.25  # the board's round cut-out for it (build_board.py print_b POST_CUTS)
 
 
-def atom_at(x, y, ports, z0=Z_ATOM):
-    """The official VoiceS3R STL, ports to 'x+', 'x-', 'y+' or 'y-' (the reset is on the face clockwise of them)."""
+def atom_at(x, y, ports, z0=Z_ATOM, z_top=0.0):
+    """The official VoiceS3R STL, ports to 'x+', 'x-', 'y+' or 'y-' (the reset is on the face clockwise of them),
+    its bottom at z0; for the page, in its frame (z - z_top, as shapes.tri() does to the other parts: before
+    2026-10-08 it was left out, and the VoiceS3R stood z_top too high, off its pins and post)."""
     t = stl_tris('voice').copy()
     c = (t.reshape(-1, 3).min(axis=0) + t.reshape(-1, 3).max(axis=0)) / 2
     t[..., :2] -= c[:2]
@@ -64,7 +66,7 @@ def atom_at(x, y, ports, z0=Z_ATOM):
     R = np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]], dtype=np.float32)
     t[..., :2] = t[..., :2] @ R.T
     zmin = t.reshape(-1, 3)[:, 2].min()
-    t[..., 2] += z0 - zmin
+    t[..., 2] += z0 - zmin - z_top
     t[..., 0] += x
     t[..., 1] += y
     return t.reshape(-1).astype(np.float32)
@@ -72,6 +74,15 @@ def atom_at(x, y, ports, z0=Z_ATOM):
 
 def on(x0, x1, y0, y1, z0, z1):
     return box(x0, x1, y0, y1, ZBT + z0, ZBT + z1)
+
+
+def pins(pts, z1):
+    """The pin headers' pins (0.64 square) from the board up to z1 (the VoiceS3R's bottom), for the page only."""
+    s = None
+    for x, y in pts:
+        b = box(x - 0.32, x + 0.32, y - 0.32, y + 0.32, ZB, z1)
+        s = b if s is None else s.union(b)
+    return s
 
 
 def db9(cx, y_face, facing):
@@ -159,7 +170,10 @@ def concept_a():
         pcb_v = pcb_v.cut(cyl_z(x, y, 1.1, ZB - 1, ZBT + 1))
     bad = check((tray.cut(bs), lid), parts)
     view = [('shell', 'ふた(天板・指静脈と VoiceS3R の窓、M2 皿ねじで本体の受けに締める)', '#2b2f33', 0.45, 'shell', lid),
-            ('atom', 'VoiceS3R(公式 CAD、USB-C は +y)', '#1fa49a', 1, 'mods', atom_at(0, ay, 'y+'))] + \
+            ('atom', 'VoiceS3R(公式 CAD、USB-C は +y)', '#1fa49a', 1, 'mods', atom_at(0, ay, 'y+', z_top=Z_TOP)),
+            ('hdr', 'ピンヘッダー J1 / J2(樹脂の台 2.5 とピン)', '#202326', 1, 'mods',
+             hdr.union(pins([(-7.62, ay - 2.54 + 2.54 * i) for i in range(5)] + [(7.62, ay + 2.54 * i) for i in range(4)],
+                            Z_ATOM)))] + \
         vein_parts(vein, VEIN_Z0, along_y=True) + [
         ('pcb', 'station 基板 print_a(配線済み、build_board.py print_a)', '#1f7a4d', 1, 'mods', pcb_v),
         ('frame', '指静脈を載せる柱 4 本(本体と一体、基板の穴を通す。上に VHB)', '#8fa09c', 1, 'mods', frame),
@@ -354,7 +368,10 @@ def concept_b():
     screws = cols + [(ax, ay)]
     vp = vein_parts(vein, vz0, along_y=True, step=True)                  # (the socket end at -y)
     view = [('shell', f'フード(指静脈の窓と裏の座ぐり、4 面の壁(一周の枠)と四隅の柱。床の裏から M2 × {SCREW_B:g} の皿小ねじ 4 本で締める。+x 側の 2 本は基板を通して基板も挟む)', '#2b2f33', 0.45, 'shell', hood),
-            ('atom', f'VoiceS3R(公式 CAD、右の列の手前。USB-C は右 +x、リセットは手前で、どちらも箱の外面にそろい前に何も無い。基板から 3.5 浮く。床の裏から段付きの柱を通した M2 × {SCREW_B:g} の皿小ねじで底の中心の穴に留める)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'x+', Z_ATOM_B))] + vp + [
+            ('atom', f'VoiceS3R(公式 CAD、右の列の手前。USB-C は右 +x、リセットは手前で、どちらも箱の外面にそろい前に何も無い。基板から 3.5 浮く。床の裏から段付きの柱を通した M2 × {SCREW_B:g} の皿小ねじで底の中心の穴に留める)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'x+', Z_ATOM_B, Z_TOP)),
+            ('hdr', 'ピンヘッダー J1 / J2(樹脂の台 2.5 とピン。VoiceS3R の底は基板から 3.5 で、ピンが底に当たる)', '#202326', 1, 'mods',
+             hdr.union(pins([(ax - 2.54 + 2.54 * i, ay + 7.62) for i in range(5)] + [(ax + 2.54 * i, ay - 7.62) for i in range(4)],
+                            Z_ATOM_B)))] + vp + [
         ('pcb', 'station 基板 print_b(build_board.py print_b。指静脈の台を避けた形。基板だけのねじは無く、フードの +x 側の柱 2 本のねじで床のボスとの間に挟まり、VoiceS3R の柱の肩とピンの間に挟まり、指静脈の下は床のリブが受けて台の柱 3 本が横の位置を決める)', '#1f7a4d', 1, 'mods', pcb_v),
         ('stand', f'指静脈の台(本体と一体: 左の棚・奥の横木・柱 3 本(右手前と、窓の下の SW1・J3 の左右)。基板から {HC_B:g} 上)', '#8fa09c', 1, 'mods', stand),
         ('db9', 'DB9 オス(右の列の VoiceS3R の後ろ、指静脈の側へ寄せた。口は右で、その前の基板と床は切ってある)', '#8a8f96', 1, 'mods', d9.union(d9shell)), ('db9plug', 'DB9 プラグ', '#5c6166', 1, 'mods', d9plug),
