@@ -19,15 +19,18 @@ the floor's inside face."""
 import os
 import cadquery as cq
 from shapes import (ROOT, box, rbox, union, vein_parts, vein_step_box, write_page, shell_and_lid, check, T_WALL,
-                    T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID, VEIN_GROOVE)
+                    T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID, VEIN_GROOVE, ledge_rect)
 
-REV = 'vp2'
+REV = 'vp3'
 # ---- shared with pcb/vein_unit_board/build_board.py p (u4): the outline, J1 and J2. Keep the two together ------------
 VEIN = (-29.5, 29.5, -13.0, 13.0)        # the module, the 9P end at -x
-BRD = (-37.3, 39.8, -15.0, 15.0)         # the board u4 (x0, x1, y0, y1), corners R1.0
+BRD = (-37.3, 39.8, -15.0, 15.0)         # the board u4 (x0, x1, y0, y1), less NOTCHES
+# the board goes in from above past the lid screws' ledges (shapes.ledges, from the lid down to LEDGE_H): notched
+# 0.3 round each, through to the board's edge where less than 2.0 would be left (checked against the ledges below)
+NOTCHES = [(-37.3, -33.4, -15.0, -7.8), (35.9, 39.8, -15.0, -7.8), (-37.3, -30.1, 11.1, 15.0), (35.9, 39.8, 7.6, 15.0)]
 J1 = (-33.7, 0.0)                        # MX1.25 4P vertical (53398-0471), footprint origin, turned 270 (pads to +x)
 J2 = (34.4, 0.0)                         # Grove (JST S4B-PH-SM4-TB), footprint origin, turned 90 (opening +x)
-U1 = (34.4, 10.5)                        # LDO (SOT-23) beside J2, C2 / C1 at x 31.0 / 37.8
+U1 = (32.6, 10.5)                        # LDO (SOT-23) beside J2, clear of the +x/+y notch, C2 / C1 at y 7.8 / 13.3
 # ----------------------------------------------------------------------------------------------------------------------
 GAP = 0.3                                # the board / the module / the cable to the walls
 # the module's cable out of its outline (measured 2026-10-07): the 9P plug with the wires bent round the -x end
@@ -51,14 +54,16 @@ g0, g1 = x0 + VEIN_GROOVE[0], x0 + VEIN_GROOVE[1]
 assert J2[0] - 4.6 >= VEIN[1] + 0.3 - 1e-9, 'J2 against the module'
 
 vein = vein_step_box(VEIN, VZ0)
-board = rbox(*BRD, ZB, ZBT, 1.0)
+board = box(*BRD, ZB, ZBT)
+for n in NOTCHES:
+    board = board.cut(box(*n, ZB - 1, ZBT + 1))
 # J1 with its 4P plug in it: the housing ±3.375 and the fitting nails ±5.075 across (KiCad's footprint, Fab), -1.1..2.6
 # deep turned to x (the pads on the module's side), up to the mated height 5.7 (Molex PicoBlade 53398)
 j1 = box(J1[0] - 2.6, J1[0] + 1.1, J1[1] - 5.075, J1[1] + 5.075, ZBT, ZBT + 5.7)
 # the Grove: JST PH S4B-PH-SM4-TB (Fab -3.2..4.4 front, ±5.95 across, 6 high), the plug through the +x wall
 grove = box(J2[0] - 3.2, J2[0] + 4.4, J2[1] - 6.0, J2[1] + 6.0, ZBT, ZBT + 6.0)
 grove_plug = box(J2[0] + 4.4, xi1 + T_WALL + 8.0, J2[1] - 4.5, J2[1] + 4.5, ZBT + 0.6, ZBT + 5.4)
-ldo = box(U1[0] - 3.9, U1[0] + 3.9, U1[1] - 1.8, U1[1] + 1.8, ZBT, ZBT + 1.2)        # U1 + C1 / C2
+ldo = box(U1[0] - 2.0, U1[0] + 2.0, U1[1] - 3.3, U1[1] + 3.4, ZBT, ZBT + 1.2)        # U1 + C1 / C2
 # the module's 9P plug (14.4 wide as station/build_vein_unit.py, low in the end face) with the wires bent round the
 # -x end (one envelope, CABLE_END out); the cable folded along both long sides and across in the groove, round the
 # -x/+y corner (past the 9P plug) and over J1 into its plug
@@ -83,6 +88,33 @@ parts = [('vein', vein), ('board', board), ('J1 + 4P plug', j1), ('Grove J2', gr
 tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, Z_IN, 
                                         keep_clear=[o for n, o in parts if n != 'cable'] + list(cable_runs))
 assert ZBT + 5.7 + J1_ROOM < Z_IN - LEDGE_H, 'the cable over J1 reaches the lid ledges'
+
+
+def bb(o):
+    b = o.val().BoundingBox()
+    return (b.xmin, b.xmax, b.ymin, b.ymax)
+
+
+def overlap(a, b):
+    return a[0] < b[1] - 1e-6 and b[0] < a[1] - 1e-6 and a[2] < b[3] - 1e-6 and b[2] < a[3] - 1e-6
+
+
+# the way in from above: the board with its parts, then the module with its 9P plug, past the ledges (in xy). The
+# notches are the ledges + 0.3, out to the board's edge where less than 2.0 would be left; the cable is laid by hand
+ledge_xy = [ledge_rect(x, y, xi0, xi1, yi0, yi1) for x, y in screws]
+want = []
+for r in ledge_xy:
+    n = [r[0] - GAP, r[1] + GAP, r[2] - GAP, r[3] + GAP]
+    n = [BRD[0] if n[0] < BRD[0] + 2.0 else n[0], BRD[1] if n[1] > BRD[1] - 2.0 else n[1],
+         BRD[2] if n[2] < BRD[2] + 2.0 else n[2], BRD[3] if n[3] > BRD[3] - 2.0 else n[3]]
+    want.append(tuple(round(v, 3) for v in n))
+assert sorted(want) == sorted(NOTCHES), f'NOTCHES (here and in build_board.py p) should be {want}'
+for r in ledge_xy:
+    for name, o in (('board', board), ('J1', j1), ('Grove J2', grove), ('LDO', ldo), ('vein', vein), ('9P plug', plug9)):
+        sol = o.val().Solids() if name == 'board' else [o.val()]
+        hit = [s for s in sol if overlap(bb(cq.Workplane().add(s)), r)] if name != 'board' else \
+            ([1] if box(*r, ZB, ZBT).intersect(board).val().Volume() > 1e-6 else [])
+        assert not hit, f'{name} does not pass the ledge {r} on the way in'
 bad = check((tray, lid), parts)
 vol = (tray.val().Volume() + lid.val().Volume()) / 1000
 print(REV, 'outer %.1f x %.1f x %.1f' % size, 'volume %.1f cm3' % vol, 'screws',

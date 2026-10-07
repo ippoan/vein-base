@@ -23,7 +23,9 @@ Routing is written here (a handful of tracks). Run with KiCad's python from pcb/
         took a 6.6 strip). 1 = 3V3, 2 = GND,
         3 = RXD (<- G1), 4 = TXD (-> G2): the 9P's 3..6 in order, so the wires never cross (NOT the order of J3 on
         the station board, hence the silk)
-  - U1 / C1 / C2 as u3, beside J2 in the +x end (+y of it)
+  - U1 / C1 / C2 as u3, beside J2 in the +x end (+y of it, clear of the notch)
+  - the outline notched in the corners for the lid screws' ledges, which the board passes on its way in from above
+        (NOTCHES, = station/build_vein_unit_print.py)
   - J2: Grove (JST S4B-PH-SM4-TB, C265102) in the +x end, opening +x: 1 = TXD (-> G2, white), 2 = RXD (<- G1,
         yellow), 3 = 5V, 4 = GND (the nets of u3)
   The outline, J1 and J2 are also in station/build_vein_unit_print.py (BRD, J1, J2): keep the two together.
@@ -43,6 +45,7 @@ BX, BY, BR = 39.0, 19.5, 9.4         # outline: 78 × 39, R9.4 (the case inside 
 X0, X1, Y0, Y1 = -BX, BX, -BY, BY
 HOLES = [(sx * 33.0, sy * 12.5) for sx in (1, -1) for sy in (1, -1)]
 POS = {}                             # p: ref -> (x, y, rot), overriding the places below
+NOTCHES = []                         # p: (x0, x1, y0, y1) cut out of the outline's corners
 if UNIT_P:
     # = BRD / J1 / J2 / U1 in station/build_vein_unit_print.py (keep them together); the module x -29.5..29.5,
     # y -13..13, its cable folded along both long sides (2.0) over the board
@@ -50,7 +53,9 @@ if UNIT_P:
     HOLES = []
     POS = {'J1': (-33.7, 0.0, 270),           # pads to +x, 0.3 off the 9P plug; the fitting nails' pads 0.6 in the edge
            'J2': (34.4, 0.0, 90),             # its back pads 0.3 clear of the module's +x end, front 1.0 in the edge
-           'U1': (34.4, 10.5, 0), 'C1': (37.8, 10.5, 90), 'C2': (31.0, 10.5, 90)}
+           'U1': (32.6, 10.5, 0), 'C2': (32.6, 7.8, 0), 'C1': (32.6, 13.3, 180)}   # a column clear of the +x/+y notch
+    # the lid screws' ledges + 0.3, through to the edge (= NOTCHES in station/build_vein_unit_print.py, which checks them)
+    NOTCHES = [(-37.3, -33.4, -15.0, -7.8), (35.9, 39.8, -15.0, -7.8), (-37.3, -30.1, 11.1, 15.0), (35.9, 39.8, 7.6, 15.0)]
 VEIN = (-29.5, 29.5, -16.5, 9.5)
 JC = 14.3                            # J1's centre across (pads 9.6..19.0, nails 10.3..18.3)
 XJ = 2.65                            # J1's origin: its front (the opening) at x = 0
@@ -137,7 +142,7 @@ for i, (x, y) in enumerate(HOLES, 1):
 for fp in (J1, J2, U1, C1, C2):
     print(fp.GetReference(), {p.GetNumber(): pad(fp, p.GetNumber()) for p in fp.Pads()})
 
-# ---- outline: 78 × 39 rounded rectangle (p: 77.1 × 30.0, R1.0)
+# ---- outline: 78 × 39 rounded rectangle (p: 77.1 × 30.0, notched)
 
 
 def seg(a, c, layer=pcbnew.Edge_Cuts):
@@ -152,9 +157,28 @@ def arc(cx, cy, a0):
     s.SetArcGeometry(P(*pts[0]), P(*pts[1]), P(*pts[2])); s.SetLayer(pcbnew.Edge_Cuts); s.SetWidth(mm(0.1)); b.Add(s)
 
 
-ix0, ix1, iy0, iy1 = X0 + BR, X1 - BR, Y0 + BR, Y1 - BR
-seg((ix0, Y0), (ix1, Y0)); seg((X1, iy0), (X1, iy1)); seg((ix1, Y1), (ix0, Y1)); seg((X0, iy1), (X0, iy0))
-arc(ix1, iy0, -90); arc(ix1, iy1, 0); arc(ix0, iy1, 90); arc(ix0, iy0, 180)
+def notched():
+    """The outline (counter-clockwise) with each NOTCHES rectangle taken out of the corner it covers."""
+    pts = []
+    for i, (cx, cy) in enumerate(((X0, Y0), (X1, Y0), (X1, Y1), (X0, Y1))):
+        n = [n for n in NOTCHES if n[0] <= cx <= n[1] and n[2] <= cy <= n[3]]
+        if not n:
+            pts.append((cx, cy))
+            continue
+        nx0, nx1, ny0, ny1 = n[0]
+        ix, iy = (nx1 if cx == X0 else nx0), (ny1 if cy == Y0 else ny0)
+        pts += [(ix, cy), (ix, iy), (cx, iy)] if i % 2 else [(cx, iy), (ix, iy), (ix, cy)]
+    return pts
+
+
+if NOTCHES:
+    EDGE = notched()
+    for a, c in zip(EDGE, EDGE[1:] + EDGE[:1]):
+        seg(a, c)
+else:
+    ix0, ix1, iy0, iy1 = X0 + BR, X1 - BR, Y0 + BR, Y1 - BR
+    seg((ix0, Y0), (ix1, Y0)); seg((X1, iy0), (X1, iy1)); seg((ix1, Y1), (ix0, Y1)); seg((X0, iy1), (X0, iy0))
+    arc(ix1, iy0, -90); arc(ix1, iy1, 0); arc(ix0, iy1, 90); arc(ix0, iy0, 180)
 
 # ---- tracks: RXD / TXD drop to B.Cu beside J1 and run under the module to the Grove; 3V3 / 5V on F.Cu / B.Cu;
 # GND is a pour on both layers, stitched by vias
@@ -186,7 +210,7 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 if UNIT_P:
     # J1's pads face +x in a column (1 at +y): RXD / TXD / GND to vias just past them; RXD / TXD along B.Cu under the
     # module to vias before the Grove's pads. 3V3: J1-1 along F.Cu under the module, up at x = 26.5 to C2-1 -> U1-2.
-    # 5V: J2-3 out to x = 28, up to y = 8 under U1, along to C1-1 -> U1-3. GND is the pour on both layers.
+    # 5V: J2-3 out to x = 34.8 (inside the notch), up to U1-3 -> C1-1. GND is the pour on both layers.
     XV = j1['1'][0] + 1.85                     # the vias past J1's pads (pitch 1.25: 0.65 between them)
     XE = j2['1'][0] - 2.95                     # the vias before the Grove's pads
     for net, pin, jp, xd in (('RXD', '3', '2', 26.0), ('TXD', '4', '1', 25.0)):
@@ -195,11 +219,10 @@ if UNIT_P:
         track([(XV, y0), (xd, y0), (xd, y1), (XE, y1)], net, layer=pcbnew.B_Cu); via(XE, y1, net)
         track([(XE, y1), j2[jp]], net)
     track([j1['2'], (XV, j1['2'][1])], 'GND'); via(XV, j1['2'][1], 'GND')
-    track([j1['1'], (26.5, j1['1'][1]), (26.5, c2['1'][1]), c2['1'], (u1['2'][0], c2['1'][1]), u1['2']], '3V3')
-    track([j2['3'], (28.0, j2['3'][1]), (28.0, 8.0), (c1['1'][0], 8.0), c1['1'], (36.5, c1['1'][1]), (36.5, u1['3'][1]),
-           u1['3']], '5V')
-    for x, y in [(-35.5, 10.0), (-35.5, -10.0), (-20.0, -8.0), (-20.0, 8.0), (0.0, -8.0), (0.0, 8.0), (20.0, -8.0),
-                 (20.0, 8.0), (24.0, 12.0), (29.5, 12.5), (34.4, 13.5), (36.5, -10.0)]:
+    track([j1['1'], (26.5, j1['1'][1]), (26.5, c2['1'][1]), c2['1'], (c2['1'][0], u1['2'][1]), u1['2']], '3V3')
+    track([j2['3'], (34.8, j2['3'][1]), (34.8, u1['3'][1]), u1['3'], (u1['3'][0], c1['1'][1]), c1['1']], '5V')
+    for x, y in [(-35.5, 10.0), (-35.5, -6.5), (-20.0, -8.0), (-20.0, 8.0), (0.0, -8.0), (0.0, 8.0), (20.0, -8.0),
+                 (20.0, 8.0), (24.0, 12.0), (29.5, 12.5), (33.0, -10.0)]:
         via(x, y, 'GND')
     text('VEIN MODULE', -6.0, 4.5, size=1.2)
     # 22 characters at 0.8 (1 character ~0.8 × size): ~14.1 wide, x -27.1..-12.9 under the module, clear of J1's vias
@@ -238,7 +261,7 @@ b = pcbnew.LoadBoard(f'{NAME}.kicad_pcb')
 for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
     z = pcbnew.ZONE(b); z.SetLayer(layer); z.SetNet(b.FindNet('GND'))
     ol = z.Outline(); ol.NewOutline()
-    for x, y in ((X0, Y0), (X1, Y0), (X1, Y1), (X0, Y1)):
+    for x, y in (EDGE if NOTCHES else ((X0, Y0), (X1, Y0), (X1, Y1), (X0, Y1))):
         ol.Append(mm(OX + x), mm(OY - y))
     z.SetLocalClearance(mm(0.3)); z.SetMinThickness(mm(0.25))
     b.Add(z)
