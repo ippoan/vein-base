@@ -116,19 +116,25 @@ jobs:
           efab station_esp_board_sw fab/station_esp_sw
           efab station_esp_board_sw75 fab/station_esp_sw75 jlc_bom_sw75.csv
 
-      - name: Build Vein Unit board (KiCad) + DRC
+      - name: Build Vein Unit boards (KiCad) + DRC
+        # u3 for the Takachi SIC5-9-2B (vein_unit_board -> fab/vein_unit/) and u4 for the printed Vein Unit P
+        # (vein_unit_board_p -> fab/vein_unit_p/, its own BOM and corrections)
         run: |
-          cd pcb/vein_unit_board && python3 build_board.py && cd ../..
-          B=pcb/vein_unit_board/vein_unit_board.kicad_pcb; D=fab/vein_unit
-          mkdir -p $D/gerber
-          kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o $D/gerber/ $B
-          kicad-cli pcb export drill --format excellon --excellon-separate-th -o $D/gerber/ $B
-          kicad-cli pcb export pos --format csv --units mm --side both -o $D/pos.csv $B
-          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o $D/vein_unit_board_v${VER}_fitcheck_1to1.pdf $B
-          (cd $D/gerber && zip -q ../vein_unit_board_v${VER}_gerbers.zip *)
-          python3 tools/make_jlc_cpl.py --pos $D/pos.csv --bom pcb/vein_unit_board/jlc_bom.csv --prefix vein_unit_board_v --outdir $D \
-            --corrections pcb/vein_unit_board/jlc_cpl_corrections.csv
-          python3 tools/check_drc.py --board $B --report $D/drc.rpt
+          cd pcb/vein_unit_board && python3 build_board.py && python3 build_board.py p && cd ../..
+          ufab() {  # $1 = board name, $2 = output dir, $3 = BOM, $4 = CPL corrections
+            local B=pcb/vein_unit_board/$1.kicad_pcb D=$2
+            mkdir -p $D/gerber
+            kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o $D/gerber/ $B
+            kicad-cli pcb export drill --format excellon --excellon-separate-th -o $D/gerber/ $B
+            kicad-cli pcb export pos --format csv --units mm --side both -o $D/pos.csv $B
+            kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o $D/$1_v${VER}_fitcheck_1to1.pdf $B
+            (cd $D/gerber && zip -q ../$1_v${VER}_gerbers.zip *)
+            python3 tools/make_jlc_cpl.py --pos $D/pos.csv --bom pcb/vein_unit_board/$3 --prefix $1_v --outdir $D \
+              --corrections pcb/vein_unit_board/$4
+            python3 tools/check_drc.py --board $B --report $D/drc.rpt
+          }
+          ufab vein_unit_board fab/vein_unit jlc_bom.csv jlc_cpl_corrections.csv
+          ufab vein_unit_board_p fab/vein_unit_p jlc_bom_p.csv jlc_cpl_corrections_p.csv
 
       - name: Build case (CadQuery)
         run: cd case && python3 build_case.py
@@ -160,6 +166,9 @@ jobs:
       - name: Build Vein Unit (finger vein module alone in a small Takachi case) cutting templates + 3D previews + interference check
         run: python3 station/build_vein_unit.py cs && python3 station/build_vein_unit.py sic
 
+      - name: Build Vein Unit P (finger vein module alone in a printed box, MJF PA12) 3D preview + interference check
+        run: python3 station/build_vein_unit_print.py
+
       - name: Minimum wall thickness of the printed parts (DMM resin SLA needs 1.0 mm)
         run: python3 tools/check_thickness.py 1.0 case/vein_base_v*_cup.stl station/vein_station_r*_shell.stl station/vein_station_r*_lid.stl station/vein_station_print_*.stl
 
@@ -188,7 +197,9 @@ jobs:
             site/station-sw130/*
             site/station-print-a/*
             site/station-print-b/*
+            site/vein-unit-print/*
             fab/vein_unit/*
+            fab/vein_unit_p/*
 
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
