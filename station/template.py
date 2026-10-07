@@ -19,6 +19,31 @@ def rrect_xy(x0, x1, y0, y1, r, n=16):
     return np.array(pts + pts[:1])
 
 
+def arc_ends_xy(L, W, re, rc, n=25):
+    """Seen from above, a case whose long sides are straight and whose ends are arcs of radius `re` (tip on the axis,
+    L apart) joined to the sides by corners of radius `rc` (Takachi SIC: re 34, rc 12). Closed point list, origin =
+    centre, x along the case. Odd n puts a point on each end's tip."""
+    ce = L / 2 - re                                     # the +x end arc's centre on the axis
+    yc = W / 2 - rc                                     # the corner centres' distance off the axis
+    xc = ce + np.sqrt((re - rc) ** 2 - yc ** 2)         # ... and along it, where the corner meets the end arc
+    phi = np.degrees(np.arctan2(yc, xc - ce))           # the tangent point's direction from the end arc's centre
+    arc = lambda cx, cy, r, a0, a1: list(zip(cx + r * np.cos(np.radians(np.linspace(a0, a1, n))),
+                                             cy + r * np.sin(np.radians(np.linspace(a0, a1, n)))))
+    half = arc(xc, -yc, rc, -90, -phi) + arc(ce, 0, re, -phi, phi) + arc(xc, yc, rc, phi, 90)
+    pts = half + [(-x, -y) for x, y in half]
+    return np.array(pts + pts[:1])
+
+
+def arc_ends_tangent(W, re, rc):
+    """Where the end arc of arc_ends_xy() meets a corner, across the case (± this from the axis)."""
+    return (W / 2 - rc) * re / (re - rc)
+
+
+def outline_xy(outline):
+    """A view's outline: (x0, x1, y0, y1, r) for a rounded rectangle, or an (N, 2) point list."""
+    return rrect_xy(*outline) if len(outline) == 5 and np.ndim(outline[0]) == 0 else np.asarray(outline)
+
+
 def a4(y_top):
     """A4 portrait axes in mm, x -105..105, y_top at the top edge of the sheet."""
     W, H = 210.0, 297.0
@@ -61,11 +86,11 @@ def save(fig, path):
 
 def view(ax, txt, outline, holes=(), text=(), lines=(), at=(0, 0)):
     """One face of the case, 1:1, in its own mm with its origin at `at` on the sheet: the grey outline
-    (x0, x1, y0, y1, r), extra lines [(xs, ys, plot kwargs)], text [(x, y, s, txt kwargs)] and the cuts in red:
+    ((x0, x1, y0, y1, r) or a point list, see outline_xy()), extra lines [(xs, ys, plot kwargs)], text [(x, y, s, txt kwargs)] and the cuts in red:
     ('rect', x0, x1, y0, y1, r[, label]) with + at the corner drill centres (two + on the centre line when r = 0) and,
     with a label, the label and the size inside; ('circle', x, y, r) with + at the centre."""
     dx, dy = at
-    ax.plot(*(rrect_xy(*outline) + (dx, dy)).T, color='0.35', lw=0.6)
+    ax.plot(*(outline_xy(outline) + (dx, dy)).T, color='0.35', lw=0.6)
     for xs, ys, kw in lines:
         ax.plot(np.add(xs, dx), np.add(ys, dy), **kw)
     for x, y, s, kw in text:

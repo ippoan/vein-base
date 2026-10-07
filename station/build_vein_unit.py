@@ -23,10 +23,10 @@ Grove's G5 / G6.
 """
 import os, sys
 from shapes import ROOT, box, rbox, cyl_z, union, vein_parts, write_page
-from template import cut_template
+from template import cut_template, arc_ends_xy, arc_ends_tangent
 import cadquery as cq
 
-REV = 'vu13'
+REV = 'vu14'
 VARIANT = sys.argv[1] if len(sys.argv) > 1 else 'cs'
 VEIN = (-29.5, 29.5, -13.0, 13.0)                 # 59 × 26, centred (sic moves it, see there)
 
@@ -61,6 +61,7 @@ if VARIANT == 'cs':
     hole = cyl_x(0.0, 5.5, 2.6, -L / 2 - 1, -IX + 0.5)
     body = body.cut(hole)
     OUT_R = 3.0
+    OUT_SHAPE = OUT_R                             # seen from above: a plain rounded rectangle
     END = dict(side=-1, h=ZC, hole=('circle', 0.0, 5.5, 2.6), label='BODY, cable end (-x) wall, seen from outside')
     TOP = ('CABLE END (-x)', 'far end', 'side', 'side')
     TPL_NOTES = ['Cover: lay the sheet face up on the cover and line up the grey outline (75 x 35, R3).',
@@ -125,12 +126,16 @@ else:
     hole = box(IX - 0.5, L / 2 + 1, -4.6, 4.6, Z_BT - 0.4, Z_BT + 6.2)
     body = body.cut(hole)
     OUT_R = 12.5
+    # seen from above the case is not a rounded rectangle: the ends are R34 arcs joined to the straight sides by R12
+    # corners (Takachi's SIC5-9-2W.dxf, 2026-10-07; the sides run straight for 60.7, the drawing's 60.6). Only the
+    # paper template uses it (the 3D keeps the R12.5 box, which holds the case's material in the corners)
+    OUT_SHAPE = (34.0, 12.0)
     END = dict(side=1, h=ZC, hole=('rect', -4.6, 4.6, Z_BT - 0.4, Z_BT + 6.2),
                label='BODY, Grove end (+x) wall, seen from outside')
     TOP = ('module cable end (-x)', 'GROVE END (+x)', 'side (-y)', 'J1 side (+y): the window is off centre toward -y')
-    TPL_NOTES = ['Cover: lay the sheet face up on the cover and line up the grey outline (90 x 45, R12.5),',
+    TPL_NOTES = ['Cover: lay the sheet face up on the cover and line up the grey outline (90 x 45, R34 ends, R12 corners),',
                  'GROVE END to the right. The window is 3.5 off centre, away from J1: check the side before cutting.',
-                 'Body: the Grove socket hole in the end wall at the Grove end (the flat face between the dashed lines).',
+                 'Body: the Grove socket hole in the end wall at the Grove end (the R34 face between the dashed lines).',
                  'Red = cut through; + = drill centres (window corners: dia 4.4 or less; end hole: 2 holes, then file square).',
                  'Unit mm.']
     inner = [('plug', 'MX1.25 9P プラグ(付属ケーブル)', '#e7e1cf', plug),
@@ -180,15 +185,19 @@ NOTE = ('ケースはタカチ公式 STP を実測した数値からの簡略形
 
 def template(path, title, case, top, win, end, notes):
     """The two cuts on one A4 sheet, 1:1.
-    case = (L, W, R): the outline seen from above (origin = centre, x along the case)
+    case = (L, W, R): the outline seen from above (origin = centre, x along the case); R is the corner radius, or
+           (end arc radius, corner radius) for a case with arc ends (arc_ends_xy())
     top = (left label, right label, back label, front label) around the top view
     win = (x0, x1, y0, y1, r): the cover window
     end = dict(side=+1 / -1 (which x end), h=body height, hole=('rect', y0, y1, z0, z1) or ('circle', y, z, r),
                label=the text over the end view); z from the bottom of the body."""
     L, W, R = case
     x0, x1, y0, y1, r = win
+    shape = arc_ends_xy(L, W, *R) if isinstance(R, tuple) else (-L / 2, L / 2, -W / 2, W / 2, R)
+    # across the end wall, where its middle face (flat, or the end arc) gives way to the corners
+    face = arc_ends_tangent(W, *R) if isinstance(R, tuple) else W / 2 - R
     b = dict(fs=7, weight='bold')
-    cover = dict(outline=(-L / 2, L / 2, -W / 2, W / 2, R), holes=[('rect', *win, 'vein window')],
+    cover = dict(outline=shape, holes=[('rect', *win, 'vein window')],
                  lines=[([-L / 2 + 4, L / 2 - 4], [0, 0], dict(color='0.6', lw=0.3, ls='-.')),
                         ([0, 0], [-W / 2 + 4, W / 2 - 4], dict(color='0.6', lw=0.3, ls='-.'))],
                  text=[(-L / 2 - 2, 0, top[0], dict(ha='right', va='center', **b)),
@@ -211,8 +220,8 @@ def template(path, title, case, top, win, end, notes):
         cut = ('circle', s * hy, hz, hr)
         rows.append(f'end hole  dia {2 * hr:.1f}  centre {hz:.1f} from the bottom, centred')
     wall = dict(outline=(-W / 2, W / 2, 0, h, 0), at=(0, yb), holes=[cut],
-                lines=[([yy, yy], [0, h], dict(color='0.6', lw=0.3, ls='--')) for yy in (-(W / 2 - R), W / 2 - R)] +
-                      [([0, 0], [-2, h + 2], dict(color='0.6', lw=0.3, ls='-.'))],   # flat face between the corners
+                lines=[([yy, yy], [0, h], dict(color='0.6', lw=0.3, ls='--')) for yy in (-face, face)] +
+                      [([0, 0], [-2, h + 2], dict(color='0.6', lw=0.3, ls='-.'))],   # the end's face between the corners
                 text=[(-W / 2, h + 5, end['label'], dict(fs=8, weight='bold')),
                       (0, -5, 'BOTTOM of the body (desk side)', dict(ha='center', **b)),
                       (s * (W / 2 + 2), h / 2, '+y', dict(ha='left' if s > 0 else 'right', va='center', fs=6, color='0.4'))])
@@ -221,7 +230,7 @@ def template(path, title, case, top, win, end, notes):
 
 
 tpl = template(os.path.join(ROOT, 'station', f'vein_unit_{REV}_{VARIANT}_template_1to1.pdf'),
-               f'Vein Unit {REV} - Takachi {NAME} cutting template, 1:1', (L, W, OUT_R), TOP, VEIN_WIN, END, TPL_NOTES)
+               f'Vein Unit {REV} - Takachi {NAME} cutting template, 1:1', (L, W, OUT_SHAPE), TOP, VEIN_WIN, END, TPL_NOTES)
 write_page(f'vein-unit-{VARIANT}', f'指静脈 Unit {REV} {NAME}', parts, SUB + 'ドラッグで回転、ホイール/ピンチで拡大。', DIMS, NOTE,
            VEIN_Z0 + 15.0, downloads=[('加工の型紙(PDF、A4 原寸 — 拡大縮小なしで印刷、蓋の窓と端の穴)', tpl)],
            extra='<p>型紙を貼って手で開ける: 窓は角を ⌀4 でドリル → 糸のこ/ピラニアソーで線の内側を切る → やすりで線まで。'
