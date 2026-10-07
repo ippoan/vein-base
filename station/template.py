@@ -6,6 +6,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 RED = '#d0021b'
+# A pen traced round the inside of a paper stencil runs this far inside its edge, and the cut goes inside that again,
+# so a hole cut that way came out one size small (2026-10-07, the vein window). Templates for cutting by hand draw a
+# dashed stencil line this far outside each cut: cut the paper out along it and the traced line lands on the cut.
+STENCIL = 1.0
 
 
 def rrect_xy(x0, x1, y0, y1, r, n=16):
@@ -84,11 +88,12 @@ def save(fig, path):
     return path
 
 
-def view(ax, txt, outline, holes=(), text=(), lines=(), at=(0, 0)):
+def view(ax, txt, outline, holes=(), text=(), lines=(), at=(0, 0), stencil=0.0):
     """One face of the case, 1:1, in its own mm with its origin at `at` on the sheet: the grey outline
     ((x0, x1, y0, y1, r) or a point list, see outline_xy()), extra lines [(xs, ys, plot kwargs)], text [(x, y, s, txt kwargs)] and the cuts in red:
     ('rect', x0, x1, y0, y1, r[, label]) with + at the corner drill centres (two + on the centre line when r = 0) and,
-    with a label, the label and the size inside; ('circle', x, y, r) with + at the centre."""
+    with a label, the label and the size inside; ('circle', x, y, r) with + at the centre. stencil > 0: a dashed red
+    line that far outside each cut (see STENCIL)."""
     dx, dy = at
     ax.plot(*(outline_xy(outline) + (dx, dy)).T, color='0.35', lw=0.6)
     for xs, ys, kw in lines:
@@ -100,10 +105,17 @@ def view(ax, txt, outline, holes=(), text=(), lines=(), at=(0, 0)):
             x, y, r = g
             a = np.linspace(0, 2 * np.pi, 65)
             ax.plot(x + dx + r * np.cos(a), y + dy + r * np.sin(a), color=RED, lw=0.5)
+            if stencil:
+                rs = r + stencil
+                ax.plot(x + dx + rs * np.cos(a), y + dy + rs * np.sin(a), color=RED, lw=0.3, ls=(0, (8, 5)))
             cross(ax, x + dx, y + dy)
             continue
         x0, x1, y0, y1, r = g[:5]
         ax.plot(*(rrect_xy(x0, x1, y0, y1, r) + (dx, dy)).T, color=RED, lw=0.5)
+        if stencil:
+            s = stencil
+            ax.plot(*(rrect_xy(x0 - s, x1 + s, y0 - s, y1 + s, r + s if r else 0) + (dx, dy)).T, color=RED, lw=0.3,
+                    ls=(0, (8, 5)))
         if r:
             marks = ((x0 + r, y0 + r), (x1 - r, y0 + r), (x1 - r, y1 - r), (x0 + r, y1 - r))
         else:
@@ -130,12 +142,17 @@ def edge_row(label, cut, outline, names=('left', 'right', 'back', 'front')):
             (f'   drill at the + marks, dia {2 * r:.1f} or less' if r else ''))
 
 
-def cut_template(path, y_top, views, ruler_y, notes_y, notes, mono=()):
+def cut_template(path, y_top, views, ruler_y, notes_y, notes, mono=(), stencil=0.0):
     """A4 portrait, 1 mm on paper = 1 mm (y_top = the sheet's top edge in sheet mm, x -105..105): the faces to lay on
-    the case and cut by hand (views = [view() keyword arguments]), a 50 mm line to check the print scale and the notes."""
+    the case and cut by hand (views = [view() keyword arguments]), a 50 mm line to check the print scale and the notes.
+    stencil > 0 adds the dashed stencil lines (see STENCIL) and a note on them."""
     fig, ax, txt = a4(y_top)
     for v in views:
-        view(ax, txt, **v)
+        view(ax, txt, stencil=stencil, **v)
+    if stencil:
+        notes = list(notes) + ['', f'Dashed red = stencil line, {stencil:g} outside the cut. To cut the paper out and trace '
+                                   'inside it with a pen,', 'cut along the dashed line: the traced line then lands on or just outside the '
+                                   'solid red line (the real size). Cut to the solid line.']
     ruler(ax, txt, ruler_y)
     notes_block(ax, txt, notes_y, notes, mono=mono)
     return save(fig, path)

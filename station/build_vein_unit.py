@@ -23,10 +23,10 @@ Grove's G5 / G6.
 """
 import os, sys
 from shapes import ROOT, box, rbox, cyl_z, union, vein_parts, write_page
-from template import cut_template, arc_ends_xy, arc_ends_tangent
+from template import cut_template, arc_ends_xy, arc_ends_tangent, STENCIL
 import cadquery as cq
 
-REV = 'vu15'
+REV = 'vu16'
 VARIANT = sys.argv[1] if len(sys.argv) > 1 else 'cs'
 VEIN = (-29.5, 29.5, -13.0, 13.0)                 # 59 × 26, centred (sic moves it, see there)
 
@@ -230,7 +230,8 @@ def template(path, title, case, top, win, end, notes):
                       (0, -5, 'BOTTOM of the body (desk side)', dict(ha='center', **b)),
                       (s * (W / 2 + 2), h / 2, '+y', dict(ha='left' if s > 0 else 'right', va='center', fs=6, color='0.4'))])
     return cut_template(path, 60, [cover, wall], yb - 17, yb - 32,
-                        [title, 'PRINT AT 100% / ACTUAL SIZE (no "fit to page", no scaling).'] + notes + [''] + rows, rows)
+                        [title, 'PRINT AT 100% / ACTUAL SIZE (no "fit to page", no scaling).'] + notes + [''] + rows, rows,
+                        stencil=STENCIL)
 
 
 tpl = template(os.path.join(ROOT, 'station', f'vein_unit_{REV}_{VARIANT}_template_1to1.pdf'),
