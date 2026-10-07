@@ -19,7 +19,8 @@ the floor's inside face."""
 import os
 import cadquery as cq
 from shapes import (ROOT, box, rbox, union, vein_parts, vein_step_box, write_page, shell_and_lid, check, T_WALL,
-                    T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID, VEIN_GROOVE, ledge_rect)
+                    T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID, VEIN_GROOVE, ledge_notches,
+                    way_in)
 
 REV = 'vp3'
 # ---- shared with pcb/vein_unit_board/build_board.py p (u4): the outline, J1 and J2. Keep the two together ------------
@@ -90,31 +91,12 @@ tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts,
 assert ZBT + 5.7 + J1_ROOM < Z_IN - LEDGE_H, 'the cable over J1 reaches the lid ledges'
 
 
-def bb(o):
-    b = o.val().BoundingBox()
-    return (b.xmin, b.xmax, b.ymin, b.ymax)
-
-
-def overlap(a, b):
-    return a[0] < b[1] - 1e-6 and b[0] < a[1] - 1e-6 and a[2] < b[3] - 1e-6 and b[2] < a[3] - 1e-6
-
-
 # the way in from above: the board with its parts, then the module with its 9P plug, past the ledges (in xy). The
 # notches are the ledges + 0.3, out to the board's edge where less than 2.0 would be left; the cable is laid by hand
-ledge_xy = [ledge_rect(x, y, xi0, xi1, yi0, yi1) for x, y in screws]
-want = []
-for r in ledge_xy:
-    n = [r[0] - GAP, r[1] + GAP, r[2] - GAP, r[3] + GAP]
-    n = [BRD[0] if n[0] < BRD[0] + 2.0 else n[0], BRD[1] if n[1] > BRD[1] - 2.0 else n[1],
-         BRD[2] if n[2] < BRD[2] + 2.0 else n[2], BRD[3] if n[3] > BRD[3] - 2.0 else n[3]]
-    want.append(tuple(round(v, 3) for v in n))
-assert sorted(want) == sorted(NOTCHES), f'NOTCHES (here and in build_board.py p) should be {want}'
-for r in ledge_xy:
-    for name, o in (('board', board), ('J1', j1), ('Grove J2', grove), ('LDO', ldo), ('vein', vein), ('9P plug', plug9)):
-        sol = o.val().Solids() if name == 'board' else [o.val()]
-        hit = [s for s in sol if overlap(bb(cq.Workplane().add(s)), r)] if name != 'board' else \
-            ([1] if box(*r, ZB, ZBT).intersect(board).val().Volume() > 1e-6 else [])
-        assert not hit, f'{name} does not pass the ledge {r} on the way in'
+want = ledge_notches(screws, (xi0, xi1, yi0, yi1), BRD, GAP)
+assert want == sorted(NOTCHES), f'NOTCHES (here and in build_board.py p) should be {want}'
+way_in(screws, (xi0, xi1, yi0, yi1), [('J1', j1), ('Grove J2', grove), ('LDO', ldo), ('vein', vein), ('9P plug', plug9)],
+       board=board)
 bad = check((tray, lid), parts)
 vol = (tray.val().Volume() + lid.val().Volume()) / 1000
 print(REV, 'outer %.1f x %.1f x %.1f' % size, 'volume %.1f cm3' % vol, 'screws',
