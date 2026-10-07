@@ -26,11 +26,21 @@ jobs:
       - name: Read version
         run: echo "VER=$(cat VERSION)" >> "$GITHUB_ENV"
 
-      - name: Install KiCad 7 and CadQuery
-        run: |
-          sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends kicad kicad-footprints fonts-ipaexfont-gothic
-          pip install --break-system-packages cadquery numpy trimesh scipy rtree matplotlib
+      # KiCad 7 from apt, kept by cache-apt-pkgs-action (bump version to refetch the packages)
+      - name: Install KiCad 7
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.3
+        with:
+          packages: kicad kicad-footprints fonts-ipaexfont-gothic
+          version: 1
+
+      - name: Cache pip downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-cadquery-numpy-trimesh-scipy-rtree-matplotlib
+
+      - name: Install CadQuery
+        run: pip install --break-system-packages cadquery numpy trimesh scipy rtree matplotlib
 
       - name: Build PCB (KiCad)
         # both variants: the cup board (pcb/vein_base -> fab/) and the ATOMIC Proto Kit board (pcb/vein_base_atomic -> fab/atomic/)
@@ -169,8 +179,17 @@ jobs:
       - name: Build Vein Unit P (finger vein module alone in a printed box, MJF PA12) 3D preview + interference check
         run: python3 station/build_vein_unit_print.py
 
+      # parts that passed are remembered by the sha256 of their bytes (and of the checker and the limit): an unchanged
+      # STL is skipped, everything else is checked in parallel (tools/check_thickness.py --cache)
+      - name: Restore the wall thickness results
+        uses: actions/cache@v4
+        with:
+          path: .thickness-cache
+          key: thickness-${{ hashFiles('tools/check_thickness.py') }}-${{ github.run_id }}
+          restore-keys: thickness-${{ hashFiles('tools/check_thickness.py') }}-
+
       - name: Minimum wall thickness of the printed parts (DMM resin SLA needs 1.0 mm)
-        run: python3 tools/check_thickness.py 1.0 case/vein_base_v*_cup.stl station/vein_station_r*_shell.stl station/vein_station_r*_lid.stl station/vein_station_print_*.stl
+        run: python3 tools/check_thickness.py --cache .thickness-cache 1.0 case/vein_base_v*_cup.stl station/vein_station_r*_shell.stl station/vein_station_r*_lid.stl station/vein_station_print_*.stl
 
       - uses: actions/upload-artifact@v4
         with:
