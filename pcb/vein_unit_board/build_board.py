@@ -31,9 +31,9 @@ import os, sys
 import pcbnew
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-P = 'p' in sys.argv[1:]
-REV = 'u4' if P else 'u3'
-NAME = 'vein_unit_board_p' if P else 'vein_unit_board'
+UNIT_P = 'p' in sys.argv[1:]         # Vein Unit P (u4); not P, which is the coordinate helper below
+REV = 'u4' if UNIT_P else 'u3'
+NAME = 'vein_unit_board_p' if UNIT_P else 'vein_unit_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
 mm = pcbnew.FromMM
@@ -42,7 +42,7 @@ BX, BY, BR = 39.0, 19.5, 9.4         # outline: 78 × 39, R9.4 (the case inside 
 X0, X1, Y0, Y1 = -BX, BX, -BY, BY
 HOLES = [(sx * 33.0, sy * 12.5) for sx in (1, -1) for sy in (1, -1)]
 POS = {}                             # p: ref -> (x, y, rot), overriding the places below
-if P:
+if UNIT_P:
     # = BRD / J1 / J2 / U1 in station/build_vein_unit_print.py (keep them together); the module x -29.5..29.5,
     # y -13..13, its cable round the -x end and along the -y side over the board
     X0, X1, Y0, Y1, BR = -34.4, 39.8, -15.0, 19.6, 1.0
@@ -109,7 +109,7 @@ J2 = load('Connector_JST.pretty', 'JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizon
 wire(J2, {'1': 'TXD', '2': 'RXD', '3': '5V', '4': 'GND', 'MP': 'GND'})
 
 # ---- J1 vein cable, opening -x (footprint front = its +y, turned 270°); p: vertical, plugged from above
-if P:
+if UNIT_P:
     J1 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53398-0471_1x04-1MP_P1.25mm_Vertical', 'J1',
               'MX1.25-4P vertical (Molex 53398-0471)', 0, 0)
     wire(J1, {'1': '3V3', '2': 'GND', '3': 'RXD', '4': 'TXD', 'MP': 'GND'})
@@ -182,7 +182,7 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
     b.Add(t)
 
 
-if P:
+if UNIT_P:
     # RXD / TXD: down from J1's pads (on the module's side) to vias, along B.Cu under the module, vias before the
     # Grove's pads; J1-2 GND down to a via beside them. 3V3: J1-1 along +x to C2-1 -> U1-2. 5V: J2-3 along F.Cu
     # under the module, up at x = XP to C1-1 -> U1-3. GND is the pour on both layers.
@@ -245,7 +245,7 @@ for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
 pcbnew.ZONE_FILLER(b).Fill(b.Zones())
 b.Save(f'{NAME}.kicad_pcb')
 LIBS['MountingHole'] = FP + 'MountingHole.pretty'
-if P:      # one fp-lib-table for both boards: p (run after u3 in CI) also lists u3's J1 library
+if UNIT_P:    # one fp-lib-table for both boards: p (run after u3 in CI) also lists u3's J1 library
     LIBS['vein_base'] = '${KIPRJMOD}/../vein_base.pretty'
 with open('fp-lib-table', 'w') as f:
     f.write('(fp_lib_table\n  (version 7)\n')
