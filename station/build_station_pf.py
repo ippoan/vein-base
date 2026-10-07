@@ -40,11 +40,11 @@ no counterbore). The DB9 plug's push goes into the board and the bosses instead 
 import os
 import numpy as np
 from shapes import box, rbox, cyl_z, cyl_y, sym, quad, stl_at, vein_parts, write_page
-from template import cut_template, edge_row
+from template import cut_template, edge_row, STENCIL
 from drawing import face, sheet
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REV = 'pf10'
+REV = 'pf11'
 
 # ---- case (simplified from the measured STP) ---------------------------------------------------------------
 FLOOR, CEIL, TOP = -1.5, 33.0, 36.0
@@ -237,7 +237,8 @@ def top_template(name):
                      (0, y0c - 5.5, 'BACK  (back panel side, -y: USB-C / PORT.A / DB9 cables come out here)',
                       dict(ha='center', fs=8, weight='bold'))])
     # the case centre sits 107 below the top of the sheet
-    return cut_template(os.path.join(out, f'vein_station_{REV}_{name}.pdf'), 107, [top], -72, -86, notes, rows)
+    return cut_template(os.path.join(out, f'vein_station_{REV}_{name}.pdf'), 107, [top], -72, -86, notes, rows,
+                        stencil=STENCIL)
 
 
 downloads = [
