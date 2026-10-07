@@ -45,7 +45,7 @@ POS = {}                             # p: ref -> (x, y, rot), overriding the pla
 if P:
     # = BRD / J1 / J2 / U1 in station/build_vein_unit_print.py (keep them together); the module x -29.5..29.5,
     # y -13..13, its cable round the -x end and along the -y side over the board
-    X0, X1, Y0, Y1, BR = -34.5, 39.8, -15.0, 19.6, 1.0
+    X0, X1, Y0, Y1, BR = -31.5, 39.8, -15.0, 19.6, 1.0
     HOLES = []
     POS = {'J1': (-6.5, 16.0, 180),           # pads to -y (the module), the fitting nails' pads 0.6 off the +y edge
            'J2': (34.4, 0.0, 90),             # its back pads 0.3 clear of the module's +x end, front 1.0 in the edge
@@ -136,7 +136,7 @@ for i, (x, y) in enumerate(HOLES, 1):
 for fp in (J1, J2, U1, C1, C2):
     print(fp.GetReference(), {p.GetNumber(): pad(fp, p.GetNumber()) for p in fp.Pads()})
 
-# ---- outline: 78 × 39 rounded rectangle (p: 74.3 × 34.6, R1.0)
+# ---- outline: 78 × 39 rounded rectangle (p: 71.3 × 34.6, R1.0)
 
 
 def seg(a, c, layer=pcbnew.Edge_Cuts):
