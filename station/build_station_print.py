@@ -16,9 +16,9 @@ Coordinates: x across, y along (B: -y = the front, the user's side), z = 0 on th
 import os
 import numpy as np
 import cadquery as cq
-from shapes import ROOT, box, rbox, cyl_z, stl_tris, vein_parts, write_page
+from shapes import (ROOT, box, rbox, cyl_z, stl_tris, vein_parts, write_page, shell_and_lid, check, T_WALL, T_FLOOR,
+                    T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID)
 
-T_WALL, T_FLOOR, T_TOP = 1.8, 1.6, 2.2       # the lid 2.2: 1.25 left under a screw's countersink
 BOSS = 2.0                       # the board stands on printed bosses (M2 self-tapping screws)
 ZB = BOSS
 ZBT = ZB + 1.6                   # board top
@@ -26,8 +26,6 @@ Z_ATOM = ZBT + 2.5               # VoiceS3R bottom on the pin headers (plastic 2
 DB9_TOP, HOOD_TOP = ZBT + 12.5, ZBT + 13.25
 Z_IN_A = ZBT + 8.7 + 0.4         # A: the DB9 outside the lid (a notch), so the lid goes down to the cable's slack
 Z_IN_B = ZBT + 8.9 + 0.4         # B: the DB9 outside the lid (a notch), so the lid goes down to the cable's slack
-Z_IN = Z_IN_A                    # the concept being built (set by concept_a / concept_b)
-Z_TOP = Z_IN + T_TOP             # the lid's top face
 VEIN_Z0 = ZBT + 3.3              # A: the vein module on printed posts, 2.9 over the MAX3232 / caps under it
 VHB_B = 1.1                      # B: the vein module on the board with VHB (5952, 1.1), top 0.3 over the lid's
 FRAME_H, FRAME_T = 5.0, 1.6      # B: the lid's frame round the vein module, down from the lid's inside / thick
@@ -65,140 +63,6 @@ def db9(cx, y_face, facing):
     return body.union(flange), shell, plug
 
 
-# the lid's screws: an M2 countersunk tapping screw (M2 x 5) from the top into a ledge on the inside of a wall
-LEDGE_D, LEDGE_W, LEDGE_H = 3.9, 6.0, 4.5     # out from the wall, along it, down from the lid (M2 x 5)
-SCREW_IN = 1.9                                 # the screw's axis from the wall's inside face (in the wall's 1.8 + ledge)
-PILOT, CLEAR, CSK = 1.6, 2.3, 4.2              # tapping pilot, the lid's clearance hole, the countersink (90 deg)
-
-
-def ledges(xi0, xi1, yi0, yi1, avoid, lid_cuts=(), n_max=4):
-    """Screw ledges along the inside of the walls, clear of every part and wall cut in `avoid` (by bounding box,
-    0.3 margin): the free place nearest to each inside corner. Returns [(x, y, ledge box)]."""
-    z0 = Z_IN - LEDGE_H
-    bbs = []
-    for o in avoid:
-        bb = o.val().BoundingBox()
-        if bb.zmax > z0 - 0.15:
-            bbs.append((bb.xmin - 0.3, bb.xmax + 0.3, bb.ymin - 0.3, bb.ymax + 0.3))
-    m = CSK / 2 + 1.0                       # the countersink stays 1.0 off the lid's windows
-    wins = [(bb.xmin - m, bb.xmax + m, bb.ymin - m, bb.ymax + m) for bb in (o.val().BoundingBox() for o in lid_cuts)]
-    cands = []
-    for wall in ('x-', 'x+', 'y-', 'y+'):
-        lo, hi = (yi0, yi1) if wall[0] == 'x' else (xi0, xi1)
-        for t in np.arange(lo + LEDGE_W / 2 + 1.2, hi - LEDGE_W / 2 - 1.2 + 1e-6, 0.5):
-            if wall == 'x-':
-                r, (sx, sy) = (xi0, xi0 + LEDGE_D, t - LEDGE_W / 2, t + LEDGE_W / 2), (xi0 + SCREW_IN, t)
-            elif wall == 'x+':
-                r, (sx, sy) = (xi1 - LEDGE_D, xi1, t - LEDGE_W / 2, t + LEDGE_W / 2), (xi1 - SCREW_IN, t)
-            elif wall == 'y-':
-                r, (sx, sy) = (t - LEDGE_W / 2, t + LEDGE_W / 2, yi0, yi0 + LEDGE_D), (t, yi0 + SCREW_IN)
-            else:
-                r, (sx, sy) = (t - LEDGE_W / 2, t + LEDGE_W / 2, yi1 - LEDGE_D, yi1), (t, yi1 - SCREW_IN)
-            if all(r[1] <= a or r[0] >= b or r[3] <= c or r[2] >= d for a, b, c, d in bbs) and \
-                    all(sx <= a or sx >= b or sy <= c or sy >= d for a, b, c, d in wins):
-                cands.append((sx, sy, r))
-    picked = []
-    for cx, cy in ((xi0, yi0), (xi1, yi0), (xi0, yi1), (xi1, yi1)):
-        best = min(cands, key=lambda c: (c[0] - cx) ** 2 + (c[1] - cy) ** 2, default=None)
-        if best and all((best[0] - p[0]) ** 2 + (best[1] - p[1]) ** 2 > 15 ** 2 for p in picked):
-            picked.append(best)
-    while len(picked) < 3 and cands:      # too few near the corners: the free place farthest from those taken
-        far = max(cands, key=lambda c: min((c[0] - p[0]) ** 2 + (c[1] - p[1]) ** 2 for p in picked) if picked else 0)
-        if picked and min((far[0] - p[0]) ** 2 + (far[1] - p[1]) ** 2 for p in picked) <= 15 ** 2:
-            break
-        picked.append(far)
-    return [(x, y, box(*r, z0, Z_IN)) for x, y, r in picked[:n_max]]
-
-
-# stiffening ribs against warping (JLC3DP: nylon flat / framed / hollow parts shrink to the centre or warp along the
-# diagonal and the edges, ribs help): a grid on the floor under the board and on the underside of the lid
-RIB_W, RIB_PITCH = 1.2, 12.0
-RIB_FLOOR = 1.0                  # floor ribs' height: 1.0 under the board (on the bosses at ZB), clear of THT legs
-RIB_LID = 1.5                    # lid ribs' depth under the lid
-
-
-def rib_grid(xi0, xi1, yi0, yi1, z0, z1, avoid):
-    """Bars along x and y every RIB_PITCH inside (xi0..xi1, yi0..yi1), each cut over its whole width where it meets
-    an (x0, x1, y0, y1) in avoid (no slivers along a bar); stubs under 6 long dropped. Returns a solid or None."""
-    w = RIB_W / 2
-    bars = []
-    nx, ny = int((xi1 - xi0) // RIB_PITCH), int((yi1 - yi0) // RIB_PITCH)
-    for i in range(1, nx + 1):
-        x = xi0 + (xi1 - xi0) * i / (nx + 1)
-        b = box(x - w, x + w, yi0, yi1, z0, z1)
-        for x0, x1, y0, y1 in avoid:
-            if x0 < x + w and x1 > x - w:
-                b = b.cut(box(x - 1, x + 1, y0, y1, z0 - 1, z1 + 1))
-        bars += b.solids().vals()
-    for i in range(1, ny + 1):
-        y = yi0 + (yi1 - yi0) * i / (ny + 1)
-        b = box(xi0, xi1, y - w, y + w, z0, z1)
-        for x0, x1, y0, y1 in avoid:
-            if y0 < y + w and y1 > y - w:
-                b = b.cut(box(x0, x1, y - 1, y + 1, z0 - 1, z1 + 1))
-        bars += b.solids().vals()
-    keep = [v for v in bars if max(v.BoundingBox().xlen, v.BoundingBox().ylen) >= 6.0]
-    if not keep:
-        return None
-    r = cq.Workplane().add(keep[0])
-    for v in keep[1:]:
-        r = r.union(cq.Workplane().add(v))
-    return r
-
-
-def bb_xy(o, m):
-    bb = o.val().BoundingBox()
-    return (bb.xmin - m, bb.xmax + m, bb.ymin - m, bb.ymax + m)
-
-
-def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, keep_clear=(), tht=(), floor=(), rib_floor=RIB_FLOOR):
-    """A tray (floor + walls up to Z_IN) and a flat lid (Z_IN..Z_TOP) with a locating rim, all corners R3 outside,
-    screwed down through the lid into ledges on the walls, both stiffened with a grid of ribs. keep_clear: every part,
-    for the rim, the ledges and the lid's ribs; tht: the parts with legs through the board, floor: what stands on the
-    floor (bosses, posts), both kept clear by the floor's ribs."""
-    xo0, xo1, yo0, yo1 = xi0 - T_WALL, xi1 + T_WALL, yi0 - T_WALL, yi1 + T_WALL
-    tray = rbox(xo0, xo1, yo0, yo1, -T_FLOOR, Z_IN, 3.0).cut(rbox(xi0, xi1, yi0, yi1, 0, Z_IN + 1, 1.2))
-    lid = rbox(xo0, xo1, yo0, yo1, Z_IN, Z_TOP, 3.0)
-    screws = ledges(xi0, xi1, yi0, yi1, list(keep_clear) + list(wall_cuts), lid_cuts)
-    for x, y, led in screws:
-        tray = tray.union(led).cut(cyl_z(x, y, PILOT / 2, Z_IN - LEDGE_H + 1.2, Z_IN + 1))
-        cone = cq.Workplane().add(cq.Solid.makeCone(CLEAR / 2, CSK / 2, (CSK - CLEAR) / 2,
-                                                    cq.Vector(x, y, Z_TOP - (CSK - CLEAR) / 2), cq.Vector(0, 0, 1)))
-        lid = lid.cut(cyl_z(x, y, CLEAR / 2, Z_IN - 3, Z_TOP + 1)).cut(cone)
-    keep_clear = list(keep_clear) + [led for _, _, led in screws]
-    # the locating rim: bars along the walls, clear of the corners and of anything near the walls; stubs dropped
-    z0, z1, a, b = Z_IN - 2.0, Z_IN + 0.01, 0.2, 1.4
-    rim = (box(xi0 + a, xi0 + b, yi0 + 4, yi1 - 4, z0, z1).union(box(xi1 - b, xi1 - a, yi0 + 4, yi1 - 4, z0, z1))
-           .union(box(xi0 + 4, xi1 - 4, yi0 + a, yi0 + b, z0, z1)).union(box(xi0 + 4, xi1 - 4, yi1 - b, yi1 - a, z0, z1)))
-    for o in list(keep_clear) + list(wall_cuts):
-        bb = o.val().BoundingBox()
-        if bb.zmax < z0 or bb.zmin > z1:
-            continue
-        x0, x1, y0, y1 = bb.xmin - 1.0, bb.xmax + 1.0, bb.ymin - 1.0, bb.ymax + 1.0
-        # a cut that reaches into a bar takes the whole width of it (no slivers along the bar)
-        x0, x1 = (xi0 - 1 if x0 < xi0 + b + 0.5 else x0), (xi1 + 1 if x1 > xi1 - b - 0.5 else x1)
-        y0, y1 = (yi0 - 1 if y0 < yi0 + b + 0.5 else y0), (yi1 + 1 if y1 > yi1 - b - 0.5 else y1)
-        rim = rim.cut(box(x0, x1, y0, y1, z0 - 1, z1 + 1))
-    bars = [v for v in rim.solids().vals() if max(v.BoundingBox().xlen, v.BoundingBox().ylen) >= 6.0]
-    for v in bars:
-        lid = lid.union(cq.Workplane().add(v))
-    # ribs: on the floor clear of the THT legs under the board, under the lid clear of every part below it
-    fr = rib_grid(xi0, xi1, yi0, yi1, -0.01, rib_floor, [bb_xy(o, 1.0) for o in tht] + [bb_xy(cq.Workplane().add(v), 1.0) for o in floor for v in o.solids().vals()])
-    if fr is not None:
-        tray = tray.union(fr)
-    z0 = Z_IN - RIB_LID
-    lr = rib_grid(xi0 + 0.5, xi1 - 0.5, yi0 + 0.5, yi1 - 0.5, z0, Z_IN + 0.01,
-                  [bb_xy(o, 0.5) for o in keep_clear if o.val().BoundingBox().zmax > z0 - 0.3] +
-                  [bb_xy(o, 1.0) for o in lid_cuts])
-    if lr is not None:
-        lid = lid.union(lr)
-    for c in wall_cuts:
-        tray = tray.cut(c)
-    for c in lid_cuts:
-        lid = lid.cut(c)
-    return tray, lid, (xo1 - xo0, yo1 - yo0, Z_TOP + T_FLOOR), [(x, y) for x, y, _ in screws]
-
-
 def bosses(pts):
     s = None
     for x, y in pts:
@@ -207,28 +71,9 @@ def bosses(pts):
     return s
 
 
-def check(case_parts, parts):
-    bad = []
-    case = case_parts[0].union(case_parts[1])
-    for n, o in parts:
-        v = case.intersect(o).val().Volume()
-        if v > 0.01:
-            bad.append(f'case/{n} {v:.2f}')
-    for i, (na, a) in enumerate(parts):
-        for nb, b in parts[i + 1:]:
-            v = a.intersect(b).val().Volume()
-            if v > 0.01:
-                bad.append(f'{na}/{nb} {v:.2f}')
-    return bad
-
-
-def set_lid(z_in):
-    global Z_IN, Z_TOP
-    Z_IN, Z_TOP = z_in, z_in + T_TOP
-
 
 def concept_a():
-    set_lid(Z_IN_A)
+    Z_IN, Z_TOP = Z_IN_A, Z_IN_A + T_TOP
     # inside 35 wide; along y: DB9 | SW1 (-x) and J6 (+x), J3 behind them | vein module | VoiceS3R.
     # The board is pcb/station_board/build_board.py print_a: these places are its footprints (keep them together)
     xi0, xi1 = -17.5, 17.5                  # 35: room for the lid screws beside the VoiceS3R's window
@@ -281,7 +126,7 @@ def concept_a():
     parts = [('DB9', d9), ('DB9 plug', d9plug), ('MAX3232', u1), ('caps', caps), ('SW1', sw1), ('J3', j3),
              ('J3 plug', j3p), ('cable slack', slack), ('Grove', grove), ('Grove plug', groveplug), ('headers', hdr),
              ('VoiceS3R', atom_box), ('USB plug', usb), ('PORT.A plug', porta), ('vein', vbox)]
-    tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, [o for _, o in parts] + [d9shell],
+    tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, Z_IN, keep_clear=[o for _, o in parts] + [d9shell],
                                             tht=[d9, hdr], floor=[bs, frame])
     tray = tray.union(bs).union(frame)
     pcb_v = pcb
@@ -303,11 +148,11 @@ def concept_a():
         ('grove', 'J6 Grove とプラグ(+x の側面、DB9 の後ろ)', '#c47f0e', 1, 'mods', grove.union(groveplug)),
         ('usb', 'USB-C / PORT.A プラグ', '#24292d', 1, 'mods', usb.union(porta)),
         ('lid', '本体(床・壁・ボス・ふたのねじの受け、MJF PA12 で造形)', '#8fa09c', 0.9, 'lid', tray)]
-    return view, bad, size, tray, lid, screws
+    return view, bad, size, tray, lid, screws, Z_TOP
 
 
 def concept_b():
-    set_lid(Z_IN_B)
+    Z_IN, Z_TOP = Z_IN_B, Z_IN_B + T_TOP
     # two rows: the vein module on the left (finger end at the front, -y), the VoiceS3R front-right (USB-C to +x,
     # the reset to the front), the DB9 behind it on the +x wall (so the lid is cut along its +x edge only, no thin
     # strip at the back), MAX3232 / C1..C5 between the vein module and the DB9, J6 (+x) / SW1 / J3 along the back.
@@ -372,8 +217,8 @@ def concept_b():
     parts = [('DB9', d9), ('DB9 plug', d9plug), ('MAX3232', u1), ('caps', caps), ('SW1', sw1), ('J3', j3),
              ('J3 plug', j3p), ('cable slack', slack), ('Grove', grove), ('Grove plug', groveplug), ('headers', hdr),
              ('VoiceS3R', atom_box), ('USB plug', usb), ('PORT.A plug', porta), ('vein', vbox)]
-    tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts,
-                                            [o for _, o in parts] + [d9shell, frame, corner], tht=[d9, hdr], floor=[bs],
+    tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, Z_IN,
+                                            keep_clear=[o for _, o in parts] + [d9shell, frame, corner], tht=[d9, hdr], floor=[bs],
                                             rib_floor=ZB)
     # the -x and front walls beside the vein module up to the lid's top face (where the lid is cut away)
     hi = box(xo0, xi0, yo0, vein[3] + 0.2, Z_IN - 0.01, Z_TOP).union(box(xo0, ax - 12.3, yo0, yi0, Z_IN - 0.01, Z_TOP))
@@ -399,7 +244,7 @@ def concept_b():
         ('grove', 'J6 Grove とプラグ(右の側面、DB9 の後ろ。USB-C と同じ面)', '#c47f0e', 1, 'mods', grove.union(groveplug)),
         ('usb', 'USB-C / PORT.A プラグ(右の側面)', '#24292d', 1, 'mods', usb.union(porta)),
         ('lid', '本体(床・壁・ボス・ふたのねじの受け、MJF PA12 で造形)', '#8fa09c', 0.9, 'lid', tray)]
-    return view, bad, size, tray, lid, screws
+    return view, bad, size, tray, lid, screws, Z_TOP
 
 
 VEIN_NOTE = {'a': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフードはふたより上に出る)、中のケーブルの余りの上まで下げた。'
@@ -412,7 +257,7 @@ VEIN_NOTE = {'a': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフ
 out = os.path.join(ROOT, 'station')
 failed = []
 for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B 2 列(短い)')):
-    view, bad, size, tray, lid, screws = fn()
+    view, bad, size, tray, lid, screws, z_top = fn()
     vol = (tray.val().Volume() + lid.val().Volume()) / 1000
     print(key, 'outer %.1f x %.1f x %.1f' % size, 'volume %.1f cm3' % vol, 'screws', [(round(x, 1), round(y, 1)) for x, y in screws],
           'interference:', bad or 'none')
@@ -437,6 +282,6 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
                f'Vein Station を 3D 印刷の箱にする試作案 {title}。基板も作り直す前提で、部品の置き場所だけを決めた形。'
                'ドラッグで回転、ホイール/ピンチで拡大。', dims,
                '試作の形(配置だけ)。基板は未配線、部品は KiCad のフットプリント寸法からの簡略形状。VoiceS3R は M5Stack 公式 STL'
-               '(m5stack/M5_Hardware、MIT License)。単位 mm。', Z_TOP, stls)
+               '(m5stack/M5_Hardware、MIT License)。単位 mm。', z_top, stls)
 if failed:
     raise SystemExit('interference: ' + ', '.join(failed))

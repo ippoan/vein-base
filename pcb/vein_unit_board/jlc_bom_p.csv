@@ -1,0 +1,5 @@
+Comment,Designator,Footprint,LCSC Part #,Note
+Molex PicoBlade 53398-0471 (MX1.25 4P vertical SMD),J1,Molex_PicoBlade_53398-0471_1x04-1MP_P1.25mm_Vertical,C17617036,Top side; beside the module's +y side; 1 = 3V3 / 2 = GND / 3 = RXD / 4 = TXD (the 9P's 3..6 in order); JLC's footprint = KiCad's (pin 1 at -x of the footprint) with its origin 0.125 lower
+"JST PH 4P right angle SMD (takes the Grove plug), S4B-PH-SM4-TB(LF)(SN)",J2,JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal,C265102,Top side; opening faces the +x edge; the genuine JST part of the footprint (JLC found the HY2.0 C722729's pins off the pads on the station board); rotation 180 in the CPL as the station board (#96)
+XC6206P332MR-G (3.3 V LDO 200 mA SOT-23),U1,SOT-23,C5446,Basic part
+"1uF 50V X5R 0603 (Samsung CL10A105KB8NNNC)","C1,C2",C_0603_1608Metric,C15849,Basic part; C1 = 5 V in / C2 = 3.3 V out
