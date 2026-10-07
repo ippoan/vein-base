@@ -222,6 +222,10 @@ def xy(v):
     return (round(pcbnew.ToMM(v.x) - OX, 3), round(OY - pcbnew.ToMM(v.y), 3))
 
 
+def pad(fp, num):
+    return xy([p for p in fp.Pads() if p.GetNumber() == num][0].GetPosition())
+
+
 b = pcbnew.BOARD()
 ds = b.GetDesignSettings()
 ds.SetCopperLayerCount(2)
@@ -380,6 +384,13 @@ elif PRINT_B:
     text('J3 1:3V3 2:G 3:RX 4:TX', -15.5, -31.5, size=0.8)  # in front of J3 (clear of P1)
     text('NFC: G38 G39 5V G', AX, AY + 13.3, size=0.8)
     text(f'vein-station board {REV} (print B)', -6.0, 16.0, layer=pcbnew.B_SilkS)   # (inside the left part's back edge)
+    # a '1' beside pin 1 of each cable's 4P (the footprints' pin-1 mark is a short line the part hides): one pitch out
+    # of the row; checked against the pads and the vias after import_ses (the .ses brings the vias)
+    PIN1 = []
+    for fp in (J3, J6):
+        p1, p2 = pad(fp, '1'), pad(fp, '2')
+        PIN1.append((fp.GetReference(), 2 * p1[0] - p2[0], 2 * p1[1] - p2[1]))
+        text('1', *PIN1[-1][1:], size=0.8)
 elif SW130:
     text('VoiceS3R: USB-C / PORT.A this way', 0.0, Y1 - 1.2, size=0.8)
     text('SW1 12=PASS 34=CROSS', 3.0, -44.3, size=0.8, rot=90)
@@ -406,6 +417,36 @@ if 'dsn' in sys.argv[1:]:
     print('dsn', pcbnew.ExportSpecctraDSN(b, f'{NAME}.dsn'))
 else:
     import_ses(b, nets, SES)
+    # print_b's pin-1 '1's: JLC trims silk off pads, and check_drc.py ignores silk_over_copper, so the 0.8 box must
+    # clear every pad (+0.1) and via (0.6 + 0.1), and lie 0.3 inside the outline and off the posts' cut-outs (the same
+    # values as pcb/vein_unit_board/build_board.py)
+    for ref, x, y in (PIN1 if PRINT_B else []):
+        tx0, tx1, ty0, ty1 = x - 0.4, x + 0.4, y - 0.4, y + 0.4
+        for f in b.GetFootprints():
+            for q in f.Pads():
+                bb = q.GetBoundingBox()
+                qx0, qx1 = pcbnew.ToMM(bb.GetLeft()) - OX - 0.1, pcbnew.ToMM(bb.GetRight()) - OX + 0.1
+                qy0, qy1 = OY - pcbnew.ToMM(bb.GetBottom()) - 0.1, OY - pcbnew.ToMM(bb.GetTop()) + 0.1
+                assert tx1 <= qx0 or qx1 <= tx0 or ty1 <= qy0 or qy1 <= ty0, \
+                    f"{ref} '1' at {(x, y)} on {f.GetReference()} pad {q.GetNumber()}"
+        for v in b.GetTracks():
+            if v.Type() == pcbnew.PCB_VIA_T:
+                (vx, vy), r = xy(v.GetPosition()), (0.6 + 0.1) / 2
+                dx, dy = max(tx0 - vx, 0, vx - tx1), max(ty0 - vy, 0, vy - ty1)
+                assert dx * dx + dy * dy >= r * r, f"{ref} '1' at {(x, y)} on the via at {(vx, vy)}"
+        # the outline (rectilinear): the box + 0.3 has its corners inside and no corner of the outline in it
+        ex0, ex1, ey0, ey1 = tx0 - 0.3, tx1 + 0.3, ty0 - 0.3, ty1 + 0.3
+        for cx, cy in ((ex0, ey0), (ex1, ey0), (ex1, ey1), (ex0, ey1)):
+            inside = False
+            for (a, c), (d, e) in zip(EDGE, EDGE[1:] + EDGE[:1]):
+                if (c > cy) != (e > cy) and cx < a + (cy - c) * (d - a) / (e - c):
+                    inside = not inside
+            assert inside, f"{ref} '1' at {(x, y)} off the outline"
+        assert not [1 for a, c in EDGE if ex0 < a < ex1 and ey0 < c < ey1], f"{ref} '1' at {(x, y)} over the outline"
+        for px, py, r in POST_CUTS:
+            dx, dy = max(tx0 - px, 0, px - tx1), max(ty0 - py, 0, py - ty1)
+            assert dx * dx + dy * dy >= (r + 0.3) ** 2, f"{ref} '1' at {(x, y)} on the cut-out at {(px, py)}"
+        print(ref, "'1' at", (round(x, 3), round(y, 3)))
     b.Save(f'{NAME}.kicad_pcb')
     # GND pour on B.Cu over the whole board (stitches the GND tracks, shields the RS232 lines).
     # Filled on a reloaded board: the filler crashes on a board built in memory without a connectivity graph.
