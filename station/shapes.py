@@ -157,11 +157,13 @@ def ledge_rect(x, y, xi0, xi1, yi0, yi1):
     return (x - LEDGE_W / 2, x + LEDGE_W / 2, yi1 - LEDGE_D, yi1)
 
 
-def ledges(xi0, xi1, yi0, yi1, z_in, avoid, lid_cuts=(), n_max=4):
+def ledges(xi0, xi1, yi0, yi1, z_in, avoid, lid_cuts=(), n_max=4, avoid_xy=()):
     """Screw ledges along the inside of the walls, clear of every part and wall cut in `avoid` (by bounding box,
-    0.3 margin): the free place nearest to each inside corner. Returns [(x, y, ledge box)]."""
+    0.3 margin; only what reaches up to the ledges) and of every (x0, x1, y0, y1) in avoid_xy whatever its height
+    (what goes in from above past the ledges, see way_in()): the free place nearest to each inside corner.
+    Returns [(x, y, ledge box)]."""
     z0 = z_in - LEDGE_H
-    bbs = []
+    bbs = [(a - 0.3, b + 0.3, c - 0.3, d + 0.3) for a, b, c, d in avoid_xy]
     for o in avoid:
         bb = o.val().BoundingBox()
         if bb.zmax > z0 - 0.15:
@@ -238,16 +240,17 @@ def bb_xy(o, m):
 
 
 def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, z_in, t_top=T_TOP, keep_clear=(), tht=(), floor=(),
-                  rib_floor=RIB_FLOOR):
+                  rib_floor=RIB_FLOOR, ledge_avoid=()):
     """A tray (floor + walls up to z_in) and a flat lid (z_in..z_in + t_top) with a locating rim, all corners R3 outside,
     screwed down through the lid into ledges on the walls, both stiffened with a grid of ribs. keep_clear: every part,
     for the rim, the ledges and the lid's ribs; tht: the parts with legs through the board, floor: what stands on the
-    floor (bosses, posts), both kept clear by the floor's ribs."""
+    floor (bosses, posts), both kept clear by the floor's ribs; ledge_avoid: (x0, x1, y0, y1) the ledges keep off in
+    xy whatever the height (ledges(avoid_xy))."""
     Z_IN, Z_TOP = z_in, z_in + t_top
     xo0, xo1, yo0, yo1 = xi0 - T_WALL, xi1 + T_WALL, yi0 - T_WALL, yi1 + T_WALL
     tray = rbox(xo0, xo1, yo0, yo1, -T_FLOOR, Z_IN, 3.0).cut(rbox(xi0, xi1, yi0, yi1, 0, Z_IN + 1, 1.2))
     lid = rbox(xo0, xo1, yo0, yo1, Z_IN, Z_TOP, 3.0)
-    screws = ledges(xi0, xi1, yi0, yi1, Z_IN, list(keep_clear) + list(wall_cuts), lid_cuts)
+    screws = ledges(xi0, xi1, yi0, yi1, Z_IN, list(keep_clear) + list(wall_cuts), lid_cuts, avoid_xy=ledge_avoid)
     for x, y, led in screws:
         tray = tray.union(led).cut(cyl_z(x, y, PILOT / 2, Z_IN - LEDGE_H + 1.2, Z_IN + 1))
         cone = cq.Workplane().add(cq.Solid.makeCone(CLEAR / 2, CSK / 2, (CSK - CLEAR) / 2,
@@ -300,3 +303,41 @@ def check(case_parts, parts):
             if v > 0.01:
                 bad.append(f'{na}/{nb} {v:.2f}')
     return bad
+
+
+def xy_box(o):
+    """(x0, x1, y0, y1) of a solid's bounding box."""
+    b = o.val().BoundingBox()
+    return (b.xmin, b.xmax, b.ymin, b.ymax)
+
+
+def xy_overlap(a, b):
+    return a[0] < b[1] - 1e-6 and b[0] < a[1] - 1e-6 and a[2] < b[3] - 1e-6 and b[2] < a[3] - 1e-6
+
+
+def ledge_notches(screws, inner, brd, gap=0.3, keep=2.0):
+    """The notches a board (x0, x1, y0, y1) needs to drop in past the lid screws' ledges: each ledge (ledge_rect) + gap,
+    out to the board's edge where less than `keep` would be left beside it. inner = the tray's inside (x0, x1, y0, y1)."""
+    out = []
+    for x, y in screws:
+        r = ledge_rect(x, y, *inner)
+        n = [r[0] - gap, r[1] + gap, r[2] - gap, r[3] + gap]
+        n = [brd[0] if n[0] < brd[0] + keep else n[0], brd[1] if n[1] > brd[1] - keep else n[1],
+             brd[2] if n[2] < brd[2] + keep else n[2], brd[3] if n[3] > brd[3] - keep else n[3]]
+        out.append(tuple(round(v, 3) for v in n))
+    return sorted(out)
+
+
+def way_in(screws, inner, items, board=None):
+    """Assert that everything that goes in from above (items = [(name, solid or (x0, x1, y0, y1))], and the board, a
+    solid, by its volume) passes the ledges in xy. Returns the ledges' (x0, x1, y0, y1)."""
+    rects = [ledge_rect(x, y, *inner) for x, y in screws]
+    for r in rects:
+        for name, o in items:
+            sol = [o] if isinstance(o, tuple) else [xy_box(cq.Workplane().add(v)) for v in o.val().Solids()]
+            assert not any(xy_overlap(q, r) for q in sol), f'{name} does not pass the ledge {r} on the way in'
+        if board is not None:
+            bb = board.val().BoundingBox()
+            v = box(*r, bb.zmin - 1, bb.zmax + 1).intersect(board).val().Volume()
+            assert v < 1e-6, f'the board does not pass the ledge {r} on the way in'
+    return rects

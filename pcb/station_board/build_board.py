@@ -55,12 +55,14 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  together with concept_a() in station/build_station_print.py. Its BOM is jlc_bom_sw130.csv (same parts).
                  -> station_board_print_a.kicad_pcb, routed on its own (station_board_print_a.ses)
   'print_b'      the same parts again for the printed case B (concept_b() in station/build_station_print.py, two rows,
-                 55.3 x 79.1 x 16.7): the vein module front-left (VHB straight on the board), the VoiceS3R front-right
-                 on J1 / J2 turned a quarter (USB-C / PORT.A to +x), its corner of the board running out to the case's
-                 outer faces (the case has no walls round it, like an M5Stack ATOMIC base), SW1 behind it, MAX3232 /
-                 C1..C5 behind J6, J6 on the +x edge (opening +x), the DB9 on the +y edge (the back wall, facing +y) and J3
-                 behind the vein socket (opening +y). M2 self-tapping screws into floor bosses (H1..H4). Board coords =
-                 case coords; keep the numbers together with concept_b(). BOM jlc_bom_sw130.csv.
+                 53.6 x 69.4 x 25.9 with the VoiceS3R): the vein module on the left on a stand 3.9 over the board (the
+                 case's shelf along -x and bar under its front end, which the board keeps clear of, and a post through
+                 P1) under a hood screwed up from under the floor, with MAX3232 / C1..C5 / R1 / R2, SW1 (hood and
+                 module off to set) and J3 (under its socket end, opening +y) under it; on the right, out to the box's
+                 front, +x and back faces with no walls nor lid: the DB9 at the front (mating face +x), the VoiceS3R
+                 behind it on J1 / J2 turned a quarter (USB-C / PORT.A to +x), J6 on the back edge behind that (opening
+                 +y). M2 self-tapping screws into floor bosses (H1..H4). Board coords = case coords; keep the numbers
+                 together with concept_b(). BOM jlc_bom_sw130.csv.
                  -> station_board_print_b.kicad_pcb, routed on its own (station_board_print_b.ses)
 
 Routing comes from freerouting and is kept in station_board[_sw75].ses (the board file itself is always generated):
@@ -86,6 +88,7 @@ NAME = ('station_board_pf' if PF else 'station_board_sw75' if SW75 else 'station
 SES = f'{NAME}.ses' if SW75 or SW130 or PRINT_A or PRINT_B else 'station_board.ses'
 HOLE_FP = 'MountingHole_3.2mm_M3'     # print_a: M2
 POSTS = []                           # print_a: 4.3 holes (M4 footprints) for the case's posts under the vein module
+POST_FP = 'MountingHole_4.3mm_M4'    # print_b: M3 (3.2)
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
 mm = pcbnew.FromMM
@@ -155,26 +158,29 @@ if PRINT_A:
            'C4': (3.2, -7.0, 0), 'C5': (6.4, -7.0, 0),
            'R1': (9.5, -12.0, 90), 'R2': (9.5, -8.5, 90)}
 if PRINT_B:
-    # case B (concept_b): inside x -28..21.2, y -37..38.5; the VoiceS3R (0.5 beside the vein module) and its corner
-    # (x >= -1.0, y <= -14.8) run out to the outer faces (23.0 / -38.8); the DB9 on the +x edge behind it
-    X0, X1, Y0, Y1 = -27.7, 21.15, -36.7, 38.2       # the DB9 flange on X1, 0.05 off the +x wall
-    AX, AY = 11.0, -26.8                            # VoiceS3R centre, USB-C / PORT.A to +x (flush with the case's +x)
-    DB9_ROT, DB9_BY = 90, 1.5                       # mating face to +x, behind the VoiceS3R (flange y -13.9..16.9)
+    # case B (concept_b): the vein module (x -27.5..-1.5, y -36.5..22.5) on a stand 3.9 over the board (the case's
+    # shelf along -x and bar under its front end, which the board keeps clear of, and a post through P1) under a hood
+    # screwed up from under the floor; the right column (x 0.9..24.0, out to the box's front, +x and back faces): the
+    # DB9 at the front (mating face +x), the VoiceS3R behind it, J6 on the back edge behind that (opening +y)
+    X0, X1, Y0, Y1 = -25.2, 24.0, -33.7, 27.7       # (Y0 / Y1: under the vein module / the right column's back edge)
+    AX, AY = 12.0, 2.0                              # VoiceS3R centre, USB-C / PORT.A to +x (flush with the box's +x)
+    DB9_ROT, DB9_BY = 90, -25.7                     # mating face to +x at the front of the right column
     HOLE_FP = 'MountingHole_2.2mm_M2'
-    HOLES = [(-24.7, 35.2), (12.0, 34.5), (5.0, 15.0), (3.5, -27.0)]   # H4 under the VoiceS3R (2.5 below it)
-    EDGE = [(X0, Y0), (AX - 12.0, Y0), (AX - 12.0, AY - 12.0), (AX + 11.0, AY - 12.0), (AX + 12.0, AY - 11.0),
-            (AX + 12.0, AY + 12.0), (X1, AY + 12.0), (X1, Y1), (X0, Y1)]
+    HOLES = [(-22.5, -10.0), (-5.0, 13.0), (4.5, AY - 3.5), (4.5, DB9_BY)]   # H3 under the VoiceS3R (3.5 below it)
+    POSTS = [(-5.0, 19.5)]                                              # the stand's post under the vein module
+    POST_FP = 'MountingHole_3.2mm_M3'            # (an M4's courtyard ran into J6's and H2's)
+    EDGE = [(X0, Y0), (0.9, Y0), (0.9, -41.7), (X1, -41.7), (X1, Y1), (0.9, Y1), (0.9, 22.5), (X0, 22.5)]
     # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
     POS = {'J1': (AX - 2.54, AY + 7.62, 90), 'J2': (AX, AY - 7.62, 90),
-           # between the vein module and the DB9's body (x -1.3..10.6)
-           'C1': (2.0, -11.0, 0), 'C2': (2.0, -8.8, 0), 'C3': (2.0, -6.6, 0), 'C4': (2.0, -4.4, 0),
-           'C5': (2.0, -2.2, 0),
-           'U1': (4.0, 6.0, 0),
-           'R1': (5.0, 20.0, 0), 'R2': (5.0, 22.0, 0),
-           'J6': (X1 - 4.45 - 2.3, 25.0, 90),   # behind the DB9 on the +x edge, opening +x
-           'SW1': (2.0, 30.0, 90),              # behind the vein module's +x end (lid off to set)
-           'J3': (-18.2, 26.4, 180)}            # behind the vein socket (y 22.5), opening +y
-
+           # under the vein module (3.9 under it): MAX3232 with C1..C5 on its -x, R1 / R2, SW1 (hood and module off
+           # to set), J3 under its socket end, opening +y, its plug under the module too
+           'U1': (-6.0, -12.0, 0),
+           'C1': (-12.0, -7.5, 90), 'C2': (-12.0, -10.5, 90), 'C3': (-12.0, -13.5, 90), 'C4': (-12.0, -16.5, 90),
+           'C5': (-12.0, -19.5, 90),
+           'R1': (-5.0, 5.0, 90), 'R2': (-5.0, 8.0, 90),
+           'SW1': (-14.5, 0.0, 90),
+           'J3': (-14.5, 12.9, 180),
+           'J6': (AX, Y1 - 4.45 - 2.3, 180)}    # behind the VoiceS3R on the back edge, opening +y
 def P(x, y):
     return pcbnew.VECTOR2I(mm(OX + x), mm(OY - y))
 
@@ -275,7 +281,7 @@ if SW130 or PRINT_A or PRINT_B:
 for i, (x, y) in enumerate(HOLES, 1):
     load('MountingHole.pretty', HOLE_FP, f'H{i}', 'M3 spacer' if HOLE_FP.endswith('M3') else 'M2 screw', x, y)
 for i, (x, y) in enumerate(POSTS, 1):
-    load('MountingHole.pretty', 'MountingHole_4.3mm_M4', f'P{i}', 'post (vein module)', x, y)
+    load('MountingHole.pretty', POST_FP, f'P{i}', 'post (vein module)', x, y)
 for x, y, r in [(x, y, 1.3) for x, y in BOSSES]:
     c = pcbnew.PCB_SHAPE(b); c.SetShape(pcbnew.SHAPE_T_CIRCLE)
     c.SetCenter(P(x, y)); c.SetEnd(P(x + r, y)); c.SetLayer(pcbnew.Edge_Cuts); c.SetWidth(mm(0.1)); b.Add(c)
@@ -319,13 +325,13 @@ elif PRINT_A:
 elif PRINT_B:
     text('VoiceS3R: USB-C / PORT.A this way', AX + 10.8, AY, size=0.8, rot=90)
     SW1.Reference().SetVisible(False)
-    text('SW1 1+2 ON = PASS', 2.0, 36.5, size=0.8)    # behind SW1 (it is under its own pads)
-    text('3+4 ON = CROSS', 2.0, 37.6, size=0.8)
+    text('SW1 1+2 ON = PASS', -14.5, 4.4, size=0.8)   # behind SW1 (under the vein module: take it off to set)
+    text('3+4 ON = CROSS', -14.5, 5.5, size=0.8)
     for fp in b.GetFootprints():                       # the holes' references sat on the labels
         if fp.GetReference().startswith('H'):
             fp.Reference().SetVisible(False)
-    text('J3 vein: 1RX 2TX 3V3 4G', -18.2, 20.6, size=0.8)
-    text('NFC: G38 G39 5V G', 15.6, 37.5, size=0.8)
+    text('J3 vein: 1RX 2TX 3V3 4G', -14.5, 8.0, size=0.8)
+    text('NFC: G38 G39 5V G', AX, AY + 13.3, size=0.8)
     text(f'vein-station board {REV} (print B)', 0.0, 20.0, layer=pcbnew.B_SilkS)
 elif SW130:
     text('VoiceS3R: USB-C / PORT.A this way', 0.0, Y1 - 1.2, size=0.8)
