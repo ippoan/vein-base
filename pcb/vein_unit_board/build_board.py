@@ -230,6 +230,33 @@ if UNIT_P:
     # 21 characters at 0.8, turned: y -6.7..6.7 at x 27.4, in front of the Grove's pads
     text('J2 1:TX 2:RX 3:5V 4:G', 27.4, 0.0, size=0.8, rot=90)
     text(f'vein unit board {REV}', 0, 0, layer=pcbnew.B_SilkS)
+    # a '1' beside pin 1 of each cable's 4P (the footprints' pin-1 mark is a short line the part hides): one pitch out
+    # of the row. JLC trims silk off pads, and check_drc.py ignores silk_over_copper, so check it here: the 0.8 box
+    # clear of every pad (+0.1) and via (0.6 + 0.1), and 0.3 inside the outline (pcb/station_board/build_board.py
+    # checks its 4Ps with the same values)
+    for fp in (J1, J2):
+        p1, p2 = pad(fp, '1'), pad(fp, '2')
+        x, y = 2 * p1[0] - p2[0], 2 * p1[1] - p2[1]
+        text('1', x, y, size=0.8)
+        tx0, tx1, ty0, ty1 = x - 0.4, x + 0.4, y - 0.4, y + 0.4
+        for f in b.GetFootprints():
+            for q in f.Pads():
+                bb = q.GetBoundingBox()
+                qx0, qx1 = pcbnew.ToMM(bb.GetLeft()) - OX - 0.1, pcbnew.ToMM(bb.GetRight()) - OX + 0.1
+                qy0, qy1 = OY - pcbnew.ToMM(bb.GetBottom()) - 0.1, OY - pcbnew.ToMM(bb.GetTop()) + 0.1
+                assert tx1 <= qx0 or qx1 <= tx0 or ty1 <= qy0 or qy1 <= ty0, \
+                    f"{fp.GetReference()} '1' at {(x, y)} on {f.GetReference()} pad {q.GetNumber()}"
+        for v in b.GetTracks():
+            if v.Type() == pcbnew.PCB_VIA_T:
+                (vx, vy), r = xy(v.GetPosition()), (0.6 + 0.1) / 2
+                dx, dy = max(tx0 - vx, 0, vx - tx1), max(ty0 - vy, 0, vy - ty1)
+                assert dx * dx + dy * dy >= r * r, f"{fp.GetReference()} '1' at {(x, y)} on the via at {(vx, vy)}"
+        assert X0 + 0.3 <= tx0 and tx1 <= X1 - 0.3 and Y0 + 0.3 <= ty0 and ty1 <= Y1 - 0.3, \
+            f"{fp.GetReference()} '1' at {(x, y)} off the outline"
+        for nx0, nx1, ny0, ny1 in NOTCHES:
+            assert tx1 <= nx0 - 0.3 or nx1 + 0.3 <= tx0 or ty1 <= ny0 - 0.3 or ny1 + 0.3 <= ty0, \
+                f"{fp.GetReference()} '1' at {(x, y)} in a notch"
+        print(fp.GetReference(), "'1' at", (round(x, 3), round(y, 3)))
 else:
     XV = j1['1'][0] + 1.85                # the two vias beside J1
     XE = j2['1'][0] - 3.0                 # the two vias before the Grove
