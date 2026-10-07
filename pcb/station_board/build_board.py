@@ -62,7 +62,10 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  front, +x and back faces with no walls nor lid: the VoiceS3R at the front on J1 / J2 turned a quarter
                  (USB-C / PORT.A to +x, its reset on the box's front face), the DB9 behind it (mating face +x, pulled in
                  to -x, the board cut before its face), J6 on the back edge behind that (opening +y). M2 self-tapping
-                 screws into floor bosses (H1 / H2); the hood's +x screws (H3 / H4) clamp the board too. Board coords = case coords; keep the numbers
+                 no screws of its own: the hood's +x screws (H1 / H2) clamp it to the floor's bosses, the VoiceS3R's
+                 screw post (a shoulder under the board, through a round cut-out at the VoiceS3R's centre up to its
+                 M2 hole) holds it under J1 / J2, the floor's ribs carry it under the vein module and the stand's posts
+                 through P1 and the cut-outs place it sideways. Board coords = case coords; keep the numbers
                  together with concept_b(). BOM jlc_bom_sw130.csv.
                  -> station_board_print_b.kicad_pcb, routed on its own (station_board_print_b.ses)
 
@@ -111,8 +114,9 @@ if PF:
 POS = {}                     # sw75: ref -> (x, y, rot), overriding the places below
 DB9_ROT, DB9_BY = 0, 0.0     # sw75: the DB9 turned to the +x edge at y = DB9_BY
 DB9_X = None                 # print_b: its flange's x when not on X1
-POST_CUTS = []               # print_b: round cut-outs (Edge.Cuts, r 1.6) for the case's posts, no courtyard
+POST_CUTS = []               # print_b: round cut-outs (Edge.Cuts, x, y, r) for the case's posts, no courtyard
 J3_NETS = {'1': 'G5', '2': 'G6', '3': '3V3', '4': 'GND', 'MP': 'GND'}   # print_b: as Vein Unit P's J1 (see there)
+PRE_ROUTE = {}               # print_b: locked F.Cu tracks drawn here (net: points), not in the .ses
 EDGE = None                  # sw75: the outline as a polygon
 NOTCH = None                 # sw75: (x0, x1, depth) cut into the -y edge for the vein cable (not in the DSN)
 if SW75:
@@ -164,7 +168,7 @@ if PRINT_A:
 if PRINT_B:
     # case B (concept_b): the vein module (x -27.5..-1.5, y -36.5..22.5) on a stand 3.9 over the board (the case's
     # shelf along -x and bar under its front end, which the board keeps clear of, and a post through P1) under a hood
-    # screwed up from under the floor (its +x screws H4 / H5 through the board, which it clamps to the floor's bosses);
+    # screwed up from under the floor (its +x screws H1 / H2 through the board, which it clamps to the floor's bosses);
     # the right column (x -4.2..24.0, out to the box's front, +x and back faces, under the hood's +x columns): the
     # VoiceS3R at the front (its reset on the box's front face), the DB9 behind it (mating face +x, pulled in to -x,
     # the board cut before its face), J6 on the back edge behind that (opening +y)
@@ -173,11 +177,12 @@ if PRINT_B:
                                                     # USB-C / PORT.A to +x (flush with the box's +x)
     DB9_ROT, DB9_BY = 90, -2.0                      # mating face to +x, behind the VoiceS3R
     HOLE_FP = 'MountingHole_2.2mm_M2'
-    HOLES = [(-22.5, -10.0), (4.5, AY - 3.5),                          # H2 under the VoiceS3R (3.5 below it)
-             (-2.1, -38.6), (-2.1, 24.6)]                               # H3 / H4: the hood's screws through the board
-    POST_CUTS = [(-22.8, 7.5), (-5.0, 12.0)]                            # posts under the window, beside SW1 / J3 (the
+    HOLES = [(-2.1, -38.6), (-2.1, 24.6)]                               # H1 / H2: the hood's screws through the board
+    POST_CUTS = [(-22.8, 7.5, 1.6), (-5.0, 12.0, 1.6),                  # posts under the window, beside SW1 / J3 (the
                                                     # middle, between them, has 3.5 where a 3.2 cut-out + 0.5 a side needs 4.2)
-    DB9_X = 10.9                                  # pulled in to -x (its courtyard clear of H3's), mating face still +x
+                 (AX, AY, 2.4)]                     # the VoiceS3R's screw post (4.3) up to its M2 hole at its centre
+                                                    # (concept_b's ATOM_POST_R + 0.25)
+    DB9_X = 10.9                                  # pulled in to -x (its courtyard clear of H1's), mating face still +x
     # J3 in the order of Vein Unit P's J1 (1 = 3V3, 2 = GND, 3 = RXD <- G5, 4 = TXD -> G6): the module's 9P 3..6 in
     # order, so one straight cable (the same as Vein Unit P's) serves both; no wires cross
     J3_NETS = {'1': '3V3', '2': 'GND', '3': 'G5', '4': 'G6', 'MP': 'GND'}
@@ -196,6 +201,13 @@ if PRINT_B:
            'SW1': (-14.5, 0.0, 90),
            'J3': (-14.5, 12.9, 180),
            'J6': (AX, Y1 - 4.45 - 2.3, 180)}    # behind the VoiceS3R on the back edge, opening +y
+    # J2's G39 / G38 / 5V out to -x under the VoiceS3R's screw post (its cut-out takes the middle between J1 and J2):
+    # left to freerouting, its first routes walled G39's pad in and no pass got it out
+    PRE_ROUTE = {'G39': [(AX, AY - 7.62), (AX - 6.0, AY - 7.62), (AX - 7.0, AY - 6.62), (AX - 7.0, AY + 3.7)],
+                 'G38': [(AX + 2.54, AY - 7.62), (AX + 2.54, AY - 5.7), (AX - 5.0, AY - 5.7), (AX - 6.0, AY - 4.7),
+                         (AX - 6.0, AY + 3.7)],
+                 '5V': [(AX + 5.08, AY - 7.62), (AX + 5.08, AY - 4.3), (AX - 4.0, AY - 4.3), (AX - 4.8, AY - 3.5),
+                        (AX - 4.8, AY + 3.7)]}
 def P(x, y):
     return pcbnew.VECTOR2I(mm(OX + x), mm(OY - y))
 
@@ -297,7 +309,7 @@ for i, (x, y) in enumerate(HOLES, 1):
     load('MountingHole.pretty', HOLE_FP, f'H{i}', 'M3 spacer' if HOLE_FP.endswith('M3') else 'M2 screw', x, y)
 for i, (x, y) in enumerate(POSTS, 1):
     load('MountingHole.pretty', POST_FP, f'P{i}', 'post (vein module)', x, y)
-for x, y in POST_CUTS:     # keep tracks and vias 0.5 off the cut-outs (freerouting does not see an inner edge's clearance)
+for x, y, r in POST_CUTS:  # keep tracks and vias 0.5 off the cut-outs (freerouting does not see an inner edge's clearance)
     import math
     ra = pcbnew.ZONE(b); ra.SetIsRuleArea(True); ra.SetDoNotAllowTracks(True); ra.SetDoNotAllowVias(True)
     ra.SetDoNotAllowPads(False); ra.SetDoNotAllowCopperPour(False); ra.SetDoNotAllowFootprints(False)
@@ -305,9 +317,9 @@ for x, y in POST_CUTS:     # keep tracks and vias 0.5 off the cut-outs (freerout
     ol = ra.Outline(); ol.NewOutline()
     for i in range(24):
         a = 2 * math.pi * i / 24
-        ol.Append(mm(OX + x + 2.3 * math.cos(a)), mm(OY - y - 2.3 * math.sin(a)))
+        ol.Append(mm(OX + x + (r + 0.7) * math.cos(a)), mm(OY - y - (r + 0.7) * math.sin(a)))
     b.Add(ra)
-for x, y, r in [(x, y, 1.3) for x, y in BOSSES] + [(x, y, 1.6) for x, y in POST_CUTS]:
+for x, y, r in [(x, y, 1.3) for x, y in BOSSES] + POST_CUTS:
     c = pcbnew.PCB_SHAPE(b); c.SetShape(pcbnew.SHAPE_T_CIRCLE)
     c.SetCenter(P(x, y)); c.SetEnd(P(x + r, y)); c.SetLayer(pcbnew.Edge_Cuts); c.SetWidth(mm(0.1)); b.Add(c)
 
@@ -375,6 +387,10 @@ else:
     text(f'vein-station board {REV}b' + (' (PF13-4-9)' if PF else ''), -20.0, 18.0, layer=pcbnew.B_SilkS)
 
 os.chdir(HERE)
+for n, pts in PRE_ROUTE.items():     # locked: freerouting routes round them and leaves them out of the .ses
+    for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+        t = pcbnew.PCB_TRACK(b); t.SetStart(P(x1, y1)); t.SetEnd(P(x2, y2)); t.SetWidth(mm(0.3))
+        t.SetLayer(pcbnew.F_Cu); t.SetNet(nets[n]); t.SetLocked(True); b.Add(t)
 if 'dsn' in sys.argv[1:]:
     b.Save(f'{NAME}.kicad_pcb')
     print('dsn', pcbnew.ExportSpecctraDSN(b, f'{NAME}.dsn'))
