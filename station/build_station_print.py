@@ -35,7 +35,7 @@ HC_B = 3.9                       # B: the vein module on a stand this high over 
 RECESS_B = 0.7                   # B: the lid's recess for the vein module's body (as Vein Unit P)
 Z_IN_B = ZBT + HC_B + 15.0 - 2.0 - RECESS_B   # B: the module's step face on the recess's floor, its top 0.5 proud
 VEIN_Z0 = ZBT + 3.3              # A: the vein module on printed posts, 2.9 over the MAX3232 / caps under it
-COL_B = 1.8                      # B: the hood's screw columns (half of 3.6 square): M2 x 5 countersunk tapping screws up
+COL_B = 1.8                      # B: the hood's screw columns (half of 3.6 square): M2 x 10 countersunk tapping screws up
 T_FLOOR_B = 2.0                  # B: the floor (1.6 left 0.65 over the screws' countersinks, 0.95 deep)
 COL_IN_B = 1.3                   # from under the floor; their axes this far in from the walls' inside (3.1 from the outside:
                                  # the countersink, r 2.1, stays 1.0 inside the floor's edge)
@@ -188,10 +188,12 @@ def concept_b():
     xo1 = ax + 12.0                                       # its +x face is the box's
     DY = yo0 + 0.6 + 15.4                                 # the DB9 at the front (courtyard on the board), face to +x
     ay = DY + 15.4 + 0.3 + 12.0                           # the VoiceS3R just behind the DB9's flange
-    # the board: under the vein module (clear of the stand and the hood's columns) and the right column out to the
-    # box's front, +x and back faces
-    bx0, by0, bxr, byv = vx0 + 2.0 + 0.3, vy0 + 2.5 + 0.3, hx1 + 1.2, vy1
-    pcb = box(bx0, bxr, by0, byv, ZB, ZBT).union(box(bxr, xo1, yo0, yo1, ZB, ZBT))
+    # the board: under the vein module (clear of the stand) and, from under the hood's two +x columns on, out to the
+    # box's front, +x and back faces: those two columns stand on it and their screws go through it (the hood clamps
+    # the board to the floor's bosses there); the -x columns go down to the floor beside the stand
+    thru = cols[1::2]
+    bx0, by0, bxs, byv = vx0 + 2.0 + 0.3, vy0 + 2.5 + 0.3, hx1 - 2 * COL_B - 0.3, vy1
+    pcb = box(bx0, bxs, by0, byv, ZB, ZBT).union(box(bxs, xo1, yo0, yo1, ZB, ZBT))
     bx1 = xo1
     d9 = on(bx1 - 10.5, bx1 - 0.5, DY - 15.0, DY + 15.0, 0, 12.5).union(on(bx1 - 1.0, bx1, DY - 15.4, DY + 15.4, 0, 12.5))
     d9shell = on(bx1, bx1 + 6.0, DY - 8.5, DY + 8.5, 2.0, 10.5)
@@ -220,16 +222,19 @@ def concept_b():
     porta = box(ax + 12, ax + 12 + 10.2, ay - 4.9, ay + 4.9, Z_ATOM_B, Z_ATOM_B + 4)
     vbox = vein_step_box((-(vy1 - vy0) / 2, (vy1 - vy0) / 2, -vw / 2, vw / 2), vz0).rotate((0, 0, 0), (0, 0, 1), -90) \
         .translate(((vein[0] + vein[1]) / 2, (vy0 + vy1) / 2, 0))      # the socket end (the step box's -x) to +y
-    holes = [(-22.5, -10.0), (-5.0, 13.0), (4.5, ay - 3.5), (4.5, DY)]  # the board's M2 screws (H1..H4)
+    holes = [(-22.5, -10.0), (4.5, ay - 3.5), (4.5, DY)]  # the board's M2 screws (H1..H3; the hood holds it by H4 / H5)
     bs = bosses(holes)
-    post_xy = (vx1 - 3.5, vy1 - 3.0)                      # the stand's post, through the board's 3.2 hole P1
+    # bosses under the board for the hood's through screws (H4 / H5), drilled through
+    for x, y in thru:
+        bs = bs.union(cyl_z(x, y, 2.5, 0, ZB).cut(cyl_z(x, y, CLEAR / 2, -1, ZB + 1)))
+    post_xy = (vx1 - 3.5, vy1 - 4.0)                      # the stand's post, through the board's 3.2 hole P1
     colz = None
     for x, y in cols:
         c = box(x - COL_B - 0.3, x + COL_B + 0.3, y - COL_B - 0.3, y + COL_B + 0.3, -1, Z_IN)
         colz = c if colz is None else colz.union(c)
     # the stand (the body): a shelf along -x under the module's -x side, a bar under its front end, a post
     shelf = box(hx0, vx0 + 2.0, hy0, vy1, 0, vz0).cut(colz)
-    bar = box(hx0, vx1, hy0, vy0 + 2.5, 0, vz0).cut(colz)
+    bar = box(hx0, bxs - 0.3, hy0, vy0 + 2.5, 0, vz0).cut(colz)
     post = cyl_z(*post_xy, 1.3, 0, vz0)
     stand = shelf.union(bar).union(post)
     # the body: the floor (R3 corners), the bosses, the stand, floor ribs up to the board (clear of the THT legs, the
@@ -237,8 +242,8 @@ def concept_b():
     body = rbox(xo0, xo1, yo0, yo1, -T_FLOOR_B, 0, 3.0).union(bs).union(stand)
     tht = [bb for o in (d9, hdr) for bb in [xy_box(o)]]
     av = [(a - 1.0, b + 1.0, c - 1.0, d + 1.0) for a, b, c, d in tht] + \
-        [(x - 3.5, x + 3.5, y - 3.5, y + 3.5) for x, y in holes + [post_xy]]
-    for r in ((bx0, bxr, by0, byv), (bxr, xo1, yo0, yo1)):
+        [(x - 3.5, x + 3.5, y - 3.5, y + 3.5) for x, y in holes + thru + [post_xy]]
+    for r in ((bx0, bxs, by0, byv), (bxs, xo1, yo0, yo1)):
         g = rib_grid(r[0] + 0.5, r[1] - 0.5, r[2] + 0.5, r[3] - 0.5, -0.01, ZB, av)
         if g is not None:
             body = body.union(g)
@@ -247,14 +252,16 @@ def concept_b():
     top = rbox(xo0, hx1, yo0, yo1, Z_IN, Z_TOP, 3.0)
     win = (vein[0] + 0.25, vein[1] - 0.25, vein[2] + 0.75, vein[3] - 0.75)
     rec = (vein[0] - 0.2, vein[1] + 0.2, vein[2] - 0.2, vein[3] + 0.2)
-    walls = box(xo0, hx0, yo0, yo1, 0, Z_IN + 0.01).union(box(xo0, hx1, yo0, hy0, 0, Z_IN + 0.01)) \
-        .union(box(xo0, hx1, hy1, yo1, 0, Z_IN + 0.01))
+    # (the front and back walls stand on the board where it runs under them)
+    walls = box(xo0, hx0, yo0, yo1, 0, Z_IN + 0.01).union(box(xo0, bxs, yo0, hy0, 0, Z_IN + 0.01)) \
+        .union(box(xo0, bxs, hy1, yo1, 0, Z_IN + 0.01)).union(box(bxs, hx1, yo0, hy0, ZBT, Z_IN + 0.01)) \
+        .union(box(bxs, hx1, hy1, yo1, ZBT, Z_IN + 0.01))
     hood = top.union(walls.intersect(rbox(xo0, hx1, yo0, yo1, -1, Z_IN + 1, 3.0)))
     for x, y in cols:
-        hood = hood.union(box(x - COL_B, x + COL_B, y - COL_B, y + COL_B, 0, Z_IN + 0.01))
+        hood = hood.union(box(x - COL_B, x + COL_B, y - COL_B, y + COL_B, ZBT if (x, y) in thru else 0, Z_IN + 0.01))
     hood = hood.cut(rbox(*win, Z_IN - 3, Z_TOP + 1, 1.75)).cut(rbox(*rec, Z_IN - 3, Z_IN + RECESS_B, 2.2))
     for x, y in cols:
-        hood = hood.cut(cyl_z(x, y, PILOT / 2, -1, 4.5))                 # M2 x 5: 3.4 into the column
+        hood = hood.cut(cyl_z(x, y, PILOT / 2, -1, 9.0))   # M2 x 10, its tip 8.0 up: 4.4 into the board's columns
         cone = cq.Workplane().add(cq.Solid.makeCone(CSK / 2, CLEAR / 2, (CSK - CLEAR) / 2,
                                                     cq.Vector(x, y, -T_FLOOR_B), cq.Vector(0, 0, 1)))
         body = body.cut(cyl_z(x, y, CLEAR / 2, -T_FLOOR_B - 1, 1)).cut(cone)
@@ -262,6 +269,8 @@ def concept_b():
     for x, y in holes:
         pcb_v = pcb_v.cut(cyl_z(x, y, 1.1, ZB - 1, ZBT + 1))
     pcb_v = pcb_v.cut(cyl_z(*post_xy, 1.6, ZB - 1, ZBT + 1))
+    for x, y in thru:
+        pcb_v = pcb_v.cut(cyl_z(x, y, 1.1, ZB - 1, ZBT + 1))
     parts = [('DB9', d9), ('DB9 plug', d9plug), ('MAX3232', u1), ('caps', caps), ('SW1', sw1), ('J3', j3),
              ('J3 plug', j3p), ('cable slack', slack), ('9P plug + wires', plug9), ('Grove', grove),
              ('Grove plug', groveplug), ('headers', hdr), ('VoiceS3R', atom_box), ('USB plug', usb),
@@ -284,9 +293,9 @@ def concept_b():
     vp = [(k, l, c, o, g, s.rotate(((vein[0] + vein[1]) / 2, (vy0 + vy1) / 2, 0),
                                    ((vein[0] + vein[1]) / 2, (vy0 + vy1) / 2, 1), 180))
           for k, l, c, o, g, s in vein_parts(vein, vz0, along_y=True, step=True)]
-    view = [('shell', 'フード(指静脈の窓と裏の座ぐり、−x・手前・奥の壁と四隅の柱。床の裏から M2 皿ねじ 4 本で締める)', '#2b2f33', 0.45, 'shell', hood),
+    view = [('shell', 'フード(指静脈の窓と裏の座ぐり、−x・手前・奥の壁と四隅の柱。床の裏から M2 × 10 の皿ねじ 4 本で締める。+x 側の 2 本は基板を通して基板も挟む)', '#2b2f33', 0.45, 'shell', hood),
             ('atom', 'VoiceS3R(公式 CAD、USB-C は右 +x、リセットは手前。壁もふたも無く、右の面は箱の面とそろう。ピンヘッダーだけで支える。基板から 3.5 浮く)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'x+', Z_ATOM_B))] + vp + [
-        ('pcb', 'station 基板 print_b(build_board.py print_b。指静脈の台とフードの柱を避けた形)', '#1f7a4d', 1, 'mods', pcb_v),
+        ('pcb', 'station 基板 print_b(build_board.py print_b。指静脈の台を避けた形。フードの +x 側の柱 2 本の下を通り、そのねじで床のボスとフードの間に挟まる)', '#1f7a4d', 1, 'mods', pcb_v),
         ('stand', f'指静脈の台(本体と一体: 左の棚・手前の横木・右奥の柱。基板から {HC_B:g} 上)', '#8fa09c', 1, 'mods', stand),
         ('db9', 'DB9 オス(右の列の手前、口は右)', '#8a8f96', 1, 'mods', d9.union(d9shell)), ('db9plug', 'DB9 プラグ', '#5c6166', 1, 'mods', d9plug),
         ('u1', 'MAX3232・C1〜C5・R1 / R2(指静脈の下)', '#202326', 1, 'mods', u1.union(caps)),
@@ -305,7 +314,7 @@ VEIN_NOTE = {'a': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフ
              'b': f'指静脈は本体と一体の台(左の棚・手前の横木・右奥の柱、基板から {HC_B:g} 上)に載せ、フードで押さえる(指静脈 Unit P と同じ段差受け)。'
                   f'上の段(57 × 25、高さ 2.0)がフードの窓 57.5 × 25.5 を通り、下の胴(59 × 26)がフードの裏の座ぐり(深さ {RECESS_B:g}、59.4 × 26.4)に当たって、'
                   f'上面はフードから {HC_B + 15.0 - (Z_IN_B + T_TOP - ZBT):.1f} 出る。フードは指静脈の部分だけで、−x・手前・奥の壁と四隅の角柱を持ち、'
-                  f'床の裏から M2 × 5 の皿タッピングねじ 4 本で締める(上面にねじ頭なし。床 {T_FLOOR_B:g} は皿穴の上に 1.0 残すため)。'
+                  f'床の裏から M2 × 10 の皿タッピングねじ 4 本で締める(上面にねじ頭なし。床 {T_FLOOR_B:g} は皿穴の上に 1.0 残すため)。+x 側の 2 本は床のボスと基板を通り、基板もフードと床の間に挟む。'
                   '指静脈の下に J3・SW1・MAX3232・C1〜C5・R1 / R2 とケーブルの余り(SW1 はフードと指静脈を外して切り替える)。'
                   '右の列(手前の DB9、その後ろの VoiceS3R、奥の縁の J6)は壁もふたも無く、基板と床だけ。VoiceS3R はピンヘッダーだけで支え、基板から 3.5 浮く(実測)'}
 RIB_SHOWN = {'a': RIB_FLOOR, 'b': ZB}   # the floor ribs' height in the table (B: up to the board)
@@ -338,7 +347,7 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
         dims[1] = ('体積', '%.1f cm³(本体 + フード)' % vol)
         dims[2] = ('肉厚', f'床 {T_FLOOR_B}、フードの壁 {T_WALL}・天板 {T_TOP}(MJF PA12)')
         dims[3] = ('リブ', f'反り止め(JLC3DP の勧め)。幅 {RIB_W:g} を約 {RIB_PITCH:g} おきの格子に、床(高さ {RIB_SHOWN[key]:g}、基板の下。THT の足とボスを避ける)')
-        dims[6] = ('フード', f'M2 皿タッピングねじ × {len(screws)} 本(M2 × 5)を床の裏から上へ、フードの四隅の角柱(3.6 角)に締める: '
+        dims[6] = ('フード', f'M2 皿タッピングねじ × {len(screws)} 本(M2 × 10)を床の裏から上へ、フードの四隅の角柱(3.6 角)に締める(+x 側の 2 本は基板を通す): '
                            + ', '.join(f'({x:.1f}, {y:.1f})' for x, y in screws))
     write_page(f'station-print-{key}', f'案 {title}', view,
                f'Vein Station を 3D 印刷の箱にする試作案 {title}。基板も作り直す前提で、部品の置き場所だけを決めた形。'

@@ -160,16 +160,18 @@ if PRINT_A:
 if PRINT_B:
     # case B (concept_b): the vein module (x -27.5..-1.5, y -36.5..22.5) on a stand 3.9 over the board (the case's
     # shelf along -x and bar under its front end, which the board keeps clear of, and a post through P1) under a hood
-    # screwed up from under the floor; the right column (x 0.9..24.0, out to the box's front, +x and back faces): the
+    # screwed up from under the floor (its +x screws H4 / H5 through the board, which it clamps to the floor's bosses);
+    # the right column (x -4.2..24.0, out to the box's front, +x and back faces, under the hood's +x columns): the
     # DB9 at the front (mating face +x), the VoiceS3R behind it, J6 on the back edge behind that (opening +y)
     X0, X1, Y0, Y1 = -25.2, 24.0, -33.7, 27.7       # (Y0 / Y1: under the vein module / the right column's back edge)
     AX, AY = 12.0, 2.0                              # VoiceS3R centre, USB-C / PORT.A to +x (flush with the box's +x)
     DB9_ROT, DB9_BY = 90, -25.7                     # mating face to +x at the front of the right column
     HOLE_FP = 'MountingHole_2.2mm_M2'
-    HOLES = [(-22.5, -10.0), (-5.0, 13.0), (4.5, AY - 3.5), (4.5, DB9_BY)]   # H3 under the VoiceS3R (3.5 below it)
-    POSTS = [(-5.0, 19.5)]                                              # the stand's post under the vein module
+    HOLES = [(-22.5, -10.0), (4.5, AY - 3.5), (4.5, DB9_BY),             # H2 under the VoiceS3R (3.5 below it)
+             (-2.1, -38.6), (-2.1, 24.6)]                               # H4 / H5: the hood's screws through the board
+    POSTS = [(-5.0, 18.5)]                                              # the stand's post under the vein module
     POST_FP = 'MountingHole_3.2mm_M3'            # (an M4's courtyard ran into J6's and H2's)
-    EDGE = [(X0, Y0), (0.9, Y0), (0.9, -41.7), (X1, -41.7), (X1, Y1), (0.9, Y1), (0.9, 22.5), (X0, 22.5)]
+    EDGE = [(X0, Y0), (-4.2, Y0), (-4.2, -41.7), (X1, -41.7), (X1, Y1), (-4.2, Y1), (-4.2, 22.5), (X0, 22.5)]
     # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
     POS = {'J1': (AX - 2.54, AY + 7.62, 90), 'J2': (AX, AY - 7.62, 90),
            # under the vein module (3.9 under it): MAX3232 with C1..C5 on its -x, R1 / R2, SW1 (hood and module off
