@@ -24,7 +24,7 @@ from shapes import (ROOT, box, rbox, union, vein_parts, vein_step_box, write_pag
 REV = 'vp1'
 # ---- shared with pcb/vein_unit_board/build_board.py p (u4): the outline, J1 and J2. Keep the two together ------------
 VEIN = (-29.5, 29.5, -13.0, 13.0)        # the module, the 9P end at -x
-BRD = (-31.5, 39.8, -15.0, 19.6)         # the board u4 (x0, x1, y0, y1), corners R1.0
+BRD = (-34.4, 39.8, -15.0, 19.6)         # the board u4 (x0, x1, y0, y1), corners R1.0
 J1 = (-6.5, 16.0)                        # MX1.25 4P vertical (53398-0471), footprint origin, turned 180 (pads to -y)
 J2 = (34.4, 0.0)                         # Grove (JST S4B-PH-SM4-TB), footprint origin, turned 90 (opening +x)
 U1 = (8.0, 16.4)                         # LDO (SOT-23), C1 / C2 3.0 either side on x
@@ -37,8 +37,8 @@ CABLE_END = 2.0
 CABLE_SIDE = 2.0
 CABLE_TO_J1 = 27.0
 # END_EXTRA: the -x end longer than the cable needs, for lid screw ledges in the -x corners (a countersink stays 1.0 off
-# the lid's recess, so that takes 2.9): 0 = the smallest box, three ledges
-END_EXTRA = 0.0
+# the lid's recess, so that takes 2.9; 0 = the smallest box with three ledges, 75.5 long)
+END_EXTRA = 2.9
 assert abs(BRD[0] - (VEIN[0] - CABLE_END - END_EXTRA)) < 1e-9 and abs(BRD[2] - (VEIN[2] - CABLE_SIDE)) < 1e-9, 'BRD against the cable'
 xi0, xi1, yi0, yi1 = BRD[0] - GAP, BRD[1] + GAP, BRD[2] - GAP, BRD[3] + GAP
 ZB = RIB_FLOOR                           # the board on the floor's ribs
