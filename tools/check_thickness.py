@@ -1,5 +1,10 @@
 """Fail if a printed part has a wall thinner than the minimum (DMM.make resin SLA: 1.0 mm).
-Usage: python3 tools/check_thickness.py MIN_MM part.stl [part.stl ...]
+Usage: python3 tools/check_thickness.py [--cache DIR] [--jobs N] MIN_MM part.stl [part.stl ...]
+
+--cache DIR: a part that passed leaves a file in DIR named after sha256(the STL's bytes, this script's bytes, MIN_MM);
+the next run skips a part whose key is there (the same bytes passed the same check before) and says so. A failure is
+never cached. CadQuery writes the same STL bytes for the same model, so unchanged parts hit (CI keeps DIR with
+actions/cache). --jobs N: parts checked in parallel (default 4; one part takes under 0.9 GB, a CI runner has 16 GB).
 
 The interference checks only see collisions, so thin walls went unnoticed until DMM cancelled orders
 (0020433268, 0020433323). A ray straight through each face is not enough: v0.8 had 0.5 mm between a counterbore
@@ -7,7 +12,8 @@ rim and a boss root diagonally, and the ray said 1.25. So: sample the surface de
 face away from each other across the material (dot < -0.3), keep pairs whose midpoint is inside the solid, and
 take the smallest distance.
 """
-import sys
+import argparse, hashlib, os, sys
+from multiprocessing import Pool
 import numpy as np
 import trimesh
 from scipy.spatial import cKDTree
@@ -44,16 +50,47 @@ def thin_spots(path, limit):
     return d[inside], mid[inside]
 
 
+def check(job):
+    """(report lines, passed) for one part."""
+    path, limit = job
+    d, mid = thin_spots(path, limit)
+    lines = [f'{path}: min {d.min():.2f} mm' if len(d) else f'{path}: OK (no wall under {limit} mm)']
+    ok = True
+    for i in np.argsort(d)[:5]:
+        if d[i] < limit - 0.02:          # sampling noise on a wall of exactly `limit`
+            lines.append(f'  THIN {d[i]:.2f} mm at x={mid[i][0]:.1f} y={mid[i][1]:.1f} z={mid[i][2]:.1f}')
+            ok = False
+    return lines, ok
+
+
+def cache_key(path, limit):
+    h = hashlib.sha256()
+    for part in (open(path, 'rb').read(), open(__file__, 'rb').read(), repr(limit).encode()):
+        h.update(hashlib.sha256(part).digest())
+    return h.hexdigest()
+
+
 def main():
-    limit = float(sys.argv[1])
-    bad = []
-    for path in sys.argv[2:]:
-        d, mid = thin_spots(path, limit)
-        print(f'{path}: min {d.min():.2f} mm' if len(d) else f'{path}: OK (no wall under {limit} mm)')
-        for i in np.argsort(d)[:5]:
-            if d[i] < limit - 0.02:          # sampling noise on a wall of exactly `limit`
-                print(f'  THIN {d[i]:.2f} mm at x={mid[i][0]:.1f} y={mid[i][1]:.1f} z={mid[i][2]:.1f}')
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--cache', help='directory of passed parts (see the docstring)')
+    ap.add_argument('--jobs', type=int, default=4)
+    ap.add_argument('limit', type=float)
+    ap.add_argument('paths', nargs='+')
+    a = ap.parse_args()
+    limit, bad, todo = a.limit, [], []
+    for path in a.paths:
+        if a.cache and os.path.exists(os.path.join(a.cache, cache_key(path, limit))):
+            print(f'{path}: OK (cached: the same bytes passed before)')
+        else:
+            todo.append(path)
+    with Pool(max(1, min(a.jobs, len(todo)))) as pool:
+        for path, (lines, ok) in zip(todo, pool.imap(check, [(p, limit) for p in todo])):
+            print('\n'.join(lines), flush=True)
+            if not ok:
                 bad.append(path)
+            elif a.cache:
+                os.makedirs(a.cache, exist_ok=True)
+                open(os.path.join(a.cache, cache_key(path, limit)), 'w').write(path + '\n')
     if bad:
         raise SystemExit(f'walls thinner than {limit} mm in: {", ".join(sorted(set(bad)))}')
 
