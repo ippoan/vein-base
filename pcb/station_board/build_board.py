@@ -109,6 +109,8 @@ if PF:
     BOSSES = [(37.5, 3.2), (-49.5, 3.2), (37.5, 50.2), (-49.5, 50.2)]
 POS = {}                     # sw75: ref -> (x, y, rot), overriding the places below
 DB9_ROT, DB9_BY = 0, 0.0     # sw75: the DB9 turned to the +x edge at y = DB9_BY
+DB9_X = None                 # print_b: its flange's x when not on X1
+POST_CUTS = []               # print_b: round cut-outs (Edge.Cuts, r 1.6) for the case's posts, no courtyard
 EDGE = None                  # sw75: the outline as a polygon
 NOTCH = None                 # sw75: (x0, x1, depth) cut into the -y edge for the vein cable (not in the DSN)
 if SW75:
@@ -167,11 +169,15 @@ if PRINT_B:
     AX, AY = 12.0, 2.0                              # VoiceS3R centre, USB-C / PORT.A to +x (flush with the box's +x)
     DB9_ROT, DB9_BY = 90, -25.7                     # mating face to +x at the front of the right column
     HOLE_FP = 'MountingHole_2.2mm_M2'
-    HOLES = [(-22.5, -10.0), (4.5, AY - 3.5), (4.5, DB9_BY),             # H2 under the VoiceS3R (3.5 below it)
-             (-2.1, -38.6), (-2.1, 24.6)]                               # H4 / H5: the hood's screws through the board
+    HOLES = [(-22.5, -10.0), (4.5, AY - 3.5),                          # H2 under the VoiceS3R (3.5 below it)
+             (-2.1, -38.6), (-2.1, 24.6)]                               # H3 / H4: the hood's screws through the board
+    POST_CUTS = [(-22.8, 7.5), (-5.0, 12.0)]                            # posts under the window, beside SW1 / J3 (the
+                                                    # middle, between them, has 3.5 where a 3.2 cut-out + 0.5 a side needs 4.2)
+    DB9_X = 10.9                                  # pulled in to -x (its courtyard clear of H3's), mating face still +x
     POSTS = [(-5.0, 18.5)]                                              # the stand's post under the vein module
     POST_FP = 'MountingHole_3.2mm_M3'            # (an M4's courtyard ran into J6's and H2's)
-    EDGE = [(X0, Y0), (-4.2, Y0), (-4.2, -41.7), (X1, -41.7), (X1, Y1), (-4.2, Y1), (-4.2, 22.5), (X0, 22.5)]
+    EDGE = [(X0, Y0), (-4.2, Y0), (-4.2, -41.7), (DB9_X, -41.7), (DB9_X, DB9_BY + 16.0), (X1, DB9_BY + 16.0), (X1, Y1),
+            (-4.2, Y1), (-4.2, 22.5), (X0, 22.5)]
     # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
     POS = {'J1': (AX - 2.54, AY + 7.62, 90), 'J2': (AX, AY - 7.62, 90),
            # under the vein module (3.9 under it): MAX3232 with C1..C5 on its -x, R1 / R2, SW1 (hood and module off
@@ -262,7 +268,7 @@ p1 = [p for p in J4.Pads() if p.GetNumber() == '1'][0]
 px, py = xy(p1.GetPosition())
 if DB9_ROT == 90:      # sw75: mating face to +x, the pin row along +y, pin 1 7.70 in from the +x edge
     J4.SetOrientationDegrees(90); px, py = xy(p1.GetPosition())
-    J4.Move(pcbnew.VECTOR2I(mm((X1 - 7.70) - px), -mm((DB9_BY - 5.54) - py)))
+    J4.Move(pcbnew.VECTOR2I(mm(((DB9_X if DB9_X is not None else X1) - 7.70) - px), -mm((DB9_BY - 5.54) - py)))
 elif DB9_ROT == 180:   # print_b: mating face to +y, pin 1 7.70 in from the +y edge, centre at DB9_BX
     J4.SetOrientationDegrees(180); px, py = xy(p1.GetPosition())
     J4.Move(pcbnew.VECTOR2I(mm((DB9_BX + 5.54) - px), -mm((Y1 - 7.70) - py)))
@@ -284,7 +290,17 @@ for i, (x, y) in enumerate(HOLES, 1):
     load('MountingHole.pretty', HOLE_FP, f'H{i}', 'M3 spacer' if HOLE_FP.endswith('M3') else 'M2 screw', x, y)
 for i, (x, y) in enumerate(POSTS, 1):
     load('MountingHole.pretty', POST_FP, f'P{i}', 'post (vein module)', x, y)
-for x, y, r in [(x, y, 1.3) for x, y in BOSSES]:
+for x, y in POST_CUTS:     # keep tracks and vias 0.5 off the cut-outs (freerouting does not see an inner edge's clearance)
+    import math
+    ra = pcbnew.ZONE(b); ra.SetIsRuleArea(True); ra.SetDoNotAllowTracks(True); ra.SetDoNotAllowVias(True)
+    ra.SetDoNotAllowPads(False); ra.SetDoNotAllowCopperPour(False); ra.SetDoNotAllowFootprints(False)
+    ls = pcbnew.LSET(); ls.AddLayer(pcbnew.F_Cu); ls.AddLayer(pcbnew.B_Cu); ra.SetLayerSet(ls)
+    ol = ra.Outline(); ol.NewOutline()
+    for i in range(24):
+        a = 2 * math.pi * i / 24
+        ol.Append(mm(OX + x + 2.3 * math.cos(a)), mm(OY - y - 2.3 * math.sin(a)))
+    b.Add(ra)
+for x, y, r in [(x, y, 1.3) for x, y in BOSSES] + [(x, y, 1.6) for x, y in POST_CUTS]:
     c = pcbnew.PCB_SHAPE(b); c.SetShape(pcbnew.SHAPE_T_CIRCLE)
     c.SetCenter(P(x, y)); c.SetEnd(P(x + r, y)); c.SetLayer(pcbnew.Edge_Cuts); c.SetWidth(mm(0.1)); b.Add(c)
 
@@ -332,7 +348,7 @@ elif PRINT_B:
     for fp in b.GetFootprints():                       # the holes' references sat on the labels
         if fp.GetReference().startswith('H'):
             fp.Reference().SetVisible(False)
-    text('J3 vein: 1RX 2TX 3V3 4G', -14.5, 8.0, size=0.8)
+    text('J3 vein: 1RX 2TX 3V3 4G', -13.5, 8.0, size=0.8)   # (clear of the post's cut-out at x -22.8)
     text('NFC: G38 G39 5V G', AX, AY + 13.3, size=0.8)
     text(f'vein-station board {REV} (print B)', 0.0, 20.0, layer=pcbnew.B_SilkS)
 elif SW130:
