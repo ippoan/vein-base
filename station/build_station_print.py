@@ -4,8 +4,8 @@ two concepts to compare, the case and the parts' places only (the board is not r
      under the vein module inside its printed frame, so the module sits 2.9 over the board instead of on spacers.
   B  two rows: the vein module on the left on a stand 3.9 over the board with J3, SW1, MAX3232, C1..C5, R1 / R2 and
      the cable's slack under it, under a hood that holds it down on its step (as Vein Unit P) and is screwed up from
-     under the floor; on the right, with no walls nor lid, the DB9 at the front (mating face +x), the VoiceS3R behind
-     it (USB-C +x), the Grove (NFC) behind that on the back edge.
+     under the floor; on the right, with no walls nor lid, the VoiceS3R at the front (USB-C +x, its reset on the box's
+     front face), the DB9 behind it (mating face +x), the Grove (NFC) behind that on the back edge.
 Both boards are drawn and routed (pcb/station_board/build_board.py print_a / print_b).
 Both: a tray (floor 1.6, walls 1.8) with bosses for the board (2 high, M2 self-tapping), a flat lid (1.8) with a
 locating rim. A: the vein module on four posts from the floor; the lid is notched round the DB9 (which stands up
@@ -167,9 +167,9 @@ def concept_b():
     # board, with J3, SW1, MAX3232, C1..C5, R1 / R2 and the cable's slack under it, under a hood: a top (the window
     # and the recess that hold the module down on its step, as Vein Unit P) and walls down to the floor on -x, the
     # front and the back, none on +x (the top's edge reaches 1.0 past the recess; the recess locates the module
-    # sideways). The hood is held by four M2 x 5 countersunk tapping screws up from under the floor into columns at its
-    # four corners (no screw heads on top). Right: the DB9 at the front (mating face +x), the VoiceS3R behind it (USB-C
-    # +x, the reset to the front, on its pin headers only), J6 behind that on the back edge (opening +y): no walls nor
+    # sideways). The hood is held by four M2 x 10 countersunk tapping screws up from under the floor into columns at
+    # its four corners (no screw heads on top). Right: the VoiceS3R at the front (USB-C +x, the reset to the front, on
+    # its pin headers only), the DB9 behind it (mating face +x), J6 behind that on the back edge (opening +y): no walls nor
     # top, the board and the floor only, all of it within the vein module's length. The body is the floor with the
     # board's bosses, the floor ribs and the module's stand (a shelf along -x, a bar under its front end, a post
     # through the board under its back +x corner).
@@ -186,8 +186,11 @@ def concept_b():
             (hx1 - COL_B, hy1 - COL_IN_B)]                # in the hood's corners (square, flush with the top's +x edge)
     ax = hx1 + 0.3 + 12.0                                 # the VoiceS3R 0.3 past the hood's top
     xo1 = ax + 12.0                                       # its +x face is the box's
-    DY = yo0 + 0.6 + 15.4                                 # the DB9 at the front (courtyard on the board), face to +x
-    ay = DY + 15.4 + 0.3 + 12.0                           # the VoiceS3R just behind the DB9's flange
+    # the VoiceS3R at the front, flush with the box's front face: its reset (on the face clockwise of the ports, the
+    # front, 1..7 from its centre to -x) faces out with nothing before it; the DB9 behind it (with the DB9 in front of
+    # it, pulled in to -x, its body stood right before the reset)
+    ay = yo0 + 12.0
+    DY = ay + 12.0 + 0.3 + 15.4                           # the DB9 just behind the VoiceS3R, face to +x
     # the board: under the vein module (clear of the stand) and, from under the hood's two +x columns on, out to the
     # box's front, +x and back faces: those two columns stand on it and their screws go through it (the hood clamps
     # the board to the floor's bosses there); the -x columns go down to the floor beside the stand
@@ -197,8 +200,9 @@ def concept_b():
     # still to +x: the board and the floor stop at its flange in front of the VoiceS3R (the box's +x face is the
     # VoiceS3R's behind that)
     bx1 = hx1 + 11.2                                      # the DB9's flange (10.9; its body 0.4..10.9)
-    byd = DY + 15.4 + 0.6                                 # where the board widens behind the DB9 (past its courtyard)
-    pcb = box(bx0, bxs, by0, byv, ZB, ZBT).union(box(bxs, bx1, yo0, yo1, ZB, ZBT)).union(box(bx1, xo1, byd, yo1, ZB, ZBT))
+    cy0, cy1 = DY - 16.0, DY + 16.0                       # the board and the floor cut before the DB9's face (its courtyard)
+    pcb = box(bx0, bxs, by0, byv, ZB, ZBT).union(box(bxs, bx1, yo0, yo1, ZB, ZBT)) \
+        .union(box(bx1, xo1, yo0, cy0, ZB, ZBT)).union(box(bx1, xo1, cy1, yo1, ZB, ZBT))
     d9 = on(bx1 - 10.5, bx1 - 0.5, DY - 15.0, DY + 15.0, 0, 12.5).union(on(bx1 - 1.0, bx1, DY - 15.4, DY + 15.4, 0, 12.5))
     d9shell = on(bx1, bx1 + 6.0, DY - 8.5, DY + 8.5, 2.0, 10.5)
     d9plug = box(bx1 + 0.8, bx1 + 40.0, DY - 15.15, DY + 15.15, ZBT - 0.75, HOOD_TOP)
@@ -249,12 +253,12 @@ def concept_b():
     stand = shelf.union(bar).union(post)
     # the body: the floor (R3 corners), the bosses, the stand, floor ribs up to the board (clear of the THT legs, the
     # bosses and the post) where the board is
-    body = rbox(xo0, xo1, yo0, yo1, -T_FLOOR_B, 0, 3.0).cut(box(bx1, xo1 + 1, yo0 - 1, byd, -T_FLOOR_B - 1, 1)) \
+    body = rbox(xo0, xo1, yo0, yo1, -T_FLOOR_B, 0, 3.0).cut(box(bx1, xo1 + 1, cy0, cy1, -T_FLOOR_B - 1, 1)) \
         .union(bs).union(stand)
     tht = [bb for o in (d9, hdr) for bb in [xy_box(o)]]
     av = [(a - 1.0, b + 1.0, c - 1.0, d + 1.0) for a, b, c, d in tht] + \
         [(x - 3.5, x + 3.5, y - 3.5, y + 3.5) for x, y in holes + thru + [post_xy] + posts_mid]
-    for r in ((bx0, bxs, by0, byv), (bxs, bx1, yo0, yo1), (bx1, xo1, byd, yo1)):
+    for r in ((bx0, bxs, by0, byv), (bxs, bx1, yo0, yo1), (bx1, xo1, yo0, cy0), (bx1, xo1, cy1, yo1)):
         g = rib_grid(r[0] + 0.5, r[1] - 0.5, r[2] + 0.5, r[3] - 0.5, -0.01, ZB, av)
         if g is not None:
             body = body.union(g)
@@ -307,10 +311,10 @@ def concept_b():
                                    ((vein[0] + vein[1]) / 2, (vy0 + vy1) / 2, 1), 180))
           for k, l, c, o, g, s in vein_parts(vein, vz0, along_y=True, step=True)]
     view = [('shell', 'フード(指静脈の窓と裏の座ぐり、−x・手前・奥の壁と四隅の柱。床の裏から M2 × 10 の皿ねじ 4 本で締める。+x 側の 2 本は基板を通して基板も挟む)', '#2b2f33', 0.45, 'shell', hood),
-            ('atom', 'VoiceS3R(公式 CAD、USB-C は右 +x、リセットは手前。壁もふたも無く、右の面は箱の面とそろう。ピンヘッダーだけで支える。基板から 3.5 浮く)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'x+', Z_ATOM_B))] + vp + [
+            ('atom', 'VoiceS3R(公式 CAD、右の列の手前。USB-C は右 +x、リセットは手前で、どちらも箱の外面にそろい前に何も無い。ピンヘッダーだけで支える。基板から 3.5 浮く)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'x+', Z_ATOM_B))] + vp + [
         ('pcb', 'station 基板 print_b(build_board.py print_b。指静脈の台を避けた形。フードの +x 側の柱 2 本の下を通り、そのねじで床のボスとフードの間に挟まる)', '#1f7a4d', 1, 'mods', pcb_v),
         ('stand', f'指静脈の台(本体と一体: 左の棚・手前の横木・柱 3 本(右奥と、窓の下の SW1・J3 の左右)。基板から {HC_B:g} 上)', '#8fa09c', 1, 'mods', stand),
-        ('db9', 'DB9 オス(右の列の手前、指静脈の側へ寄せた。口は右で、その前の基板と床は切ってある)', '#8a8f96', 1, 'mods', d9.union(d9shell)), ('db9plug', 'DB9 プラグ', '#5c6166', 1, 'mods', d9plug),
+        ('db9', 'DB9 オス(右の列の VoiceS3R の後ろ、指静脈の側へ寄せた。口は右で、その前の基板と床は切ってある)', '#8a8f96', 1, 'mods', d9.union(d9shell)), ('db9plug', 'DB9 プラグ', '#5c6166', 1, 'mods', d9plug),
         ('u1', 'MAX3232・C1〜C5・R1 / R2(指静脈の下)', '#202326', 1, 'mods', u1.union(caps)),
         ('sw1', 'SW1 DIP(指静脈の下。フードと指静脈を外して切り替え)', '#c0392b', 1, 'mods', sw1),
         ('j3', 'J3 とプラグ(指静脈のソケットの端の下、口は奥)', '#f1efe8', 1, 'mods', j3.union(j3p)),
@@ -329,7 +333,7 @@ VEIN_NOTE = {'a': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフ
                   f'上面はフードから {HC_B + 15.0 - (Z_IN_B + T_TOP - ZBT):.1f} 出る。フードは指静脈の部分だけで、−x・手前・奥の壁と四隅の角柱を持ち、'
                   f'床の裏から M2 × 10 の皿タッピングねじ 4 本で締める(上面にねじ頭なし。床 {T_FLOOR_B:g} は皿穴の上に 1.0 残すため)。+x 側の 2 本は床のボスと基板を通り、基板もフードと床の間に挟む。'
                   '指静脈の下に J3・SW1・MAX3232・C1〜C5・R1 / R2 とケーブルの余り(SW1 はフードと指静脈を外して切り替える)。'
-                  '右の列(手前の DB9(指静脈の側へ寄せ、口の前の基板と床は切る)、その後ろの VoiceS3R、奥の縁の J6)は壁もふたも無く、基板と床だけ。VoiceS3R はピンヘッダーだけで支え、基板から 3.5 浮く(実測)'}
+                  '右の列(手前の VoiceS3R(リセットは箱の手前の面)、その後ろの DB9(指静脈の側へ寄せ、口の前の基板と床は切る)、奥の縁の J6)は壁もふたも無く、基板と床だけ。VoiceS3R はピンヘッダーだけで支え、基板から 3.5 浮く(実測)'}
 RIB_SHOWN = {'a': RIB_FLOOR, 'b': ZB}   # the floor ribs' height in the table (B: up to the board)
 out = os.path.join(ROOT, 'station')
 failed = []

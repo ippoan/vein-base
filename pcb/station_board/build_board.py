@@ -59,9 +59,10 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  case's shelf along -x and bar under its front end, which the board keeps clear of, and a post through
                  P1) under a hood screwed up from under the floor, with MAX3232 / C1..C5 / R1 / R2, SW1 (hood and
                  module off to set) and J3 (under its socket end, opening +y) under it; on the right, out to the box's
-                 front, +x and back faces with no walls nor lid: the DB9 at the front (mating face +x), the VoiceS3R
-                 behind it on J1 / J2 turned a quarter (USB-C / PORT.A to +x), J6 on the back edge behind that (opening
-                 +y). M2 self-tapping screws into floor bosses (H1..H4). Board coords = case coords; keep the numbers
+                 front, +x and back faces with no walls nor lid: the VoiceS3R at the front on J1 / J2 turned a quarter
+                 (USB-C / PORT.A to +x, its reset on the box's front face), the DB9 behind it (mating face +x, pulled in
+                 to -x, the board cut before its face), J6 on the back edge behind that (opening +y). M2 self-tapping
+                 screws into floor bosses (H1 / H2); the hood's +x screws (H3 / H4) clamp the board too. Board coords = case coords; keep the numbers
                  together with concept_b(). BOM jlc_bom_sw130.csv.
                  -> station_board_print_b.kicad_pcb, routed on its own (station_board_print_b.ses)
 
@@ -164,10 +165,12 @@ if PRINT_B:
     # shelf along -x and bar under its front end, which the board keeps clear of, and a post through P1) under a hood
     # screwed up from under the floor (its +x screws H4 / H5 through the board, which it clamps to the floor's bosses);
     # the right column (x -4.2..24.0, out to the box's front, +x and back faces, under the hood's +x columns): the
-    # DB9 at the front (mating face +x), the VoiceS3R behind it, J6 on the back edge behind that (opening +y)
+    # VoiceS3R at the front (its reset on the box's front face), the DB9 behind it (mating face +x, pulled in to -x,
+    # the board cut before its face), J6 on the back edge behind that (opening +y)
     X0, X1, Y0, Y1 = -25.2, 24.0, -33.7, 27.7       # (Y0 / Y1: under the vein module / the right column's back edge)
-    AX, AY = 12.0, 2.0                              # VoiceS3R centre, USB-C / PORT.A to +x (flush with the box's +x)
-    DB9_ROT, DB9_BY = 90, -25.7                     # mating face to +x at the front of the right column
+    AX, AY = 12.0, -29.7                            # VoiceS3R centre at the front (its reset on the box's front face),
+                                                    # USB-C / PORT.A to +x (flush with the box's +x)
+    DB9_ROT, DB9_BY = 90, -2.0                      # mating face to +x, behind the VoiceS3R
     HOLE_FP = 'MountingHole_2.2mm_M2'
     HOLES = [(-22.5, -10.0), (4.5, AY - 3.5),                          # H2 under the VoiceS3R (3.5 below it)
              (-2.1, -38.6), (-2.1, 24.6)]                               # H3 / H4: the hood's screws through the board
@@ -176,8 +179,8 @@ if PRINT_B:
     DB9_X = 10.9                                  # pulled in to -x (its courtyard clear of H3's), mating face still +x
     POSTS = [(-5.0, 18.5)]                                              # the stand's post under the vein module
     POST_FP = 'MountingHole_3.2mm_M3'            # (an M4's courtyard ran into J6's and H2's)
-    EDGE = [(X0, Y0), (-4.2, Y0), (-4.2, -41.7), (DB9_X, -41.7), (DB9_X, DB9_BY + 16.0), (X1, DB9_BY + 16.0), (X1, Y1),
-            (-4.2, Y1), (-4.2, 22.5), (X0, 22.5)]
+    EDGE = [(X0, Y0), (-4.2, Y0), (-4.2, -41.7), (X1, -41.7), (X1, DB9_BY - 16.0), (DB9_X, DB9_BY - 16.0),
+            (DB9_X, DB9_BY + 16.0), (X1, DB9_BY + 16.0), (X1, Y1), (-4.2, Y1), (-4.2, 22.5), (X0, 22.5)]
     # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
     POS = {'J1': (AX - 2.54, AY + 7.62, 90), 'J2': (AX, AY - 7.62, 90),
            # under the vein module (3.9 under it): MAX3232 with C1..C5 on its -x, R1 / R2, SW1 (hood and module off
