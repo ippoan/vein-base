@@ -119,6 +119,31 @@ def vein_cable_sides(rect, z0, z1, along_y=False):
             box(x0 + g0 + 0.2, x0 + g1 - 0.2, y0 - CABLE_SIDE, y1 + CABLE_SIDE, z0, z0 + gd - 0.1)]
 
 
+def vein_cable(rect, zb, z1, plug4, room, along_y=False):
+    """The module (rect) standing on zb with its cable into a vertical MX1.25 4P (Molex 53398, footprint origin plug4,
+    just past the 9P plug, its tails and lock away from the module): the 9P plug with its wires bent round the 9P end
+    (CABLE_END out, from the -y side's fold to 7.2 past the middle) and the room for the rest: folded along both long
+    sides up to z1 and across in the groove (vein_cable_sides), round the 9P end's +y corner past the plug and over the
+    4P into its plug from above (the mated plug 5.7 high, `room` over it for the wires' bend). The user winds it on
+    the real module, so this is room, not a route. Long side along x, the 9P end at x0; along_y: turned a quarter
+    (the 9P end at y0, the +y corner to -x). Returns (plug9, runs)."""
+    x0, x1, y0, y1 = rect
+    if along_y:
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        hl, hw = (y1 - y0) / 2, (x1 - x0) / 2
+        p, runs = vein_cable((cx - hl, cx + hl, cy - hw, cy + hw), zb, z1,
+                             (cx + (plug4[1] - cy), cy - (plug4[0] - cx)), room)
+        turn = lambda s: s.rotate((cx, cy, 0), (cx, cy, 1), 90)   # noqa: E731
+        return turn(p), [turn(r) for r in runs]
+    yc = (y0 + y1) / 2
+    ys0, ys1 = y0 - CABLE_SIDE, y1 + CABLE_SIDE
+    plug9 = rbox(x0 - CABLE_END, x0, ys0, yc + 7.2, zb, zb + 1.5 + 3.5, 0.6)     # rounded round the corner
+    xj = plug4[0] + 2.6 + 0.3                                                   # past the 4P's housing
+    return plug9, [*vein_cable_sides(rect, zb, z1),
+                   rbox(xj, x0, yc + 7.4, ys1, zb, zb + 5.7 + room, 0.6),       # round the 9P end's +y corner
+                   box(plug4[0] - 1.1, xj + 0.01, plug4[1] - 3.375, ys1, zb + 5.7, zb + 5.7 + room)]   # over the 4P
+
+
 def vein_parts(rect, z0, along_y=False, step=False):
     """The vein module (x0, x1, y0, y1) standing on z0, long side along x, as a picture only (Waveshare publishes no
     CAD): drawn by hand inside its 59 × 26 × 15 box after the product photos, not measured. A finger scoop over the
