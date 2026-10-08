@@ -13,13 +13,13 @@ module's 9P plug, U1 (5 V -> 3.3 V) with C1 / C2 beside the Grove J2 in the +x e
     the 9P end, 2 deep); the user winds it on the real module, so only the room is kept, not a route. It comes round
     the -x/+y corner and into J1 from above (the mated plug 5.7 high and room for the wires' bend over it).
   - The lid: M2 x 5 countersunk tapping screws from the top into ledges on the walls (station/shapes.py).
-Writes site/vein-unit-print/ and station/vein_station_print_unit_{body,lid}.stl, fails on any interference.
+Writes site/vein-unit-print/ and station/vein_station_print_unit_v<VERSION>_{body,lid}.stl, fails on any interference.
 Run from the repository root:  python3 station/build_vein_unit_print.py
 Coordinates = the board's: x along the module (the 9P end and J1 at -x, the Grove at +x), y across, z = 0 on
 the floor's inside face."""
 import os
 import cadquery as cq
-from shapes import (ROOT, box, union, vein_parts, vein_step_box, write_page, shell_and_lid, check, T_WALL,
+from shapes import (ROOT, VER, box, union, vein_parts, vein_step_box, write_page, shell_and_lid, check, T_WALL,
                     T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, SCREW_IN, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID, VEIN_GROOVE, ledge_notches,
                     way_in, grove_at, grove_hole, VEIN_RECESS, CABLE_END, CABLE_SIDE, vein_z_in, vein_window,
                     vein_lid_cuts, vein_cable)
@@ -99,7 +99,7 @@ failed += bad
 out = os.path.join(ROOT, 'station')
 stls = []
 for n, s, label in (('body', tray, '本体'), ('lid', lid, 'ふた')):
-    p = os.path.join(out, f'vein_station_print_unit_{n}.stl')
+    p = os.path.join(out, f'vein_station_print_unit_v{VER}_{n}.stl')
     cq.exporters.export(s, p, tolerance=0.02, angularTolerance=0.1)
     stls.append((f'{label}の STL(MJF PA12 で造形)', p))
 view = [('shell', f'ふた(窓 {win[1] - win[0]:.1f} × {win[3] - win[2]:.1f}、裏に深さ {RECESS:g} の座ぐり、M2 皿ねじで本体の受けに締める)',
