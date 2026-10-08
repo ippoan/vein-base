@@ -2,7 +2,7 @@
 two concepts to compare, the case and the parts' places only (the board is not routed yet).
   A  one row like SW130 (DB9 | SW1, J3 and the cable | vein module | VoiceS3R), lower: the MAX3232 and its caps go
      under the vein module inside its printed frame, so the module sits 2.9 over the board instead of on spacers.
-  B  two rows: the vein module on the left on a stand 3.9 over the board with SW1, MAX3232, C1..C5, R1 / R2 and the
+  B  two rows: the vein module on the left on a stand 4.4 over the board with SW1, MAX3232, C1..C5, R1 / R2 and the
      cable's slack under it and J3 (vertical) just in front of its 9P plug, under a hood that holds it down on its step (as Vein Unit P),
      runs out over J3 and is screwed up from under the floor; on the right, with no walls nor lid, the VoiceS3R at the front (USB-C +x, its reset on the box's
      front face), the DB9 behind it (mating face +x), the Grove (NFC) behind that on the back edge.
@@ -32,9 +32,9 @@ Z_ATOM = ZBT + 2.5               # VoiceS3R bottom on the pin headers (plastic 2
 Z_ATOM_B = ZBT + 3.5             # B: measured on the real one (2026-10-07): its bottom 3.5 over the board, top + 20.3
 DB9_TOP, HOOD_TOP = ZBT + 12.5, ZBT + 13.25
 Z_IN_A = ZBT + 8.7 + 0.4         # A: the DB9 outside the lid (a notch), so the lid goes down to the cable's slack
-HC_B = 3.9                       # B: the vein module on a stand this high over the board: the cable's slack under it
-                                 # (3.6 high, the user's way of stowing it) + 0.3 (J3 3.4 + 0.5 until J3 came out in
-                                 # front of it, 2026-10-08; SW1 alone, 3.0, would let it come down to 3.5)
+HC_B = 4.4                       # B: the vein module on a stand this high over the board: the cable's slack under it
+                                 # (3.6 high, the user's way of stowing it) + 0.3 would be 3.9, but SW1's real height is
+                                 # 4.05 (CTS 219-4LPSTRF datasheet: body 3.80 + standoff 0.25): SW1 4.05 + 0.35
 RECESS_B = 0.7                   # B: the lid's recess for the vein module's body (as Vein Unit P)
 Z_IN_B = ZBT + HC_B + 15.0 - 2.0 - RECESS_B   # B: the module's step face on the recess's floor, its top 0.5 proud
 VEIN_Z0 = ZBT + 3.3              # A: the vein module on printed posts, 2.9 over the MAX3232 / caps under it
@@ -125,12 +125,12 @@ def concept_a():
     # MAX3232, C1..C5 and R1 / R2 under the vein module (2.9 under it: 1.75 / 0.9 / 0.5 high), footprints with pads
     u1 = on(-5.4, 5.3, -17.2, -9.7, 0, 1.75)
     caps = on(-7.9, 7.9, -7.75, -6.25, 0, 0.9).union(on(8.75, 10.25, -13.5, -7.0, 0, 0.5))
-    sw1 = on(-16.4, -4.8, row, row + 12.45, 0, 3.0)                 # DIP on -x behind the DB9 (lid off to set)
+    sw1 = on(-16.4, -4.8, row, row + 12.45, 0, 4.05)                 # DIP on -x behind the DB9 (lid off to set)
     j3x, j3y = -0.15, vein[2] - 3.9
     j3 = on(j3x - 5.0, j3x + 5.0, j3y - 3.1, j3y + 3.7, 0, 3.4)     # just in front of the vein socket, opening -y
     j3p = on(j3x - 3.0, j3x + 3.0, j3y - 9.1, j3y - 3.1, 0.3, 3.1)   # its plug between SW1 and J6
-    slack = box(xi0 + LEDGE_D + 0.8, 4.5, row + 1.0, row + 15.0, ZBT + 3.7, ZBT + 8.7)   # the vein cable's slack over
-                                                    # SW1 / J3, clear of a lid screw's ledge on the -x wall
+    slack = box(xi0 + LEDGE_D + 0.8, 4.5, row + 1.0, row + 15.0, ZBT + 4.35, ZBT + 8.7)   # the vein cable's slack over
+                                                    # SW1 / J3 (from SW1 4.05 + 0.3), clear of a lid screw's ledge on the -x wall
     gy = row + 6.62                                                 # J6 (Grove) on +x behind the DB9
     gf = bx1 - 2.3                                                  # its front, 2.3 inside the board edge
     grove = on(gf - 7.7, gf, gy - 6.0, gy + 6.0, 0, 6.0)
@@ -264,7 +264,7 @@ def concept_b():
     j3 = on(j3x - 5.075, j3x + 5.075, j3y - 1.1, j3y + 2.6, 0, 5.7)
     # under the vein module (the footprints' extents, build_board.py print_b): SW1 (hood and module off to set),
     # MAX3232 with C1..C5 beside it, R1 / R2
-    sw1 = on(-20.72, -8.28, -19.83, -8.17, 0, 3.0)
+    sw1 = on(-20.72, -8.28, -19.83, -8.17, 0, 4.05)
     u1 = on(-9.72, -2.28, -7.22, 3.4, 0, 1.75)
     caps = on(-12.75, -11.25, -8.0, 7.0, 0, 0.9).union(on(-5.75, -4.25, -23.5, -17.5, 0, 0.9))
     # the 9P plug in the module's front end (CABLE_END out of it, low in the end face as Vein Unit P's) and the
