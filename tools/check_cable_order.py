@@ -48,12 +48,11 @@ def literals(path, func=None):
 
 
 def print_b():
-    """3D 印刷 B (station/build_station_print.py concept_b): the module's 9P end at -y (the front); the cable bends
-    down there and back (+y) into J3 under the module, opening -y."""
+    """3D 印刷 B (station/build_station_print.py concept_b): the module's 9P end at -y (the front); the cable goes out
+    -y and bends down into the vertical J3 just in front of it, whose lock faces out (-y)."""
     v = literals(os.path.join(ROOT, 'station/build_station_print.py'), 'concept_b')
     vx0, vy0, vw = v['vx0'], v['vy0'], v['vw']
-    # J3 is a right-angle 53261 until #c109-16 makes it vertical for the same cable: its lock is not checked yet
-    return ('pcb/station_board/station_board_print_b.kicad_pcb', 'J3', (vx0 + vw / 2, vy0), (0.0, -1.0), None)
+    return ('pcb/station_board/station_board_print_b.kicad_pcb', 'J3', (vx0 + vw / 2, vy0), (0.0, -1.0), +1)
 
 
 def unit_p():
