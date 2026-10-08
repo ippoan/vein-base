@@ -98,7 +98,7 @@ vein_cable = (box(*VCX, YN[0], YS, ZS - 0.5, ZS + 0.5)                       # s
               .union(box(J3[0] - 3.5, J3[0] + 3.0, YN[0], BY0 + 7.0, 2.0, 5.5)))   # spare length under the board
 u1 = on(U1[0] - 1.95, U1[0] + 1.95, U1[1] - 4.95, U1[1] + 4.95, 0, 1.75)
 caps = on(-8.8, -7.2, -5.5, 8.0, 0, 0.9).union(on(-18.0, -15.0, 7.8, 9.2, 0, 0.9))
-sw1 = on(SW1[0] - 5.86, SW1[0] + 5.86, SW1[1] - 3.35, SW1[1] + 3.35, 0, 3.0)
+sw1 = on(SW1[0] - 5.86, SW1[0] + 5.86, SW1[1] - 3.35, SW1[1] + 3.35, 0, 4.05)
 
 # Ext.Pin headers on the tongue (plastic 2.54 × 2.5, pins up 4 into the VoiceS3R, tails 3 under the board)
 hdr_plastic = on(J1X - 1.27, J1X + 1.27, AY - 3.81, AY + 8.89, 0, 2.5).union(

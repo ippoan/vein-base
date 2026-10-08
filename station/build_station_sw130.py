@@ -109,7 +109,7 @@ vein_cable = (box(*VCX, YL, YS, ZS - 0.5, ZS + 0.5).union(box(*VCX, YL - 1.0, YL
 cable_slack = box(-15.0, -3.0, BY0 + 11.2, VEIN[2] - 1.0, ZBT + 6.9, ZBT + 12.9)
 u1 = on(U1[0] - 4.95, U1[0] + 4.95, U1[1] - 1.95, U1[1] + 1.95, 0, 1.75)
 caps = on(-14.0, -2.0, 19.6, 21.0, 0, 0.9).union(on(-9.5, -6.5, 31.1, 32.5, 0, 0.9))
-sw1 = on(SW1[0] - 5.6, SW1[0] + 5.6, SW1[1] - 3.35, SW1[1] + 3.35, 0, 3.0)   # gull-wing pads across x
+sw1 = on(SW1[0] - 5.6, SW1[0] + 5.6, SW1[1] - 3.35, SW1[1] + 3.35, 0, 4.05)   # gull-wing pads across x
 
 # Ext.Pin headers (plastic 2.54 × 2.5, pins up 4 into the VoiceS3R, tails 3 under the board)
 hdr_plastic = on(J1X - 1.27, J1X + 1.27, AY - 3.81, AY + 8.89, 0, 2.5).union(
