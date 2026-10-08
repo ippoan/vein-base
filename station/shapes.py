@@ -6,6 +6,7 @@ import cadquery as cq
 from m5_cad import stl_tris
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+VER = open(os.path.join(ROOT, 'VERSION')).read().strip()
 
 
 def box(x0, x1, y0, y1, z0, z1):

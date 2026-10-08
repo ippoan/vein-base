@@ -24,6 +24,7 @@ edit shared parts there.
 - Ext.Pin の 2 列は **−y 端(y=−7.62)で揃う**。J1(x=+7.62)は +2.54 から 3V3,G5,G6,G7,G8、J2(x=−7.62)は 0 から G39,G38,5V,GND。実機の底面シルクで確認済み。ヘッダー位置を動かすときは基板・ケースのスロット・viewer の 3 か所を必ず一緒に直す。
 - 版番号は `VERSION` だけで管理する。出力ファイル名(`vein_base_v<版>_*`)、Artifacts 名(`vein-base-v<版>-fab`)、基板裏シルクはここから入る。形状や配線を変えたら上げる。
 - 生成物(STL / STEP / PDF / gerber zip / CPL)は git に入れない(`.gitignore` 済み)。古い生成物を発注しかけた事故があったため。取得は常に CI の Artifacts から。
+- 3D 印刷の STL は `vein_station_print_<a|b|unit>_v<版>_<body|lid>.stl`(版は `VERSION`。JLC3DP のカートで見分けるため。Unit P の REV(vp5)はページ表示用で、ファイル名には使わない)。
 - BOM の元データは vein-base が `pcb/jlc_bom.csv`、station 基板が `pcb/station_board/jlc_bom.csv`、指静脈 Unit の基板が `pcb/vein_unit_board/jlc_bom.csv`(どれも LCSC 品番入り)。`fab/` は CI の出力先。
 - フットプリントは lib nickname 付きで置き、`build_pcb.py` がプロジェクトローカルの `fp-lib-table` を書き出す(DRC の lib_footprint_* 警告対策)。標準から変えたフットプリントは `pcb/vein_base.pretty/` に置く(例: 2.4 mm の M2 穴)。
 - `pcb/vein_base.kicad_pcb` は `build_pcb.py` の出力。手で編集せず、スクリプトを直す。

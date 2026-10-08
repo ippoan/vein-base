@@ -15,13 +15,13 @@ through screws, a stepped post up to the VoiceS3R's M2 hole and ribs, and a hood
 cable's slack only: its 57 x 25 top step through the window, its body
 against a 0.7 recess (0.5 proud), walls all round (a closed frame), four square columns; five M2 x 12 countersunk
 machine screws up from under the floor (the hood's four, the VoiceS3R's one), none for the board alone. Writes
-site/station-print-{a,b}/ and station/vein_station_print_{a,b}_{body,lid}.stl (B: lid = the hood), and fails on any
+site/station-print-{a,b}/ and station/vein_station_print_{a,b}_v<VERSION>_{body,lid}.stl (B: lid = the hood), and fails on any
 interference.
 Run from the repository root:  python3 station/build_station_print.py
 Coordinates: x across, y along (B: -y = the front, the user's side), z = 0 on the floor's inside face."""
 import os
 import cadquery as cq
-from shapes import (ROOT, box, rbox, cyl_z, union, vein_parts, vein_step_box, write_page, shell_and_lid, check,
+from shapes import (ROOT, VER, box, rbox, cyl_z, union, vein_parts, vein_step_box, write_page, shell_and_lid, check,
                     rib_grid, xy_box, xy_overlap, T_WALL, T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH,
                     RIB_FLOOR, RIB_LID, PILOT, CLEAR, CSK, atom_at, pins, db9, grove_at, grove_hole, VEIN_RECESS,
                     CABLE_END, CABLE_SIDE, vein_z_in, vein_lid_cuts, vein_cable)
@@ -405,7 +405,7 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
     failed += [f'{key}: {b}' for b in bad]
     stls = []
     for n, s, label in (('body', tray, '本体'), ('lid', lid, 'ふた')):
-        p = os.path.join(out, f'vein_station_print_{key}_{n}.stl')
+        p = os.path.join(out, f'vein_station_print_{key}_v{VER}_{n}.stl')
         cq.exporters.export(s, p, tolerance=0.02, angularTolerance=0.1)
         stls.append((f'{label}の STL(MJF PA12 で造形)', p))
     dims = [('外形', '%.1f × %.1f × %.1f(幅 × 奥行 × 高さ、ふた込み)' % size), ('体積', '%.1f cm³(本体 + ふた)' % vol),
