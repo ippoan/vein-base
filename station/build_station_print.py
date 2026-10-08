@@ -129,8 +129,8 @@ def concept_a():
     j3x, j3y = -0.15, vein[2] - 3.9
     j3 = on(j3x - 5.0, j3x + 5.0, j3y - 3.1, j3y + 3.7, 0, 3.4)     # just in front of the vein socket, opening -y
     j3p = on(j3x - 3.0, j3x + 3.0, j3y - 9.1, j3y - 3.1, 0.3, 3.1)   # its plug between SW1 and J6
-    slack = box(xi0 + LEDGE_D + 0.8, 4.5, row + 1.0, row + 15.0, ZBT + 3.7, ZBT + 8.7)   # the vein cable's slack over
-                                                    # SW1 / J3, clear of a lid screw's ledge on the -x wall
+    slack = box(xi0 + LEDGE_D + 0.8, 4.5, row + 1.0, row + 15.0, ZBT + 4.35, ZBT + 8.7)   # the vein cable's slack over
+                                                    # SW1 / J3 (from SW1 4.05 + 0.3), clear of a lid screw's ledge on the -x wall
     gy = row + 6.62                                                 # J6 (Grove) on +x behind the DB9
     gf = bx1 - 2.3                                                  # its front, 2.3 inside the board edge
     grove = on(gf - 7.7, gf, gy - 6.0, gy + 6.0, 0, 6.0)
