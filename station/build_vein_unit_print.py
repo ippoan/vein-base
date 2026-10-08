@@ -19,9 +19,10 @@ Coordinates = the board's: x along the module (the 9P end and J1 at -x, the Grov
 the floor's inside face."""
 import os
 import cadquery as cq
-from shapes import (ROOT, box, rbox, union, vein_parts, vein_step_box, write_page, shell_and_lid, check, T_WALL,
+from shapes import (ROOT, box, union, vein_parts, vein_step_box, write_page, shell_and_lid, check, T_WALL,
                     T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, SCREW_IN, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID, VEIN_GROOVE, ledge_notches,
-                    way_in, grove_at, grove_hole)
+                    way_in, grove_at, grove_hole, VEIN_RECESS, CABLE_END, CABLE_SIDE, vein_z_in, vein_window,
+                    vein_lid_cuts, vein_cable)
 
 REV = 'vp5'
 # ---- shared with pcb/vein_unit_board/build_board.py p (u4): the outline, J1 and J2. Keep the two together ------------
@@ -35,10 +36,8 @@ J2 = (34.4, 0.0)                         # Grove (JST S4B-PH-SM4-TB), footprint 
 U1 = (32.6, 10.5)                        # LDO (SOT-23) beside J2, clear of the +x/+y notch, C2 / C1 at y 7.8 / 13.3
 # ----------------------------------------------------------------------------------------------------------------------
 GAP = 0.3                                # the board / the module / the cable to the walls
-# the module's cable out of its outline (measured 2026-10-07): the 9P plug with the wires bent round the -x end
-# CABLE_END out of the end face; the cable folded along each long side CABLE_SIDE thick ("a little under 2 mm" on -y)
-CABLE_END = 2.0
-CABLE_SIDE = 2.0
+# the module's cable out of its outline (shapes.CABLE_END / CABLE_SIDE): the 9P plug with the wires bent round the -x
+# end, the cable folded along each long side
 J1_ROOM = 1.8                            # over J1's mated plug (5.7) for the wires' bend, under the lid ledges' bottoms
 # J1 past the 9P plug: its fitting nails' pads (+x, 3.0 from the origin) 0.3 off the plug (not under it), its tails'
 # pads (-x, 1.9 from the origin, the locking window's side) 0.6 inside the board's edge; the long sides CABLE_SIDE out
@@ -49,11 +48,9 @@ xi0, xi1, yi0, yi1 = BRD[0] - GAP, BRD[1] + GAP, BRD[2] - GAP, BRD[3] + GAP
 ZB = RIB_FLOOR                           # the board on the floor's ribs
 ZBT = ZB + 1.6
 VZ0 = ZBT                                # the module straight on the board
-RECESS = 0.7                             # the lid's recess for the module's body
-Z_IN = VZ0 + 15.0 - 2.0 - RECESS         # the module's step face bears on the recess's floor
+RECESS = VEIN_RECESS                     # the lid's recess for the module's body
+Z_IN = vein_z_in(VZ0)                    # the module's step face bears on the recess's floor
 Z_TOP = Z_IN + T_TOP                     # the module's top 0.5 over it
-x0 = VEIN[0]
-g0, g1 = x0 + VEIN_GROOVE[0], x0 + VEIN_GROOVE[1]
 assert J2[0] - 4.6 >= VEIN[1] + 0.3 - 1e-9, 'J2 against the module'
 
 vein = vein_step_box(VEIN, VZ0)
@@ -70,22 +67,13 @@ ldo = box(U1[0] - 2.0, U1[0] + 2.0, U1[1] - 3.3, U1[1] + 3.4, ZBT, ZBT + 1.2)   
 # the module's 9P plug (14.4 wide as station/build_vein_unit.py, low in the end face) with the wires bent round the
 # -x end (one envelope, CABLE_END out); the cable folded along both long sides and across in the groove, round the
 # -x/+y corner (past the 9P plug) and over J1 into its plug
-Z_P = VZ0 + 1.5
-YC = (VEIN[2] + VEIN[3]) / 2
-ys0, ys1 = VEIN[2] - CABLE_SIDE, VEIN[3] + CABLE_SIDE
-plug9 = rbox(x0 - CABLE_END, x0, ys0, YC + 7.2, ZBT, Z_P + 3.5, 0.6)       # rounded round the corner
-xj1 = J1[0] + 2.6 + 0.3                                  # past J1's housing
-cable_runs = (box(x0, VEIN[1], ys0, VEIN[2], ZBT, Z_IN - 0.3),          # folded along the sides, up to the lid
-              box(x0, VEIN[1], VEIN[3], ys1, ZBT, Z_IN - 0.3),
-              box(g0 + 0.2, g1 - 0.2, ys0, ys1, ZBT, ZBT + VEIN_GROOVE[2] - 0.1),
-              rbox(xj1, x0, YC + 7.4, ys1, ZBT, ZBT + 5.7 + J1_ROOM, 0.6),  # round the -x/+y corner
-              box(J1[0] - 1.1, xj1 + 0.01, J1[1] - 3.375, ys1, ZBT + 5.7, ZBT + 5.7 + J1_ROOM))   # over J1
+# (shapes.vein_cable, as 3D 印刷 B's)
+plug9, cable_runs = vein_cable(VEIN, ZBT, Z_IN - 0.3, J1, J1_ROOM)
 cable = union(*cable_runs)
 
 wall_cuts = [grove_hole(J2[1], xi1, 'x+', ZBT)]                                         # Grove (as GROVE_CUT, sw130)
-win = (VEIN[0] + 0.75, VEIN[1] - 0.75, VEIN[2] + 0.25, VEIN[3] - 0.25)                   # 57.5 × 25.5
-rec = (VEIN[0] - 0.2, VEIN[1] + 0.2, VEIN[2] - 0.2, VEIN[3] + 0.2)                       # 59.4 × 26.4
-lid_cuts = [rbox(*win, Z_IN - 3, Z_TOP + 1, 1.75), rbox(*rec, Z_IN - 3, Z_IN + RECESS, 2.2)]
+win, rec = vein_window(VEIN)                                                             # 57.5 × 25.5, 59.4 × 26.4
+lid_cuts = vein_lid_cuts(VEIN, Z_IN, Z_TOP)
 parts = [('vein', vein), ('board', board), ('J1 + 4P plug', j1), ('Grove J2', grove), ('Grove plug', grove_plug),
          ('LDO', ldo), ('9P plug + wires', plug9), ('cable', cable)]
 tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, Z_IN, walls=('x-', 'x+'),
