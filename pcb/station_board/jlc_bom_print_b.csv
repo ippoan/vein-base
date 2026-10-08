@@ -1,0 +1,10 @@
+Comment,Designator,Footprint,LCSC Part #,Note
+"Pin header 1x5 2.54mm male, straight (XFCN PZ254V-11-05P-A40)",J1,PinHeader_1x05_P2.54mm_Vertical,C42419912,THT; mating 4mm / tail 3mm / plastic 2.5mm (same as vein-base)
+"Pin header 1x4 2.54mm male, straight (XFCN PZ254V-11-04P-A40)",J2,PinHeader_1x04_P2.54mm_Vertical,C42419911,THT; mating 4mm / tail 3mm / plastic 2.5mm (same as vein-base)
+Molex PicoBlade 53398-0471 (MX1.25 4P vertical SMD),J3,Molex_PicoBlade_53398-0471_1x04-1MP_P1.25mm_Vertical,C17617036,"Top side; just in front of the vein module's 9P plug, locking window (tails) to the -y edge; pads -x to +x = 3V3 / GND / G5 (RXD) / G6 (TXD)"
+"MAX3232EIDR (TI, RS232 transceiver 3-5.5V)",U1,SOIC-16_3.9x9.9mm_P1.27mm,C193666,powered from 3V3
+"100nF 50V X7R 0603","C1,C2,C3,C4,C5",C_0603_1608Metric,C14663,Basic part
+"CTS 219-4LPSTRF (DIP switch 4P SPST, SMD gull wing, low profile)",SW1,SW_DIP_SPSTx04_Slide_6.7x11.72mm_W8.61mm_P2.54mm_LowProfile,C3034155,set 1+2 ON (passthrough) after assembly
+"DB9 male right angle, 4-40 screw lock (Ckmtw D-DMR009PM-D002)",J4,DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm,C141880,THT; flange on the -y board edge (the -y end wall)
+"JST PH 4P right angle SMD (takes the Grove plug), S4B-PH-SM4-TB(LF)(SN)",J6,JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal,C265102,Unit NFC: 1 = G38 (SDA) / 2 = G39 (SCL) / 5V / GND; opening on the +x edge (the reset's side, just short of the VoiceS3R); the genuine JST part of the footprint (JLC found the HY2.0 C722729's pins off the pads); its front stands 2.3 inside the edge
+"4.7k 1% 0603","R1,R2",R_0603_1608Metric,C23162,Basic part; I2C pull-ups for J6 (G38 / G39 to 3V3)

@@ -54,12 +54,14 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  J1 / J2 at the +y end. M2 self-tapping screws into floor bosses (H1..H5). Board coords = case coords; keep the numbers
                  together with concept_a() in station/build_station_print.py. Its BOM is jlc_bom_sw130.csv (same parts).
                  -> station_board_print_a.kicad_pcb, routed on its own (station_board_print_a.ses)
-  'print_b'      the same parts again for the printed case B (concept_b() in station/build_station_print.py, two rows,
-                 54.5 x 69.4 x 25.9 with the VoiceS3R): the vein module on the left, its 9P socket end at the front,
-                 on a stand 3.9 over the board (the case's shelf along -x and bar under its back end, which the board
+  'print_b'      the same circuit for the printed case B (concept_b() in station/build_station_print.py, two rows,
+                 54.5 x 74.6 x 25.9 with the VoiceS3R): the vein module on the left, its 9P socket end at the front,
+                 on a stand 3.5 over the board (the case's shelf along -x and bar under its back end, which the board
                  keeps clear of, and a post through P1) under a hood screwed up from under the floor, with MAX3232 /
-                 C1..C5 / R1 / R2, SW1 (hood and module off to set) and J3 (under its socket end, opening -y) under it;
-                 on the right, out to the box's
+                 C1..C5 / R1 / R2 and SW1 (hood and module off to set) under it, and J3 (MX1.25 4P vertical, 53398-0471)
+                 just in front of its 9P plug, its locking window to -y (the cable, made with both latches on the same
+                 face, comes out of the 9P level and bends down into it); the board's left part and the hood run out
+                 to -y over J3. On the right, out to the box's
                  front, +x and back faces with no walls nor lid: the VoiceS3R at the front on J1 / J2 turned a quarter
                  (USB-C / PORT.A to +x, its reset on the box's front face), the DB9 behind it (mating face +x, pulled in
                  to -x, the board cut before its face), J6 on the back edge behind that (opening +y). M2 self-tapping
@@ -67,7 +69,7 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  screw post (a shoulder under the board, through a round cut-out at the VoiceS3R's centre up to its
                  M2 hole) holds it under J1 / J2, the floor's ribs carry it under the vein module and the stand's posts
                  through P1 and the cut-outs place it sideways. Board coords = case coords; keep the numbers
-                 together with concept_b(). BOM jlc_bom_sw130.csv.
+                 together with concept_b(). Its own BOM (jlc_bom_print_b.csv: sw130's with J3 vertical).
                  -> station_board_print_b.kicad_pcb, routed on its own (station_board_print_b.ses)
 
 Routing comes from freerouting and is kept in station_board[_sw75].ses (the board file itself is always generated):
@@ -116,7 +118,7 @@ POS = {}                     # sw75: ref -> (x, y, rot), overriding the places b
 DB9_ROT, DB9_BY = 0, 0.0     # sw75: the DB9 turned to the +x edge at y = DB9_BY
 DB9_X = None                 # print_b: its flange's x when not on X1
 POST_CUTS = []               # print_b: round cut-outs (Edge.Cuts, x, y, r) for the case's posts, no courtyard
-J3_NETS = {'1': 'G5', '2': 'G6', '3': '3V3', '4': 'GND', 'MP': 'GND'}   # print_b: as Vein Unit P's J1 (see there)
+J3_NETS = {'1': 'G5', '2': 'G6', '3': '3V3', '4': 'GND', 'MP': 'GND'}   # print_b: from its pads' places (see there)
 PRE_ROUTE = {}               # print_b: locked F.Cu tracks drawn here (net: points), not in the .ses
 EDGE = None                  # sw75: the outline as a polygon
 NOTCH = None                 # sw75: (x0, x1, depth) cut into the -y edge for the vein cable (not in the DSN)
@@ -168,7 +170,7 @@ if PRINT_A:
            'R1': (9.5, -12.0, 90), 'R2': (9.5, -8.5, 90)}
 if PRINT_B:
     # case B (concept_b): the vein module (x -27.5..-1.5, y -36.5..22.5, its 9P socket end at the front, -y) on a
-    # stand 3.9 over the board (the case's shelf along -x and bar under its back end, which the board keeps clear of,
+    # stand 3.5 over the board (the case's shelf along -x and bar under its back end, which the board keeps clear of,
     # and a post through P1) under a hood walled all round (its +x wall, x -1.2..0.6, stands on the board)
     # screwed up from under the floor (its +x screws H1 / H2 through the board, which it clamps to the floor's bosses);
     # the right column (x -4.6..24.9, out to the box's front, +x and back faces, under the hood's +x columns): the
@@ -177,35 +179,49 @@ if PRINT_B:
     X0, X1, Y0, Y1 = -25.2, 24.9, -36.5, 27.7       # (Y0 / Y1: under the vein module / the right column's back edge)
     YL1 = 19.7                                      # the back edge under the vein module (clear of the stand's bar)
     # under the vein module everything is the mirror in y (about y -7.0) of the module turned the other way (its 9P end
-    # at the back) before 2026-10-07; J3 turned half a turn with the module, so the cable runs straight as before
+    # at the back) before 2026-10-07
+    # J3 (2026-10-08): vertical, just in front of the module's 9P plug (2.0 out of its end face): its fitting nails'
+    # pads (3.0 behind the origin, turned half a turn) 0.3 off the plug, its tails and locking window to -y. The
+    # cable's two latches are on one face (made so): out of the 9P level, latch up, bent down into J3 from above,
+    # J3's latch faces away from the 9P
+    J3_XY = (-14.5, -36.5 - 2.0 - 0.3 - 3.0)        # x = the module's middle (concept_b's j3x)
+    # the left part runs out past J3 to -y: its pads' front (1.9 before the origin) and the lock mark (a triangle and
+    # 'LOCK', 0.6 high, 0.15 off the pads) 0.35 inside it (0.3 + 0.05 to spare); out of the hood's -x front column (0.3
+    # off it, it goes down to the floor). The right column keeps its front at -41.7 (the VoiceS3R's reset on the box's
+    # front face) but from XR to the hood's +x face (XH), under the hood's front wall and +x front column (H1), it runs
+    # out with it (concept_b: the same numbers)
+    YF, XT = J3_XY[1] - 1.9 - 0.15 - 0.6 - 0.35, -24.4
+    YR, YH, XH = -41.7, -46.9, 0.6                  # the right column's front, the hood's front face, its +x face
     AX, AY = 12.9, -29.7                            # VoiceS3R centre at the front (its reset on the box's front face),
                                                     # USB-C / PORT.A to +x (flush with the box's +x)
     DB9_ROT, DB9_BY = 90, -2.0                      # mating face to +x, behind the VoiceS3R
     HOLE_FP = 'MountingHole_2.2mm_M2'
-    HOLES = [(-2.5, -38.6), (-2.5, 24.6)]                               # H1 / H2: the hood's screws through the board
+    HOLES = [(-2.5, -43.8), (-2.5, 24.6)]                               # H1 / H2: the hood's screws through the board
     POST_CUTS = [(-22.8, -21.5, 1.6), (-5.0, -26.0, 1.6),               # posts under the window, beside SW1 / J3 (the
                                                     # middle, between them, has 3.5 where a 3.2 cut-out + 0.5 a side needs 4.2)
                  (AX, AY, 2.4)]                     # the VoiceS3R's screw post (4.3) up to its M2 hole at its centre
                                                     # (concept_b's ATOM_POST_R + 0.25)
     DB9_X = 11.8                                  # pulled in to -x (its body 0.7 off the hood's +x wall), mating face still +x
-    # J3 in the order of Vein Unit P's J1 (1 = 3V3, 2 = GND, 3 = RXD <- G5, 4 = TXD -> G6): the module's 9P 3..6 in
-    # order, so one straight cable (the same as Vein Unit P's) serves both; no wires cross
-    J3_NETS = {'1': '3V3', '2': 'GND', '3': 'G5', '4': 'G6', 'MP': 'GND'}
+    # J3's pads from -x to +x on 3V3 / GND / G5 (RXD) / G6 (TXD): the module's 9P 3..6 (red, black, green, yellow) run
+    # that way along its end face (seen from the front, window up, pin 1 on the left = -x), and the cable keeps the
+    # order; the pad numbers follow from the footprint's turn (set below from the pads' places)
+    J3_NETS = None
     POSTS = [(-5.0, -32.5)]                                             # the stand's post under the vein module
     POST_FP = 'MountingHole_3.2mm_M3'            # (an M4's courtyard ran into J6's and H2's)
     XR = -4.6                                       # the right column's -x edge (0.3 past the hood's +x columns)
-    EDGE = [(X0, Y0), (XR, Y0), (XR, -41.7), (X1, -41.7), (X1, DB9_BY - 16.0), (DB9_X, DB9_BY - 16.0),
+    EDGE = [(X0, Y0), (XT, Y0), (XT, YF), (XR, YF), (XR, YH), (XH, YH), (XH, YR), (X1, YR),
+            (X1, DB9_BY - 16.0), (DB9_X, DB9_BY - 16.0),
             (DB9_X, DB9_BY + 16.0), (X1, DB9_BY + 16.0), (X1, Y1), (XR, Y1), (XR, YL1), (X0, YL1)]
     # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
     POS = {'J1': (AX - 2.54, AY + 7.62, 90), 'J2': (AX, AY - 7.62, 90),
-           # under the vein module (3.9 under it): MAX3232 with C1..C5 on its -x, R1 / R2, SW1 (hood and module off
-           # to set), J3 under its socket end, opening -y, its plug under the module too
+           # under the vein module (3.5 under it): MAX3232 with C1..C5 on its -x, R1 / R2, SW1 (hood and module off
+           # to set); J3 in front of it (above)
            'U1': (-6.0, -2.0, 0),
            'C1': (-12.0, -6.5, 90), 'C2': (-12.0, -3.5, 90), 'C3': (-12.0, -0.5, 90), 'C4': (-12.0, 2.5, 90),
            'C5': (-12.0, 5.5, 90),
            'R1': (-5.0, -19.0, 90), 'R2': (-5.0, -22.0, 90),
            'SW1': (-14.5, -14.0, 90),
-           'J3': (-14.5, -26.9, 0),
+           'J3': (*J3_XY, 180),                   # tails (the pads) and the locking window to -y
            'J6': (AX, Y1 - 4.45 - 2.3, 180)}    # behind the VoiceS3R on the back edge, opening +y
     # J2's G39 / G38 / 5V out to -x under the VoiceS3R's screw post (its cut-out takes the middle between J1 and J2):
     # left to freerouting, its first routes walled G39's pad in and no pass got it out
@@ -269,9 +285,14 @@ wire(J1, {'1': '3V3', '2': 'G5', '3': 'G6', '4': 'G7', '5': 'G8'})
 J2 = load('Connector_PinHeader_2.54mm.pretty', 'PinHeader_1x04_P2.54mm_Vertical', 'J2', 'Hdr 1x4 (G39,G38,5V,GND)', -7.62, 0)
 wire(J2, {'1': 'G39', '2': 'G38', '3': '5V', '4': 'GND'})
 
-# ---- J3 finger vein, on the +y edge (the station's front), opening towards the vein module
-J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal', 'J3',
-          'MX1.25-4P RA (Molex 53261-0471)', -30.0, J3_EDGE - 3.1, rot=180)
+# ---- J3 finger vein, on the +y edge (the station's front), opening towards the vein module (print_b: vertical)
+if PRINT_B:
+    J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53398-0471_1x04-1MP_P1.25mm_Vertical', 'J3',
+              'MX1.25-4P vertical (Molex 53398-0471)', 0, 0)
+    J3_NETS = dict(zip(sorted('1234', key=lambda n: pad(J3, n)[0]), ('3V3', 'GND', 'G5', 'G6')), MP='GND')
+else:
+    J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal', 'J3',
+              'MX1.25-4P RA (Molex 53261-0471)', -30.0, J3_EDGE - 3.1, rot=180)
 wire(J3, J3_NETS)
 
 # ---- MAX3232 + charge pump caps (0.1 uF at 3.3 V)
@@ -370,6 +391,7 @@ elif PRINT_A:
     text('NFC: G38 G39 5V G', 10.6, ROW + 13.9, size=0.8)
     text(f'vein-station board {REV} (print A)', 0.0, 0.0, layer=pcbnew.B_SilkS)
 elif PRINT_B:
+    SILK = []                                          # (x0, x1, y0, y1), label: checked after import_ses
     text('VoiceS3R: USB-C / PORT.A this way', AX + 10.8, AY, size=0.8, rot=90)
     SW1.Reference().SetVisible(False)
     # behind SW1, in the 10.9 between the board's -x edge and C1..C5's references (under the vein module: take it off
@@ -380,17 +402,39 @@ elif PRINT_B:
     for fp in b.GetFootprints():                       # the holes' references sat on the labels
         if fp.GetReference().startswith('H'):
             fp.Reference().SetVisible(False)
-    J3.Reference().SetVisible(False)                   # (the text names it; it sat on J3's and R2's references)
-    text('J3 1:3V3 2:G 3:RX 4:TX', -15.5, -31.5, size=0.8)  # in front of J3 (clear of P1)
+    J3.Reference().SetVisible(False)                   # (the text names it)
+    # pin by pin, from the nets (22 characters at 0.8, ~14.1 wide), between J3's fitting nails and the module's end
+    short = {'3V3': '3V3', 'GND': 'G', 'G5': 'RX', 'G6': 'TX'}
+    text('J3 ' + ' '.join(f'{n}:{short[J3_NETS[n]]}' for n in '1234'), J3_XY[0], -37.7, size=0.8)
     text('NFC: G38 G39 5V G', AX, AY + 13.3, size=0.8)
     text(f'vein-station board {REV} (print B)', -6.0, 16.0, layer=pcbnew.B_SilkS)   # (inside the left part's back edge)
     # a '1' beside pin 1 of each cable's 4P (the footprints' pin-1 mark is a short line the part hides): one pitch out
     # of the row; checked against the pads and the vias after import_ses (the .ses brings the vias)
-    PIN1 = []
     for fp in (J3, J6):
         p1, p2 = pad(fp, '1'), pad(fp, '2')
-        PIN1.append((fp.GetReference(), 2 * p1[0] - p2[0], 2 * p1[1] - p2[1]))
-        text('1', *PIN1[-1][1:], size=0.8)
+        x, y = 2 * p1[0] - p2[0], 2 * p1[1] - p2[1]
+        text('1', x, y, size=0.8)
+        SILK.append(((x - 0.4, x + 0.4, y - 0.4, y + 0.4), f"{fp.GetReference()} '1'"))
+    # J3's locking window (Molex 533980000-SD: the long wall on the tails' side, here -y): a filled triangle in front
+    # of its pads, its tip at that wall (+y), 0.15 off the pads, and 'LOCK' (0.6, 4 characters ~1.9 long) beside it
+    # (-x): plug the 4P with its latch that way
+    yt = min(pad(J3, n)[1] for n in '1234') - 0.65 - 0.15     # the pads' front (1.3 long) - 0.15
+    tri = pcbnew.PCB_SHAPE(b); tri.SetShape(pcbnew.SHAPE_T_POLY)
+    ps = pcbnew.SHAPE_POLY_SET(); ps.NewOutline()
+    for x, y in ((J3_XY[0], yt), (J3_XY[0] + 0.4, yt - 0.6), (J3_XY[0] - 0.4, yt - 0.6)):
+        ps.Append(mm(OX + x), mm(OY - y))
+    tri.SetPolyShape(ps); tri.SetLayer(pcbnew.F_SilkS); tri.SetWidth(mm(0.1)); tri.SetFilled(True); b.Add(tri)
+    text('LOCK', J3_XY[0] - 1.9, yt - 0.3, size=0.6)
+    SILK += [((J3_XY[0] - 0.45, J3_XY[0] + 0.45, yt - 0.65, yt), 'J3 lock triangle'),
+             ((J3_XY[0] - 2.9, J3_XY[0] - 0.9, yt - 0.6, yt), 'J3 LOCK')]
+    for (x0, x1, y0, y1), _ in SILK:      # no vias on the marks (a via by J3's pad 1 sat on its '1')
+        ra = pcbnew.ZONE(b); ra.SetIsRuleArea(True); ra.SetDoNotAllowVias(True); ra.SetDoNotAllowTracks(False)
+        ra.SetDoNotAllowPads(False); ra.SetDoNotAllowCopperPour(False); ra.SetDoNotAllowFootprints(False)
+        ls = pcbnew.LSET(); ls.AddLayer(pcbnew.F_Cu); ls.AddLayer(pcbnew.B_Cu); ra.SetLayerSet(ls)
+        ol = ra.Outline(); ol.NewOutline()
+        for x, y in ((x0 - 0.4, y0 - 0.4), (x1 + 0.4, y0 - 0.4), (x1 + 0.4, y1 + 0.4), (x0 - 0.4, y1 + 0.4)):
+            ol.Append(mm(OX + x), mm(OY - y))
+        b.Add(ra)
 elif SW130:
     text('VoiceS3R: USB-C / PORT.A this way', 0.0, Y1 - 1.2, size=0.8)
     text('SW1 12=PASS 34=CROSS', 3.0, -44.3, size=0.8, rot=90)
@@ -417,23 +461,23 @@ if 'dsn' in sys.argv[1:]:
     print('dsn', pcbnew.ExportSpecctraDSN(b, f'{NAME}.dsn'))
 else:
     import_ses(b, nets, SES)
-    # print_b's pin-1 '1's: JLC trims silk off pads, and check_drc.py ignores silk_over_copper, so the 0.8 box must
-    # clear every pad (+0.1) and via (0.6 + 0.1), and lie 0.3 inside the outline and off the posts' cut-outs (the same
-    # values as pcb/vein_unit_board/build_board.py)
-    for ref, x, y in (PIN1 if PRINT_B else []):
-        tx0, tx1, ty0, ty1 = x - 0.4, x + 0.4, y - 0.4, y + 0.4
+    # print_b's marks by the cable's 4Ps: JLC trims silk off pads, and check_drc.py ignores silk_over_copper, so each
+    # box must clear every pad (+0.1) and via (0.6 + 0.1), lie 0.3 inside the outline and off the posts' cut-outs (the
+    # same values as pcb/vein_unit_board/build_board.py), and keep off the other marks
+    def silk_clear(box, label):
+        tx0, tx1, ty0, ty1 = box
         for f in b.GetFootprints():
             for q in f.Pads():
                 bb = q.GetBoundingBox()
                 qx0, qx1 = pcbnew.ToMM(bb.GetLeft()) - OX - 0.1, pcbnew.ToMM(bb.GetRight()) - OX + 0.1
                 qy0, qy1 = OY - pcbnew.ToMM(bb.GetBottom()) - 0.1, OY - pcbnew.ToMM(bb.GetTop()) + 0.1
                 assert tx1 <= qx0 or qx1 <= tx0 or ty1 <= qy0 or qy1 <= ty0, \
-                    f"{ref} '1' at {(x, y)} on {f.GetReference()} pad {q.GetNumber()}"
+                    f"{label} {box} on {f.GetReference()} pad {q.GetNumber()}"
         for v in b.GetTracks():
             if v.Type() == pcbnew.PCB_VIA_T:
                 (vx, vy), r = xy(v.GetPosition()), (0.6 + 0.1) / 2
                 dx, dy = max(tx0 - vx, 0, vx - tx1), max(ty0 - vy, 0, vy - ty1)
-                assert dx * dx + dy * dy >= r * r, f"{ref} '1' at {(x, y)} on the via at {(vx, vy)}"
+                assert dx * dx + dy * dy >= r * r, f"{label} {box} on the via at {(vx, vy)}"
         # the outline (rectilinear): the box + 0.3 has its corners inside and no corner of the outline in it
         ex0, ex1, ey0, ey1 = tx0 - 0.3, tx1 + 0.3, ty0 - 0.3, ty1 + 0.3
         for cx, cy in ((ex0, ey0), (ex1, ey0), (ex1, ey1), (ex0, ey1)):
@@ -441,12 +485,17 @@ else:
             for (a, c), (d, e) in zip(EDGE, EDGE[1:] + EDGE[:1]):
                 if (c > cy) != (e > cy) and cx < a + (cy - c) * (d - a) / (e - c):
                     inside = not inside
-            assert inside, f"{ref} '1' at {(x, y)} off the outline"
-        assert not [1 for a, c in EDGE if ex0 < a < ex1 and ey0 < c < ey1], f"{ref} '1' at {(x, y)} over the outline"
+            assert inside, f"{label} {box} off the outline"
+        assert not [1 for a, c in EDGE if ex0 < a < ex1 and ey0 < c < ey1], f"{label} {box} over the outline"
         for px, py, r in POST_CUTS:
             dx, dy = max(tx0 - px, 0, px - tx1), max(ty0 - py, 0, py - ty1)
-            assert dx * dx + dy * dy >= (r + 0.3) ** 2, f"{ref} '1' at {(x, y)} on the cut-out at {(px, py)}"
-        print(ref, "'1' at", (round(x, 3), round(y, 3)))
+            assert dx * dx + dy * dy >= (r + 0.3) ** 2, f"{label} {box} on the cut-out at {(px, py)}"
+        print(label, 'at', tuple(round(v, 3) for v in box))
+
+    for i, (box, label) in enumerate(SILK if PRINT_B else []):
+        silk_clear(box, label)
+        for o, other in SILK[:i]:
+            assert box[1] <= o[0] or o[1] <= box[0] or box[3] <= o[2] or o[3] <= box[2], f"{label} {box} on {other} {o}"
     b.Save(f'{NAME}.kicad_pcb')
     # GND pour on B.Cu over the whole board (stitches the GND tracks, shields the RS232 lines).
     # Filled on a reloaded board: the filler crashes on a board built in memory without a connectivity graph.
