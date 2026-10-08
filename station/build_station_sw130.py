@@ -33,7 +33,7 @@ and so is the reset notch (as a 6 × 8 hole its top ran 0.2 past the body's top 
 """
 import os
 import cadquery as cq
-from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page
+from shapes import ROOT, box, rbox, cyl_z, cyl_y, stl_at, vein_parts, write_page, grove_at, GROVE_HOLE
 from template import cut_template, edge_row, save
 from drawing import face, sheet
 import position_sheet as ps
@@ -124,8 +124,7 @@ porta_plug = box(AX - 4.9, AX + 4.9, YF, YF + 10.2, Z_ATOM + 0.0, Z_ATOM + 4.0) 
 # J6: the genuine JST S4B-PH-SM4-TB (C265102, since the HY2.0 C722729's pins missed the pads), its front at the
 # footprint's, 2.3 inside the board edge; the Grove plug reaches in through the side cut (sized for the old HY2.0 body)
 GF = BX1 - 2.3                                              # its front, 2.3 inside the board edge
-grove = on(J6[0] - 3.25, GF, J6[1] - 6.0, J6[1] + 6.0, 0, 6.0)
-grove_plug = on(GF, GF + 8.1, J6[1] - 4.5, J6[1] + 4.5, 0.6, 5.4)
+grove, grove_plug = grove_at(J6[1], GF, 'x+', ZBT, back=GF - (J6[0] - 3.25), out=8.1)
 assert ZBT + 6.0 < VEIN_Z0 - 0.5, 'J6 reaches the vein module'
 
 # spacers (hex 5.5 as r 3.2) with their tape under every hole; over H1..H4 the washer (r 3) and the M3 × 5 for the vein
@@ -148,7 +147,7 @@ cover_cut = rbox(*VEIN_WIN[:4], CEIL - 1, TOP + 1, VEIN_WIN[4]).union(rbox(*ATOM
 # reset ones are notches in the body, open to its top edge (SKIRT, the joint with the cover)
 DB9_CUT = (-15.65, 15.65, ZBT - 1.5, SKIRT, 0)                                           # DB9 hood (-y), open to the top
 USB_CUT = (AX - 5.3, AX + 5.3, Z_ATOM - 0.4, SKIRT, 0)                                    # USB-C over PORT.A (+y), open to the top
-GROVE_CUT = (J6[1] - 6.3, J6[1] + 6.3, ZBT - 0.3, ZBT + 6.4, 1.0)                          # Grove body 12 × 6 (+x);
+GROVE_CUT = (J6[1] - GROVE_HOLE[0], J6[1] + GROVE_HOLE[0], ZBT + GROVE_HOLE[1], ZBT + GROVE_HOLE[2], 1.0)  # Grove body 12 × 6 (+x);
 # R1, not R0.5: Takachi's milling notes say an R0.5 needs a fine end mill, slow and dearer (the plug is 9 × 4.8)
 # the reset: a U-shaped flap on the face left of the ports (official STL: 1.5..6.5 from the centre away from the
 # ports, 1.4..8.4 up), on the +x face here (the VoiceS3R turned half a turn); the notch takes a screwdriver

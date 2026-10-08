@@ -21,7 +21,7 @@ import os
 import cadquery as cq
 from shapes import (ROOT, box, rbox, union, vein_parts, vein_step_box, write_page, shell_and_lid, check, T_WALL,
                     T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID, VEIN_GROOVE, ledge_notches,
-                    way_in)
+                    way_in, grove_at, grove_hole)
 
 REV = 'vp4'
 # ---- shared with pcb/vein_unit_board/build_board.py p (u4): the outline, J1 and J2. Keep the two together ------------
@@ -65,8 +65,7 @@ for n in NOTCHES:
 # PicoBlade 53398)
 j1 = box(J1[0] - 1.1, J1[0] + 2.6, J1[1] - 5.075, J1[1] + 5.075, ZBT, ZBT + 5.7)
 # the Grove: JST PH S4B-PH-SM4-TB (Fab -3.2..4.4 front, ±5.95 across, 6 high), the plug through the +x wall
-grove = box(J2[0] - 3.2, J2[0] + 4.4, J2[1] - 6.0, J2[1] + 6.0, ZBT, ZBT + 6.0)
-grove_plug = box(J2[0] + 4.4, xi1 + T_WALL + 8.0, J2[1] - 4.5, J2[1] + 4.5, ZBT + 0.6, ZBT + 5.4)
+grove, grove_plug = grove_at(J2[1], J2[0] + 4.4, 'x+', ZBT, back=7.6, out=xi1 + T_WALL + 8.0 - (J2[0] + 4.4))
 ldo = box(U1[0] - 2.0, U1[0] + 2.0, U1[1] - 3.3, U1[1] + 3.4, ZBT, ZBT + 1.2)        # U1 + C1 / C2
 # the module's 9P plug (14.4 wide as station/build_vein_unit.py, low in the end face) with the wires bent round the
 # -x end (one envelope, CABLE_END out); the cable folded along both long sides and across in the groove, round the
@@ -83,7 +82,7 @@ cable_runs = (box(x0, VEIN[1], ys0, VEIN[2], ZBT, Z_IN - 0.3),          # folded
               box(J1[0] - 1.1, xj1 + 0.01, J1[1] - 3.375, ys1, ZBT + 5.7, ZBT + 5.7 + J1_ROOM))   # over J1
 cable = union(*cable_runs)
 
-wall_cuts = [box(xi1 - 1, xi1 + 5, J2[1] - 6.3, J2[1] + 6.3, ZBT - 0.3, ZBT + 6.4)]       # Grove (as GROVE_CUT, sw130)
+wall_cuts = [grove_hole(J2[1], xi1, 'x+', ZBT)]                                         # Grove (as GROVE_CUT, sw130)
 win = (VEIN[0] + 0.75, VEIN[1] - 0.75, VEIN[2] + 0.25, VEIN[3] - 0.25)                   # 57.5 × 25.5
 rec = (VEIN[0] - 0.2, VEIN[1] + 0.2, VEIN[2] - 0.2, VEIN[3] + 0.2)                       # 59.4 × 26.4
 lid_cuts = [rbox(*win, Z_IN - 3, Z_TOP + 1, 1.75), rbox(*rec, Z_IN - 3, Z_IN + RECESS, 2.2)]
