@@ -80,6 +80,45 @@ def vein_step_box(rect, z0):
             .cut(box(vx0 + g0, vx0 + g1, vy0 - 1, vy1 + 1, z0 - 1, z0 + gd)))
 
 
+# held down by a lid / hood (Vein Unit P, 3D 印刷 B): the step goes through a window (the step + 0.25 a side, 57.5 ×
+# 25.5), the body bears on a recess in its underside (the body + 0.2 a side, 59.4 × 26.4, VEIN_RECESS deep), the top
+# 0.5 proud. The module's cable (measured 2026-10-07): the 9P plug with the wires bent round the 9P end CABLE_END out
+# of the end face; the rest folded along each long side CABLE_SIDE thick ("a little under 2 mm" on one side)
+VEIN_RECESS = 0.7
+CABLE_END, CABLE_SIDE = 2.0, 2.0
+
+
+def vein_z_in(z0):
+    """The lid's underside over the vein module standing on z0: the step's foot on the recess's floor."""
+    return z0 + 15.0 - VEIN_STEP_H - VEIN_RECESS
+
+
+def vein_window(rect, along_y=False):
+    """(window, recess) as (x0, x1, y0, y1) for the vein module (x0, x1, y0, y1), long side along x (or y)."""
+    ix, iy = (VEIN_STEP_IN[1], VEIN_STEP_IN[0]) if along_y else VEIN_STEP_IN
+    win = (rect[0] + (ix - 0.25), rect[1] - (ix - 0.25), rect[2] + (iy - 0.25), rect[3] - (iy - 0.25))
+    rec = (rect[0] - 0.2, rect[1] + 0.2, rect[2] - 0.2, rect[3] + 0.2)
+    return win, rec
+
+
+def vein_lid_cuts(rect, z_in, z_top, along_y=False):
+    """The window and the recess cut out of a lid / hood (z_in..z_top) over the vein module."""
+    win, rec = vein_window(rect, along_y)
+    return [rbox(*win, z_in - 3, z_top + 1, 1.75), rbox(*rec, z_in - 3, z_in + VEIN_RECESS, 2.2)]
+
+
+def vein_cable_sides(rect, z0, z1, along_y=False):
+    """The room for the module's cable folded along both long sides (CABLE_SIDE thick, z0..z1) and across in the
+    groove under it (the 9P end at x0, or y0 along_y): [side, side, groove]."""
+    g0, g1, gd = VEIN_GROOVE
+    x0, x1, y0, y1 = rect
+    if along_y:
+        return [box(x0 - CABLE_SIDE, x0, y0, y1, z0, z1), box(x1, x1 + CABLE_SIDE, y0, y1, z0, z1),
+                box(x0 - CABLE_SIDE, x1 + CABLE_SIDE, y0 + g0 + 0.2, y0 + g1 - 0.2, z0, z0 + gd - 0.1)]
+    return [box(x0, x1, y0 - CABLE_SIDE, y0, z0, z1), box(x0, x1, y1, y1 + CABLE_SIDE, z0, z1),
+            box(x0 + g0 + 0.2, x0 + g1 - 0.2, y0 - CABLE_SIDE, y1 + CABLE_SIDE, z0, z0 + gd - 0.1)]
+
+
 def vein_parts(rect, z0, along_y=False, step=False):
     """The vein module (x0, x1, y0, y1) standing on z0, long side along x, as a picture only (Waveshare publishes no
     CAD): drawn by hand inside its 59 × 26 × 15 box after the product photos, not measured. A finger scoop over the
