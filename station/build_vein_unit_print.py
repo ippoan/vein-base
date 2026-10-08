@@ -23,7 +23,7 @@ from shapes import (ROOT, box, rbox, union, vein_parts, vein_step_box, write_pag
                     T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, SCREW_IN, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID, VEIN_GROOVE, ledge_notches,
                     way_in, grove_at, grove_hole)
 
-REV = 'vp4'
+REV = 'vp5'
 # ---- shared with pcb/vein_unit_board/build_board.py p (u4): the outline, J1 and J2. Keep the two together ------------
 VEIN = (-29.5, 29.5, -13.0, 13.0)        # the module, the 9P end at -x
 BRD = (-37.3, 39.8, -15.0, 15.0)         # the board u4 (x0, x1, y0, y1), less NOTCHES
