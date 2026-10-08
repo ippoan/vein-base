@@ -231,32 +231,49 @@ if UNIT_P:
     text('J2 1:TX 2:RX 3:5V 4:G', 27.4, 0.0, size=0.8, rot=90)
     text(f'vein unit board {REV}', 0, 0, layer=pcbnew.B_SilkS)
     # a '1' beside pin 1 of each cable's 4P (the footprints' pin-1 mark is a short line the part hides): one pitch out
-    # of the row. JLC trims silk off pads, and check_drc.py ignores silk_over_copper, so check it here: the 0.8 box
-    # clear of every pad (+0.1) and via (0.6 + 0.1), and 0.3 inside the outline (pcb/station_board/build_board.py
-    # checks its 4Ps with the same values)
-    for fp in (J1, J2):
-        p1, p2 = pad(fp, '1'), pad(fp, '2')
-        x, y = 2 * p1[0] - p2[0], 2 * p1[1] - p2[1]
-        text('1', x, y, size=0.8)
-        tx0, tx1, ty0, ty1 = x - 0.4, x + 0.4, y - 0.4, y + 0.4
+    # of the row, and on J1 a filled triangle pointing at the side of the locking window, with 'LOCK' (Molex
+    # 533980000-SD: the window is in the long wall on the tails' side, here +x towards the module; plug the 4P with
+    # its latch that way). JLC trims silk off pads, and check_drc.py ignores silk_over_copper, so check each box here:
+    # clear of every pad (+0.1) and via (0.6 + 0.1), and 0.3 inside the outline and off the notches
+    # (pcb/station_board/build_board.py checks its 4Ps with the same values)
+    def silk_clear(box, label):
+        tx0, tx1, ty0, ty1 = box
         for f in b.GetFootprints():
             for q in f.Pads():
                 bb = q.GetBoundingBox()
                 qx0, qx1 = pcbnew.ToMM(bb.GetLeft()) - OX - 0.1, pcbnew.ToMM(bb.GetRight()) - OX + 0.1
                 qy0, qy1 = OY - pcbnew.ToMM(bb.GetBottom()) - 0.1, OY - pcbnew.ToMM(bb.GetTop()) + 0.1
                 assert tx1 <= qx0 or qx1 <= tx0 or ty1 <= qy0 or qy1 <= ty0, \
-                    f"{fp.GetReference()} '1' at {(x, y)} on {f.GetReference()} pad {q.GetNumber()}"
+                    f"{label} {box} on {f.GetReference()} pad {q.GetNumber()}"
         for v in b.GetTracks():
             if v.Type() == pcbnew.PCB_VIA_T:
                 (vx, vy), r = xy(v.GetPosition()), (0.6 + 0.1) / 2
                 dx, dy = max(tx0 - vx, 0, vx - tx1), max(ty0 - vy, 0, vy - ty1)
-                assert dx * dx + dy * dy >= r * r, f"{fp.GetReference()} '1' at {(x, y)} on the via at {(vx, vy)}"
-        assert X0 + 0.3 <= tx0 and tx1 <= X1 - 0.3 and Y0 + 0.3 <= ty0 and ty1 <= Y1 - 0.3, \
-            f"{fp.GetReference()} '1' at {(x, y)} off the outline"
+                assert dx * dx + dy * dy >= r * r, f"{label} {box} on the via at {(vx, vy)}"
+        assert X0 + 0.3 <= tx0 and tx1 <= X1 - 0.3 and Y0 + 0.3 <= ty0 and ty1 <= Y1 - 0.3, f"{label} {box} off the outline"
         for nx0, nx1, ny0, ny1 in NOTCHES:
-            assert tx1 <= nx0 - 0.3 or nx1 + 0.3 <= tx0 or ty1 <= ny0 - 0.3 or ny1 + 0.3 <= ty0, \
-                f"{fp.GetReference()} '1' at {(x, y)} in a notch"
-        print(fp.GetReference(), "'1' at", (round(x, 3), round(y, 3)))
+            assert tx1 <= nx0 - 0.3 or nx1 + 0.3 <= tx0 or ty1 <= ny0 - 0.3 or ny1 + 0.3 <= ty0, f"{label} {box} in a notch"
+        print(label, 'at', box)
+
+    ones = []
+    for fp in (J1, J2):
+        p1, p2 = pad(fp, '1'), pad(fp, '2')
+        x, y = 2 * p1[0] - p2[0], 2 * p1[1] - p2[1]
+        text('1', x, y, size=0.8)
+        ones.append((x - 0.4, x + 0.4, y - 0.4, y + 0.4))
+        silk_clear(ones[-1], f"{fp.GetReference()} '1'")
+    # the triangle 0.6 × 0.8 at (-31.0, -3.4), its tip to -x (J1's wall on the tails' side); 'LOCK' at 0.6 turned:
+    # 4 characters ~1.9 long, 0.6 across
+    tri = pcbnew.PCB_SHAPE(b); tri.SetShape(pcbnew.SHAPE_T_POLY)
+    ps = pcbnew.SHAPE_POLY_SET(); ps.NewOutline()
+    for x, y in ((-31.3, -3.4), (-30.7, -3.8), (-30.7, -3.0)):
+        ps.Append(mm(OX + x), mm(OY - y))
+    tri.SetPolyShape(ps); tri.SetLayer(pcbnew.F_SilkS); tri.SetWidth(mm(0.1)); tri.SetFilled(True); b.Add(tri)
+    text('LOCK', -30.9, -5.0, size=0.6, rot=90)
+    for box, label in (((-31.3, -30.7, -3.8, -3.0), 'J1 lock triangle'), ((-31.2, -30.6, -5.95, -4.05), 'J1 LOCK')):
+        silk_clear(box, label)
+        for o in ones:
+            assert box[1] <= o[0] or o[1] <= box[0] or box[3] <= o[2] or o[3] <= box[2], f"{label} {box} on the '1' {o}"
 else:
     XV = j1['1'][0] + 1.85                # the two vias beside J1
     XE = j2['1'][0] - 3.0                 # the two vias before the Grove
