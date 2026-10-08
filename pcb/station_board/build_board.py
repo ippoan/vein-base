@@ -56,7 +56,7 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  -> station_board_print_a.kicad_pcb, routed on its own (station_board_print_a.ses)
   'print_b'      the same circuit for the printed case B (concept_b() in station/build_station_print.py, two rows,
                  54.5 x 74.6 x 25.9 with the VoiceS3R): the vein module on the left, its 9P socket end at the front,
-                 on a stand 3.5 over the board (the case's shelf along -x and bar under its back end, which the board
+                 on a stand 3.9 over the board (the case's shelf along -x and bar under its back end, which the board
                  keeps clear of, and a post through P1) under a hood screwed up from under the floor, with MAX3232 /
                  C1..C5 / R1 / R2 and SW1 (hood and module off to set) under it, and J3 (MX1.25 4P vertical, 53398-0471)
                  just in front of its 9P plug, its locking window to -y (the cable, made with both latches on the same
@@ -170,7 +170,7 @@ if PRINT_A:
            'R1': (9.5, -12.0, 90), 'R2': (9.5, -8.5, 90)}
 if PRINT_B:
     # case B (concept_b): the vein module (x -27.5..-1.5, y -36.5..22.5, its 9P socket end at the front, -y) on a
-    # stand 3.5 over the board (the case's shelf along -x and bar under its back end, which the board keeps clear of,
+    # stand 3.9 over the board (the case's shelf along -x and bar under its back end, which the board keeps clear of,
     # and a post through P1) under a hood walled all round (its +x wall, x -1.2..0.6, stands on the board)
     # screwed up from under the floor (its +x screws H1 / H2 through the board, which it clamps to the floor's bosses);
     # the right column (x -4.6..24.9, out to the box's front, +x and back faces, under the hood's +x columns): the
@@ -214,7 +214,7 @@ if PRINT_B:
             (DB9_X, DB9_BY + 16.0), (X1, DB9_BY + 16.0), (X1, Y1), (XR, Y1), (XR, YL1), (X0, YL1)]
     # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
     POS = {'J1': (AX - 2.54, AY + 7.62, 90), 'J2': (AX, AY - 7.62, 90),
-           # under the vein module (3.5 under it): MAX3232 with C1..C5 on its -x, R1 / R2, SW1 (hood and module off
+           # under the vein module (3.9 under it): MAX3232 with C1..C5 on its -x, R1 / R2, SW1 (hood and module off
            # to set); J3 in front of it (above)
            'U1': (-6.0, -2.0, 0),
            'C1': (-12.0, -6.5, 90), 'C2': (-12.0, -3.5, 90), 'C3': (-12.0, -0.5, 90), 'C4': (-12.0, 2.5, 90),
