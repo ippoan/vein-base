@@ -157,11 +157,11 @@ def ledge_rect(x, y, xi0, xi1, yi0, yi1):
     return (x - LEDGE_W / 2, x + LEDGE_W / 2, yi1 - LEDGE_D, yi1)
 
 
-def ledges(xi0, xi1, yi0, yi1, z_in, avoid, lid_cuts=(), n_max=4, avoid_xy=()):
+def ledges(xi0, xi1, yi0, yi1, z_in, avoid, lid_cuts=(), n_max=4, avoid_xy=(), walls=('x-', 'x+', 'y-', 'y+')):
     """Screw ledges along the inside of the walls, clear of every part and wall cut in `avoid` (by bounding box,
     0.3 margin; only what reaches up to the ledges) and of every (x0, x1, y0, y1) in avoid_xy whatever its height
     (what goes in from above past the ledges, see way_in()): the free place nearest to each inside corner.
-    Returns [(x, y, ledge box)]."""
+    walls: the walls that may carry a ledge. Returns [(x, y, ledge box)]."""
     z0 = z_in - LEDGE_H
     bbs = [(a - 0.3, b + 0.3, c - 0.3, d + 0.3) for a, b, c, d in avoid_xy]
     for o in avoid:
@@ -171,7 +171,7 @@ def ledges(xi0, xi1, yi0, yi1, z_in, avoid, lid_cuts=(), n_max=4, avoid_xy=()):
     m = CSK / 2 + 1.0                       # the countersink stays 1.0 off the lid's windows
     wins = [(bb.xmin - m, bb.xmax + m, bb.ymin - m, bb.ymax + m) for bb in (o.val().BoundingBox() for o in lid_cuts)]
     cands = []
-    for wall in ('x-', 'x+', 'y-', 'y+'):
+    for wall in walls:
         lo, hi = (yi0, yi1) if wall[0] == 'x' else (xi0, xi1)
         for t in np.arange(lo + LEDGE_W / 2 + 1.2, hi - LEDGE_W / 2 - 1.2 + 1e-6, 0.5):
             if wall == 'x-':
@@ -240,17 +240,17 @@ def bb_xy(o, m):
 
 
 def shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, z_in, t_top=T_TOP, keep_clear=(), tht=(), floor=(),
-                  rib_floor=RIB_FLOOR, ledge_avoid=()):
+                  rib_floor=RIB_FLOOR, ledge_avoid=(), walls=('x-', 'x+', 'y-', 'y+')):
     """A tray (floor + walls up to z_in) and a flat lid (z_in..z_in + t_top) with a locating rim, all corners R3 outside,
     screwed down through the lid into ledges on the walls, both stiffened with a grid of ribs. keep_clear: every part,
     for the rim, the ledges and the lid's ribs; tht: the parts with legs through the board, floor: what stands on the
     floor (bosses, posts), both kept clear by the floor's ribs; ledge_avoid: (x0, x1, y0, y1) the ledges keep off in
-    xy whatever the height (ledges(avoid_xy))."""
+    xy whatever the height (ledges(avoid_xy)); walls: the walls that may carry a ledge."""
     Z_IN, Z_TOP = z_in, z_in + t_top
     xo0, xo1, yo0, yo1 = xi0 - T_WALL, xi1 + T_WALL, yi0 - T_WALL, yi1 + T_WALL
     tray = rbox(xo0, xo1, yo0, yo1, -T_FLOOR, Z_IN, 3.0).cut(rbox(xi0, xi1, yi0, yi1, 0, Z_IN + 1, 1.2))
     lid = rbox(xo0, xo1, yo0, yo1, Z_IN, Z_TOP, 3.0)
-    screws = ledges(xi0, xi1, yi0, yi1, Z_IN, list(keep_clear) + list(wall_cuts), lid_cuts, avoid_xy=ledge_avoid)
+    screws = ledges(xi0, xi1, yi0, yi1, Z_IN, list(keep_clear) + list(wall_cuts), lid_cuts, avoid_xy=ledge_avoid, walls=walls)
     for x, y, led in screws:
         tray = tray.union(led).cut(cyl_z(x, y, PILOT / 2, Z_IN - LEDGE_H + 1.2, Z_IN + 1))
         cone = cq.Workplane().add(cq.Solid.makeCone(CLEAR / 2, CSK / 2, (CSK - CLEAR) / 2,

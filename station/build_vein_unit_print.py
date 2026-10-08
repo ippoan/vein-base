@@ -20,7 +20,7 @@ the floor's inside face."""
 import os
 import cadquery as cq
 from shapes import (ROOT, box, rbox, union, vein_parts, vein_step_box, write_page, shell_and_lid, check, T_WALL,
-                    T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID, VEIN_GROOVE, ledge_notches,
+                    T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, SCREW_IN, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID, VEIN_GROOVE, ledge_notches,
                     way_in, grove_at, grove_hole)
 
 REV = 'vp4'
@@ -29,7 +29,7 @@ VEIN = (-29.5, 29.5, -13.0, 13.0)        # the module, the 9P end at -x
 BRD = (-37.3, 39.8, -15.0, 15.0)         # the board u4 (x0, x1, y0, y1), less NOTCHES
 # the board goes in from above past the lid screws' ledges (shapes.ledges, from the lid down to LEDGE_H): notched
 # 0.3 round each, through to the board's edge where less than 2.0 would be left (checked against the ledges below)
-NOTCHES = [(-37.3, -33.4, -15.0, -7.8), (35.9, 39.8, -15.0, -7.8), (-37.3, -30.1, 11.1, 15.0), (35.9, 39.8, 7.6, 15.0)]
+NOTCHES = [(-37.3, -33.4, -15.0, -7.8), (35.9, 39.8, -15.0, -7.8), (-37.3, -33.4, 7.6, 15.0), (35.9, 39.8, 7.6, 15.0)]
 J1 = (-34.8, 0.0)                        # MX1.25 4P vertical (53398-0471), footprint origin, turned 90 (tails and lock to -x)
 J2 = (34.4, 0.0)                         # Grove (JST S4B-PH-SM4-TB), footprint origin, turned 90 (opening +x)
 U1 = (32.6, 10.5)                        # LDO (SOT-23) beside J2, clear of the +x/+y notch, C2 / C1 at y 7.8 / 13.3
@@ -88,8 +88,10 @@ rec = (VEIN[0] - 0.2, VEIN[1] + 0.2, VEIN[2] - 0.2, VEIN[3] + 0.2)              
 lid_cuts = [rbox(*win, Z_IN - 3, Z_TOP + 1, 1.75), rbox(*rec, Z_IN - 3, Z_IN + RECESS, 2.2)]
 parts = [('vein', vein), ('board', board), ('J1 + 4P plug', j1), ('Grove J2', grove), ('Grove plug', grove_plug),
          ('LDO', ldo), ('9P plug + wires', plug9), ('cable', cable)]
-tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, Z_IN, 
+tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, wall_cuts, lid_cuts, Z_IN, walls=('x-', 'x+'),
                                         keep_clear=[o for n, o in parts if n != 'cable'] + list(cable_runs))
+assert len(screws) == 4 and all(abs(x - (xi0 + SCREW_IN)) < 1e-6 or abs(x - (xi1 - SCREW_IN)) < 1e-6 for x, _ in screws), \
+    'the four ledges should all be on the +-x walls'
 assert ZBT + 5.7 + J1_ROOM < Z_IN - LEDGE_H, 'the cable over J1 reaches the lid ledges'
 
 
