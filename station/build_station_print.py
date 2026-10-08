@@ -19,11 +19,10 @@ interference.
 Run from the repository root:  python3 station/build_station_print.py
 Coordinates: x across, y along (B: -y = the front, the user's side), z = 0 on the floor's inside face."""
 import os
-import numpy as np
 import cadquery as cq
-from shapes import (ROOT, box, rbox, cyl_z, stl_tris, vein_parts, vein_step_box, write_page, shell_and_lid, check,
+from shapes import (ROOT, box, rbox, cyl_z, vein_parts, vein_step_box, write_page, shell_and_lid, check,
                     rib_grid, xy_box, xy_overlap, T_WALL, T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH,
-                    RIB_FLOOR, RIB_LID, PILOT, CLEAR, CSK)
+                    RIB_FLOOR, RIB_LID, PILOT, CLEAR, CSK, atom_at, pins, db9, grove_at, grove_hole)
 
 BOSS = 2.0                       # the board stands on printed bosses (M2 self-tapping screws)
 ZB = BOSS
@@ -56,47 +55,8 @@ ATOM_POST_R0 = 3.5               # its foot under the board (the shoulder the bo
 ATOM_CUT_R = ATOM_POST_R + 0.25  # the board's round cut-out for it (build_board.py print_b POST_CUTS)
 
 
-def atom_at(x, y, ports, z0=Z_ATOM, z_top=0.0):
-    """The official VoiceS3R STL, ports to 'x+', 'x-', 'y+' or 'y-' (the reset is on the face clockwise of them),
-    its bottom at z0; for the page, in its frame (z - z_top, as shapes.tri() does to the other parts: before
-    2026-10-08 it was left out, and the VoiceS3R stood z_top too high, off its pins and post)."""
-    t = stl_tris('voice').copy()
-    c = (t.reshape(-1, 3).min(axis=0) + t.reshape(-1, 3).max(axis=0)) / 2
-    t[..., :2] -= c[:2]
-    ang = {'y-': 0, 'x+': 90, 'y+': 180, 'x-': 270}[ports]    # file: ports on -y
-    a = np.radians(ang)
-    R = np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]], dtype=np.float32)
-    t[..., :2] = t[..., :2] @ R.T
-    zmin = t.reshape(-1, 3)[:, 2].min()
-    t[..., 2] += z0 - zmin - z_top
-    t[..., 0] += x
-    t[..., 1] += y
-    return t.reshape(-1).astype(np.float32)
-
-
 def on(x0, x1, y0, y1, z0, z1):
     return box(x0, x1, y0, y1, ZBT + z0, ZBT + z1)
-
-
-def pins(pts, z1):
-    """The pin headers' pins (0.64 square) from the board up to z1 (the VoiceS3R's bottom), for the page only."""
-    s = None
-    for x, y in pts:
-        b = box(x - 0.32, x + 0.32, y - 0.32, y + 0.32, ZB, z1)
-        s = b if s is None else s.union(b)
-    return s
-
-
-def db9(cx, y_face, facing):
-    """DB9 male RA on the board, its flange at y_face, mating face to 'y-' or 'y+'. Returns (parts, plug)."""
-    s = -1 if facing == 'y-' else 1
-    def yy(a, b):        # a, b measured outwards from the flange face
-        return (min(y_face + s * a, y_face + s * b), max(y_face + s * a, y_face + s * b))
-    body = on(cx - 15.0, cx + 15.0, *yy(-10.5, -0.5), 0, 12.5)
-    flange = on(cx - 15.4, cx + 15.4, *yy(-1.0, 0.0), 0, 12.5)
-    shell = on(cx - 8.5, cx + 8.5, *yy(0.0, 6.0), 2.0, 10.5)
-    plug = box(cx - 15.15, cx + 15.15, *yy(0.8, 40.0), ZBT - 0.75, HOOD_TOP)
-    return body.union(flange), shell, plug
 
 
 def bosses(pts):
@@ -120,7 +80,7 @@ def concept_a():
     yi1 = ay + 12.0 + 0.3
     bx0, bx1, by0, by1 = -17.2, 17.2, ydb, yi1 - 0.3
     pcb = box(bx0, bx1, by0, by1, ZB, ZBT)
-    d9, d9shell, d9plug = db9(0.0, ydb, 'y-')
+    d9, d9shell, d9plug = db9(0.0, ydb, 'y-', ZBT, HOOD_TOP)
     row = by0 + 10.6                         # behind the DB9's body
     # MAX3232, C1..C5 and R1 / R2 under the vein module (2.9 under it: 1.75 / 0.9 / 0.5 high), footprints with pads
     u1 = on(-5.4, 5.3, -17.2, -9.7, 0, 1.75)
@@ -133,8 +93,7 @@ def concept_a():
                                                     # SW1 / J3 (from SW1 4.05 + 0.3), clear of a lid screw's ledge on the -x wall
     gy = row + 6.62                                                 # J6 (Grove) on +x behind the DB9
     gf = bx1 - 2.3                                                  # its front, 2.3 inside the board edge
-    grove = on(gf - 7.7, gf, gy - 6.0, gy + 6.0, 0, 6.0)
-    groveplug = on(gf, xi1 + 6.0, gy - 4.5, gy + 4.5, 0.6, 5.4)
+    grove, groveplug = grove_at(gy, gf, 'x+', ZBT, out=xi1 + 6.0 - gf)
     hdr = on(-8.9, -6.3, ay - 3.8, ay + 8.9, 0, 2.5).union(on(6.3, 8.9, ay - 1.3, ay + 8.9, 0, 2.5))
     atom_box = rbox(-12, 12, ay - 12, ay + 12, Z_ATOM, Z_ATOM + 16.8, 3.0)
     usb = box(-6, 6, ay + 12 + 6.5, ay + 12 + 24, Z_ATOM + 4, Z_ATOM + 11).union(
@@ -151,7 +110,7 @@ def concept_a():
     bs = bosses(holes)
     wall_cuts = [box(-15.65, 15.65, yi0 - 5, yi0 + 1, ZBT - 1.5, Z_IN + 0.1),            # DB9, open to the lid
                  box(-5.3, 5.3, yi1 - 1, yi1 + 5, Z_ATOM - 0.4, Z_ATOM + 9.4),          # USB-C over PORT.A
-                 box(xi1 - 1, xi1 + 5, gy - 5.0, gy + 5.0, ZBT - 0.3, ZBT + 6.4),        # the Grove plug
+                 grove_hole(gy, xi1, 'x+', ZBT, w=5.0),                                 # the Grove plug
                  box(xi1 - 1, xi1 + 5, ay - 7.0, ay - 1.0, Z_ATOM + 1.0, Z_IN + 0.1)]    # the reset, open to the lid
     # the DB9 stands up through a notch in the lid at the -y end, and the VoiceS3R's window runs out over the +y
     # wall for the USB-C / PORT.A plugs (they are over the lid too)
@@ -172,10 +131,10 @@ def concept_a():
         pcb_v = pcb_v.cut(cyl_z(x, y, 1.1, ZB - 1, ZBT + 1))
     bad = check((tray.cut(bs), lid), parts)
     view = [('shell', 'ふた(天板・指静脈と VoiceS3R の窓、M2 皿ねじで本体の受けに締める)', '#2b2f33', 0.45, 'shell', lid),
-            ('atom', 'VoiceS3R(公式 CAD、USB-C は +y)', '#1fa49a', 1, 'mods', atom_at(0, ay, 'y+', z_top=Z_TOP)),
+            ('atom', 'VoiceS3R(公式 CAD、USB-C は +y)', '#1fa49a', 1, 'mods', atom_at(0, ay, 'y+', Z_ATOM, Z_TOP)),
             ('hdr', 'ピンヘッダー J1 / J2(樹脂の台 2.5 とピン)', '#202326', 1, 'mods',
              hdr.union(pins([(-7.62, ay - 2.54 + 2.54 * i) for i in range(5)] + [(7.62, ay + 2.54 * i) for i in range(4)],
-                            Z_ATOM)))] + \
+                            ZB, Z_ATOM)))] + \
         vein_parts(vein, VEIN_Z0, along_y=True) + [
         ('pcb', 'station 基板 print_a(配線済み、build_board.py print_a)', '#1f7a4d', 1, 'mods', pcb_v),
         ('frame', '指静脈を載せる柱 4 本(本体と一体、基板の穴を通す。上に VHB)', '#8fa09c', 1, 'mods', frame),
@@ -256,9 +215,7 @@ def concept_b():
     pcb = None
     for r in brd:
         pcb = box(*r, ZB, ZBT) if pcb is None else pcb.union(box(*r, ZB, ZBT))
-    d9 = on(bx1 - 10.5, bx1 - 0.5, DY - 15.0, DY + 15.0, 0, 12.5).union(on(bx1 - 1.0, bx1, DY - 15.4, DY + 15.4, 0, 12.5))
-    d9shell = on(bx1, bx1 + 6.0, DY - 8.5, DY + 8.5, 2.0, 10.5)
-    d9plug = box(bx1 + 0.8, bx1 + 40.0, DY - 15.15, DY + 15.15, ZBT - 0.75, HOOD_TOP)
+    d9, d9shell, d9plug = db9(DY, bx1, 'x+', ZBT, HOOD_TOP)
     # J3 with the 4P plug in it: the housing ±3.375 and the fitting nails ±5.075 across, -1.1..2.6 deep turned to y
     # (KiCad's footprint, Fab; the pads to -y), up to the mated height 5.7 (as Vein Unit P's J1)
     j3 = on(j3x - 5.075, j3x + 5.075, j3y - 1.1, j3y + 2.6, 0, 5.7)
@@ -308,8 +265,7 @@ def concept_b():
     for r in to_slack[1:]:
         way = way.union(r)
     gx, gf = ax, yo1 - 2.3                                # J6 on the back edge behind the VoiceS3R, opening +y
-    grove = on(gx - 6.0, gx + 6.0, gf - 7.7, gf, 0, 6.0)
-    groveplug = on(gx - 4.5, gx + 4.5, gf, yo1 + 8.0, 0.6, 5.4)
+    grove, groveplug = grove_at(gx, gf, 'y+', ZBT, out=yo1 + 8.0 - gf)
     # J1 / J2 turned a quarter with the VoiceS3R (vein-base's x_vb -> y, y_vb -> -x): J1 (5 pins) at y = ay + 7.62
     # from x = ax - 2.54, J2 (4 pins) at y = ay - 7.62 from x = ax, both to ax + 7.62 (the USB-C side)
     hdr = on(ax - 3.81, ax + 8.89, ay + 6.35, ay + 8.89, 0, 2.5).union(on(ax - 1.27, ax + 8.89, ay - 8.89, ay - 6.35, 0, 2.5))
@@ -430,7 +386,7 @@ def concept_b():
             ('atom', f'VoiceS3R(公式 CAD、右の列の手前。USB-C は右 +x、リセットは手前で、どちらも箱の外面にそろい前に何も無い。基板から 3.5 浮く。床の裏から段付きの柱を通した M2 × {SCREW_B:g} の皿小ねじで底の中心の穴に留める)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'x+', Z_ATOM_B, Z_TOP)),
             ('hdr', 'ピンヘッダー J1 / J2(樹脂の台 2.5 とピン。VoiceS3R の底は基板から 3.5 で、ピンが底に当たる)', '#202326', 1, 'mods',
              hdr.union(pins([(ax - 2.54 + 2.54 * i, ay + 7.62) for i in range(5)] + [(ax + 2.54 * i, ay - 7.62) for i in range(4)],
-                            Z_ATOM_B)))] + vp + [
+                            ZB, Z_ATOM_B)))] + vp + [
         ('pcb', 'station 基板 print_b(build_board.py print_b。指静脈の台を避けた形。基板だけのねじは無く、フードの +x 側の柱 2 本のねじで床のボスとの間に挟まり、VoiceS3R の柱の肩とピンの間に挟まり、指静脈の下は床のリブが受けて台の柱 3 本が横の位置を決める)', '#1f7a4d', 1, 'mods', pcb_v),
         ('stand', f'指静脈の台(本体と一体: 左の棚・奥の横木・柱 3 本(右手前と、窓の下の 2 本)。基板から {HC_B:g} 上)', '#8fa09c', 1, 'mods', stand),
         ('db9', 'DB9 オス(右の列の VoiceS3R の後ろ、指静脈の側へ寄せた。口は右で、その前の基板と床は切ってある)', '#8a8f96', 1, 'mods', d9.union(d9shell)), ('db9plug', 'DB9 プラグ', '#5c6166', 1, 'mods', d9plug),

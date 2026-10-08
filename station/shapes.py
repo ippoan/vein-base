@@ -341,3 +341,75 @@ def way_in(screws, inner, items, board=None):
             v = box(*r, bb.zmin - 1, bb.zmax + 1).intersect(board).val().Volume()
             assert v < 1e-6, f'the board does not pass the ledge {r} on the way in'
     return rects
+
+
+# ---- parts shared by the station scripts (build_station_print.py, build_station_sw130.py, build_vein_unit_print.py,
+# build_vs3r_base_print.py) ------------------------------------------------------------------------------------------
+def atom_at(x, y, ports, z0, z_top=0.0):
+    """The official VoiceS3R STL, ports to 'x+', 'x-', 'y+' or 'y-' (the reset is on the face clockwise of them),
+    its bottom at z0; for the page, in its frame (z - z_top, as tri() does to the other parts: before 2026-10-08 it
+    was left out, and the VoiceS3R stood z_top too high, off its pins and post)."""
+    t = stl_tris('voice').copy()
+    c = (t.reshape(-1, 3).min(axis=0) + t.reshape(-1, 3).max(axis=0)) / 2
+    t[..., :2] -= c[:2]
+    ang = {'y-': 0, 'x+': 90, 'y+': 180, 'x-': 270}[ports]    # file: ports on -y
+    a = np.radians(ang)
+    R = np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]], dtype=np.float32)
+    t[..., :2] = t[..., :2] @ R.T
+    zmin = t.reshape(-1, 3)[:, 2].min()
+    t[..., 2] += z0 - zmin - z_top
+    t[..., 0] += x
+    t[..., 1] += y
+    return t.reshape(-1).astype(np.float32)
+
+
+def pins(pts, z0, z1):
+    """The pin headers' pins (0.64 square) from z0 (the board's underside) up to z1 (the VoiceS3R's bottom), for the
+    page only."""
+    s = None
+    for x, y in pts:
+        b = box(x - 0.32, x + 0.32, y - 0.32, y + 0.32, z0, z1)
+        s = b if s is None else s.union(b)
+    return s
+
+
+def _out(facing, c, face, a, b, w):
+    """(x0, x1, y0, y1) of a part facing 'x+' / 'x-' / 'y+' / 'y-' from a face at `face` (x for 'x±', y for 'y±'):
+    a..b measured outwards from the face, ±w across about c."""
+    s = 1 if facing[1] == '+' else -1
+    lo, hi = sorted((face + s * a, face + s * b))
+    return (lo, hi, c - w, c + w) if facing[0] == 'x' else (c - w, c + w, lo, hi)
+
+
+def db9(c, face, facing, zbt, plug_top):
+    """DB9 male RA on the board (its top at zbt), its flange at `face` (x for 'x±', y for 'y±'), centred at c along
+    it, mating face to `facing`. Returns (body + flange, shell, plug up to plug_top)."""
+    def on(a, b, w, z0, z1):
+        return box(*_out(facing, c, face, a, b, w), zbt + z0, zbt + z1)
+    body = on(-10.5, -0.5, 15.0, 0, 12.5)
+    flange = on(-1.0, 0.0, 15.4, 0, 12.5)
+    shell = on(0.0, 6.0, 8.5, 2.0, 10.5)
+    plug = box(*_out(facing, c, face, 0.8, 40.0, 15.15), zbt - 0.75, plug_top)
+    return body.union(flange), shell, plug
+
+
+# the Grove socket: JST PH S4B-PH-SM4-TB (C265102; the HY2.0 C722729's pins missed the pads), 12 across, 6 high, and
+# the Grove plug in it; a wall's hole for the plug: 12.6 × 6.7 (the HY2.0 body 12 × 6 goes through)
+GROVE_W, GROVE_H = 6.0, 6.0               # half its width, its height
+GROVE_PLUG = (4.5, 0.6, 5.4)              # the plug: half its width, z0 / z1 over the board
+GROVE_HOLE = (6.3, -0.3, 6.4)             # a wall's hole: half its width, z0 / z1 over the board
+
+
+def grove_at(c, face, facing, zbt, back=7.7, out=8.0):
+    """The Grove socket on the board (its top at zbt), its front at `face` (x for 'x±', y for 'y±'), centred at c
+    along it, opening to `facing`, `back` deep behind its front; and its plug `out` long in front of it.
+    Returns (socket, plug)."""
+    body = box(*_out(facing, c, face, -back, 0.0, GROVE_W), zbt, zbt + GROVE_H)
+    plug = box(*_out(facing, c, face, 0.0, out, GROVE_PLUG[0]), zbt + GROVE_PLUG[1], zbt + GROVE_PLUG[2])
+    return body, plug
+
+
+def grove_hole(c, wall, facing, zbt, w=GROVE_HOLE[0]):
+    """A hole for the Grove plug through the wall whose inside face is at `wall` (x for 'x±', y for 'y±'), centred at
+    c along it, ±w across."""
+    return box(*_out(facing, c, wall, -1.0, 5.0, w), zbt + GROVE_HOLE[1], zbt + GROVE_HOLE[2])
