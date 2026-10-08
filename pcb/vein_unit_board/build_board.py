@@ -20,9 +20,12 @@ Routing is written here (a handful of tracks). Run with KiCad's python from pcb/
         locate it), every part on the top and none under the module (its bottom bears on the board):
   - J1: MX1.25 4P vertical (Molex 53398-0471, LCSC C17617036) in the -x end just past the module's 9P plug (the plug
         and its bent wires 2.0 out of the end face), plugged from above (vp2; vp1 had it beside the +y side, which
-        took a 6.6 strip). 1 = 3V3, 2 = GND,
-        3 = RXD (<- G1), 4 = TXD (-> G2): the 9P's 3..6 in order, so the wires never cross (NOT the order of J3 on
-        the station board, hence the silk)
+        took a 6.6 strip). Turned 90 (u4 from v0.34): its tails and the locking window (Molex 533980000-SD: the long
+        wall on the tails' side) to -x, the board's edge, the fitting nails to +x, the module. The cable is made
+        with the locks of both ends on the same face and the wires straight: the 9P (lock up) goes out -x and bends
+        down into J1, whose lock then faces out (-x). Its pads take, from +y, 3V3, GND, RXD (<- G1), TXD (-> G2):
+        the 9P's 3..6 (red, black, green, yellow, +y first seen from outside), so 4 = 3V3 / 3 = GND / 2 = RXD /
+        1 = TXD, set from the pads' places (NOT the order of J3 on the station board, hence the silk)
   - U1 / C1 / C2 as u3, beside J2 in the +x end (+y of it, clear of the notch)
   - the outline notched in the corners for the lid screws' ledges, which the board passes on its way in from above
         (NOTCHES, = station/build_vein_unit_print.py)
@@ -51,7 +54,7 @@ if UNIT_P:
     # y -13..13, its cable folded along both long sides (2.0) over the board
     X0, X1, Y0, Y1, BR = -37.3, 39.8, -15.0, 15.0, 1.0
     HOLES = []
-    POS = {'J1': (-33.7, 0.0, 270),           # pads to +x, 0.3 off the 9P plug; the fitting nails' pads 0.6 in the edge
+    POS = {'J1': (-34.8, 0.0, 90),            # tails to -x, 0.6 in the edge; the fitting nails' pads 0.3 off the 9P plug
            'J2': (34.4, 0.0, 90),             # its back pads 0.3 clear of the module's +x end, front 1.0 in the edge
            'U1': (32.6, 10.5, 0), 'C2': (32.6, 7.8, 0), 'C1': (32.6, 13.3, 180)}   # a column clear of the +x/+y notch
     # the lid screws' ledges + 0.3, through to the edge (= NOTCHES in station/build_vein_unit_print.py, which checks them)
@@ -99,6 +102,10 @@ def load(lib, name, ref, value, x, y, rot=0, base=FP, uri_base=FP):
     return fp
 
 
+def pad(fp, num):
+    return xy([p for p in fp.Pads() if p.GetNumber() == num][0].GetPosition())
+
+
 def wire(fp, table):
     for p in fp.Pads():
         n = table.get(p.GetNumber())
@@ -106,19 +113,17 @@ def wire(fp, table):
             p.SetNet(nets[n])
 
 
-def pad(fp, num):
-    return xy([p for p in fp.Pads() if p.GetNumber() == num][0].GetPosition())
-
-
 # ---- J2 Grove on the +x edge, opening +x (footprint front = its +y, turned 90°)
 J2 = load('Connector_JST.pretty', 'JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal', 'J2', 'Grove HY2.0-4P RA', XG, 0, rot=90)
 wire(J2, {'1': 'TXD', '2': 'RXD', '3': '5V', '4': 'GND', 'MP': 'GND'})
 
-# ---- J1 vein cable, opening -x (footprint front = its +y, turned 270°); p: vertical, plugged from above
+# ---- J1 vein cable, opening -x (footprint front = its +y, turned 270°); p: vertical, plugged from above, turned 90
 if UNIT_P:
     J1 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53398-0471_1x04-1MP_P1.25mm_Vertical', 'J1',
               'MX1.25-4P vertical (Molex 53398-0471)', 0, 0)
-    wire(J1, {'1': '3V3', '2': 'GND', '3': 'RXD', '4': 'TXD', 'MP': 'GND'})
+    # the 9P's 3..6 run from +y along the -x end face, so J1's pads take them from +y (not by the pads' numbers)
+    J1NET = dict(zip(sorted('1234', key=lambda n: -pad(J1, n)[1]), ('3V3', 'GND', 'RXD', 'TXD')))
+    wire(J1, {**J1NET, 'MP': 'GND'})
 else:
     J1 = load('vein_base.pretty', 'Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal_NarrowMP', 'J1',
               'MX1.25-4P RA (Molex 53261-0471)', XJ, JC, rot=270, base=os.path.join(HERE, '..') + '/', uri_base='${KIPRJMOD}/../')
@@ -195,6 +200,7 @@ def via(x, y, net):
 
 
 j1 = {n: pad(J1, n) for n in '1234'}
+jn = {net: j1[n] for n, net in J1NET.items()} if UNIT_P else {}   # p: J1's pads by net
 j2 = {n: pad(J2, n) for n in '1234'}
 u1 = {n: pad(U1, n) for n in '123'}
 c1 = {n: pad(C1, n) for n in '12'}
@@ -208,32 +214,34 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 
 if UNIT_P:
-    # J1's pads face +x in a column (1 at +y): RXD / TXD / GND to vias just past them; RXD / TXD along B.Cu under the
-    # module to vias before the Grove's pads. 3V3: J1-1 along F.Cu under the module, up at x = 26.5 to C2-1 -> U1-2.
+    # J1's pads at -x in a column (3V3 at +y): RXD / TXD / GND along F.Cu under J1's housing (between its fitting
+    # nails) to vias past it (+x, under the 9P plug); RXD / TXD along B.Cu under the module to vias before the Grove's pads. 3V3: along
+    # F.Cu under the module, up at x = 26.5 to C2-1 -> U1-2.
     # 5V: J2-3 out to x = 34.8 (inside the notch), up to U1-3 -> C1-1. GND is the pour on both layers.
-    XV = j1['1'][0] + 1.85                     # the vias past J1's pads (pitch 1.25: 0.65 between them)
+    XV = xy(J1.GetPosition())[0] + 2.6 + 0.6  # the vias 0.6 past J1's housing (pitch 1.25: 0.65 between them)
     XE = j2['1'][0] - 2.95                     # the vias before the Grove's pads
-    for net, pin, jp, xd in (('RXD', '3', '2', 26.0), ('TXD', '4', '1', 25.0)):
-        y0, y1 = j1[pin][1], j2[jp][1]
-        track([j1[pin], (XV, y0)], net); via(XV, y0, net)
+    for net, jp, xd in (('RXD', '2', 26.0), ('TXD', '1', 25.0)):
+        y0, y1 = jn[net][1], j2[jp][1]
+        track([jn[net], (XV, y0)], net); via(XV, y0, net)
         track([(XV, y0), (xd, y0), (xd, y1), (XE, y1)], net, layer=pcbnew.B_Cu); via(XE, y1, net)
         track([(XE, y1), j2[jp]], net)
-    track([j1['2'], (XV, j1['2'][1])], 'GND'); via(XV, j1['2'][1], 'GND')
-    track([j1['1'], (26.5, j1['1'][1]), (26.5, c2['1'][1]), c2['1'], (c2['1'][0], u1['2'][1]), u1['2']], '3V3')
+    track([jn['GND'], (XV, jn['GND'][1])], 'GND'); via(XV, jn['GND'][1], 'GND')
+    track([jn['3V3'], (26.5, jn['3V3'][1]), (26.5, c2['1'][1]), c2['1'], (c2['1'][0], u1['2'][1]), u1['2']], '3V3')
     track([j2['3'], (34.8, j2['3'][1]), (34.8, u1['3'][1]), u1['3'], (u1['3'][0], c1['1'][1]), c1['1']], '5V')
     for x, y in [(-35.5, 10.0), (-35.5, -6.5), (-20.0, -8.0), (-20.0, 8.0), (0.0, -8.0), (0.0, 8.0), (20.0, -8.0),
                  (20.0, 8.0), (24.0, 12.0), (29.5, 12.5), (33.0, -10.0)]:
         via(x, y, 'GND')
     text('VEIN MODULE', -6.0, 4.5, size=1.2)
     # 22 characters at 0.8 (1 character ~0.8 × size): ~14.1 wide, x -27.1..-12.9 under the module, clear of J1's vias
-    text('J1 1:3V3 2:G 3:RX 4:TX', -20.0, -5.0, size=0.8)
+    short = {'3V3': '3V3', 'GND': 'G', 'RXD': 'RX', 'TXD': 'TX'}
+    text('J1 ' + ' '.join(f'{n}:{short[J1NET[n]]}' for n in '1234'), -20.0, -5.0, size=0.8)
     # 21 characters at 0.8, turned: y -6.7..6.7 at x 27.4, in front of the Grove's pads
     text('J2 1:TX 2:RX 3:5V 4:G', 27.4, 0.0, size=0.8, rot=90)
     text(f'vein unit board {REV}', 0, 0, layer=pcbnew.B_SilkS)
     # a '1' beside pin 1 of each cable's 4P (the footprints' pin-1 mark is a short line the part hides): one pitch out
     # of the row, and on J1 a filled triangle pointing at the side of the locking window, with 'LOCK' (Molex
-    # 533980000-SD: the window is in the long wall on the tails' side, here +x towards the module; plug the 4P with
-    # its latch that way). JLC trims silk off pads, and check_drc.py ignores silk_over_copper, so check each box here:
+    # 533980000-SD: the window is in the long wall on the tails' side, here -x towards the board's edge; plug the 4P
+    # with its latch that way). JLC trims silk off pads, and check_drc.py ignores silk_over_copper, so check each box here:
     # clear of every pad (+0.1) and via (0.6 + 0.1), and 0.3 inside the outline and off the notches
     # (pcb/station_board/build_board.py checks its 4Ps with the same values)
     def silk_clear(box, label):
@@ -262,15 +270,15 @@ if UNIT_P:
         text('1', x, y, size=0.8)
         ones.append((x - 0.4, x + 0.4, y - 0.4, y + 0.4))
         silk_clear(ones[-1], f"{fp.GetReference()} '1'")
-    # the triangle 0.6 × 0.8 at (-31.0, -3.4), its tip to -x (J1's wall on the tails' side); 'LOCK' at 0.6 turned:
-    # 4 characters ~1.9 long, 0.6 across
+    # the triangle 0.6 × 0.8 at (-36.6, 3.4), past the +y end of the row (the '1' is past the -y end), its tip to +x
+    # (J1's wall on the tails' side, x -35.9); 'LOCK' at 0.6 turned beyond it: 4 characters ~1.9 long, 0.6 across
     tri = pcbnew.PCB_SHAPE(b); tri.SetShape(pcbnew.SHAPE_T_POLY)
     ps = pcbnew.SHAPE_POLY_SET(); ps.NewOutline()
-    for x, y in ((-31.3, -3.4), (-30.7, -3.8), (-30.7, -3.0)):
+    for x, y in ((-36.3, 3.4), (-36.9, 3.0), (-36.9, 3.8)):
         ps.Append(mm(OX + x), mm(OY - y))
     tri.SetPolyShape(ps); tri.SetLayer(pcbnew.F_SilkS); tri.SetWidth(mm(0.1)); tri.SetFilled(True); b.Add(tri)
-    text('LOCK', -30.9, -5.0, size=0.6, rot=90)
-    for box, label in (((-31.3, -30.7, -3.8, -3.0), 'J1 lock triangle'), ((-31.2, -30.6, -5.95, -4.05), 'J1 LOCK')):
+    text('LOCK', -36.6, 5.15, size=0.6, rot=90)
+    for box, label in (((-36.9, -36.3, 3.0, 3.8), 'J1 lock triangle'), ((-36.9, -36.3, 4.2, 6.1), 'J1 LOCK')):
         silk_clear(box, label)
         for o in ones:
             assert box[1] <= o[0] or o[1] <= box[0] or box[3] <= o[2] or o[3] <= box[2], f"{label} {box} on the '1' {o}"
