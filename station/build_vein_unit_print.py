@@ -113,7 +113,7 @@ for n, s, label in (('body', tray, '本体'), ('lid', lid, 'ふた')):
 view = [('shell', f'ふた(窓 {win[1] - win[0]:.1f} × {win[3] - win[2]:.1f}、裏に深さ {RECESS:g} の座ぐり、M2 皿ねじで本体の受けに締める)',
          '#2b2f33', 0.45, 'shell', lid)] + vein_parts(VEIN, VZ0, step=True) + [
     ('board', '基板 u4(床のリブの上、指静脈で押さえる。build_board.py p)', '#1f7a4d', 1, 'mods', board),
-    ('j1', 'J1 MX1.25 4P 縦型(53398-0471)と 4P プラグ(−x 端、9P プラグの外側、上から挿す)。1:3V3 2:GND 3:RXD 4:TXD', '#f1efe8', 1, 'mods', j1),
+    ('j1', 'J1 MX1.25 4P 縦型(53398-0471)と 4P プラグ(−x 端、9P プラグの外側、上から挿す)。1:3V3 2:GND 3:RXD 4:TXD。ロックの窓(シルクの △ LOCK)は足の側(+x、指静脈の側)。プラグのロックの爪をそちらに向けて上から挿す', '#f1efe8', 1, 'mods', j1),
     ('plug9', f'指静脈の MX1.25 9P プラグと −x 端を回る線(端面から {CABLE_END:g}、付属ケーブル④、3〜6 に差し替え)', '#e7e1cf', 1, 'mods', plug9),
     ('cable', f'4 線のケーブルの置き場(両側面に厚さ {CABLE_SIDE:g} で折り返し、底の溝、−x/+y の角を回って J1 の上へ。巻き方は実物で合わせる)', '#d9775c', 1, 'mods', cable),
     ('ldo', 'U1 LDO 5V → 3.3V と C1 / C2(+x 端、J2 の横)', '#202326', 1, 'mods', ldo),
