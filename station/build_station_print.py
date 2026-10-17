@@ -50,10 +50,9 @@ J3_MATED = 5.7                   # J3 (53398-0471) with the 4P plug in it, over 
 TAIL_HDR = 1.5
 TAIL_DB9 = 2.5
 TAIL_GAP_MIN = 0.5               # the tails' tips off the floor's top (J1 / J2) / off the desk (the DB9's holes)
-DB9_HOLE_MARGIN = 0.5            # the DB9's holes: the leg's outline + this all round
+DB9_HOLE_D = 5.0                 # the DB9's holes: round, through the floor under each fixing leg (the user, 2026-10-18)
 DB9_FIX_D = 3.2                  # the fixing legs' diameter (the footprint's drill 3.2, pad 4)
-DB9_PIN_W = 1.0                  # the signal pins' width (the footprint's drill 1.0)
-
+TAIL_DB9_SIG = 1.5               # the DB9's signal pins: the user measured "shorter than 2.0"; 1.5 (as J1 / J2) is a guide
 
 def tail_gap_hdr():
     """J1 / J2's tails' tips over the floor's top, 0.5 at least (the tails do not reach the floor)."""
@@ -66,23 +65,19 @@ def db9_tail_holes(face, c):
     """B: the DB9's tails (J4: KiCad's DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_..., turned to
     the +x face as build_board.py print_b does: row 1 (pins 1..5, local y 0) 7.70 in from the flange at `face`, row 2
     (pins 6..9, local y 2.84) 2.84 nearer it, pin pitch 2.77, the two fixing legs (pad 0) at local (-6.96, 1.42) and
-    (18.04, 1.42) i.e. 12.5 either side of the row's centre `c`, 1.42 in from row 1) and the holes through the floor
-    under them. One hole for the 9 signal pins (the rows are 2.84 apart and one 4.84 wide hole leaves the bridge
-    between it and the legs' holes 3.9 wide), one for each fixing leg. Returns (tails, holes (x0, x1, y0, y1), the
+    (18.04, 1.42) i.e. 12.5 either side of the row's centre `c`, 1.42 in from row 1) and the round holes through the
+    floor under the two fixing legs (2.5 long, 0.5 into the floor). The signal pins are shorter than 2.0 (measured), so
+    they get no hole (taken as 1.5, a guide, for the interference check). Returns (tails, holes (x, y, d), the fixing
     tails' tips off the desk)."""
     x1 = face - 7.70
     sig = [(x1, c + (i - 2) * 2.77) for i in range(5)] + [(x1 + 2.84, c + (j - 1.5) * 2.77) for j in range(4)]
     fix = [(x1 + 1.42, c - 12.5), (x1 + 1.42, c + 12.5)]
-    tails = pins(sig, ZB - TAIL_DB9, ZB)
-    h = DB9_PIN_W / 2 + DB9_HOLE_MARGIN
-    holes = [(x1 - h, x1 + 2.84 + h, c - 2 * 2.77 - h, c + 2 * 2.77 + h)]
-    f = DB9_FIX_D / 2
+    tails = pins(sig, ZB - TAIL_DB9_SIG, ZB)
     for x, y in fix:
-        tails = tails.union(cyl_z(x, y, f, ZB - TAIL_DB9, ZB))
-        holes.append((x - f - DB9_HOLE_MARGIN, x + f + DB9_HOLE_MARGIN, y - f - DB9_HOLE_MARGIN, y + f + DB9_HOLE_MARGIN))
+        tails = tails.union(cyl_z(x, y, DB9_FIX_D / 2, ZB - TAIL_DB9, ZB))
     desk = T_FLOOR_B + ZB - TAIL_DB9
     assert desk >= TAIL_GAP_MIN, f'the DB9\'s tails come {desk:.2f} over the desk'
-    return tails, holes, desk
+    return tails, [(x, y, DB9_HOLE_D) for x, y in fix], desk
 
 
 DB9_GAP_B = 2.0                  # B: the serial cable's plug off the VoiceS3R's back face (the user's, 2026-10-18: the
@@ -428,11 +423,15 @@ def concept_b():
         [(x - 3.5, x + 3.5, y - 3.5, y + 3.5) for x, y in thru] + \
         [(ax - ATOM_POST_R0 - 1.0, ax + ATOM_POST_R0 + 1.0, ay - ATOM_POST_R0 - 1.0, ay + ATOM_POST_R0 + 1.0)] + \
         [(bx1 - 1.0, xo1, cy0 - 1.0, cy1 + 1.0)] + \
-        [(a - 1.0, b + 1.0, c - 1.0, d + 1.0) for a, b, c, d in d9holes]    # the floor's cut before the DB9 (a rib's end came 0.9 off its corner), the holes under its legs
+        [(x - d / 2 - 1.0, x + d / 2 + 1.0, y - d / 2 - 1.0, y + d / 2 + 1.0) for x, y, d in d9holes]    # the floor's cut before the DB9 (a rib's end came 0.9 off its corner), the holes under its legs
     for r in brd:
         g = rib_grid(r[0] + 0.5, r[1] - 0.5, r[2] + 0.5, r[3] - 0.5, -0.01, ZB, av)
         if g is not None:
             body = body.union(g)
+    # rib_grid brings a bar back when a later avoid box meets a bar an earlier one has cut away whole (cq's cut on an
+    # empty result falls back to the first solid), which left ribs under the DB9's pins; clear the DB9's box again
+    # (A and the other boards keep their ribs: shapes.py stays as it is)
+    body = body.cut(box(*[(a - 1.0, b + 1.0, c - 1.0, d + 1.0) for a, b, c, d in [xy_box(d9)]][0], 0.001, ZB + 0.5))
     # the hood: walls all round (a closed frame: -x, the front and the back down to the floor, +x and the front / back
     # walls' +x ends down to the board, which runs under them), the four columns; the floor under them drilled and
     # countersunk for the screws' heads
@@ -440,8 +439,8 @@ def concept_b():
              (bxs, xh1, hy1, yo1, ZBT), (hx1, xh1, yo0, yo1, ZBT)]
     hood = hood_over_vein(vein, (xo0, xh1, yo0, yo1), (hx0, hx1, hy0, hy1), walls, cols, thru, Z_IN, Z_TOP)
     body = floor_screws(body, cols, ax, ay, z_atom_hole)
-    for r in d9holes:
-        body = body.cut(box(*r, -T_FLOOR_B - 1, 1))
+    for x, y, d in d9holes:
+        body = body.cut(cyl_z(x, y, d / 2, -T_FLOOR_B - 1, 1))
     pcb_v = pcb.cut(cyl_z(ax, ay, ATOM_CUT_R, ZB - 1, ZBT + 1))
     for x, y in thru:
         pcb_v = pcb_v.cut(cyl_z(x, y, 1.1, ZB - 1, ZBT + 1))
@@ -468,7 +467,7 @@ def concept_b():
     print('b: the DB9 plug %.2f off the VoiceS3R' % gap9)
     print(f'b: J1 / J2\'s tails ({TAIL_HDR:g}, measured) end {tip_gap:.2f} over the floor\'s top (keep {TAIL_GAP_MIN:g}); the DB9\'s tails ({TAIL_DB9:g}, '
           f'measured) end {d9desk:.2f} over the desk (keep {TAIL_GAP_MIN:g}); holes through the floor under them: '
-          + ', '.join('(%.2f..%.2f, %.2f..%.2f)' % r for r in d9holes))
+          + ', '.join('⌀%.1f at (%.2f, %.2f)' % (r[2], r[0], r[1]) for r in d9holes))
     view = [('shell', f'フード(指静脈の窓と裏の座ぐり、4 面の壁(一周の枠)と四隅の柱。床の裏から M2 × {SCREW_B:g} の皿小ねじ 4 本で締める。+x 側の 2 本は基板を通して基板も挟む)', '#2b2f33', 0.45, 'shell', hood),
             ('atom', f'VoiceS3R(公式 CAD、右の列の手前。USB-C は右 +x、リセットは手前で、どちらも箱の外面にそろい前に何も無い。基板から 3.5 浮き、下に MAX3232・SW1 など。床の裏から段付きの柱を通した M2 × {SCREW_B:g} の皿小ねじで底の中心の穴に留める)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'x+', Z_ATOM_B, Z_TOP)),
             ('hdr', 'ピンヘッダー J1 / J2(樹脂の台 2.5 とピン。VoiceS3R の底は基板から 3.5 で、ピンが底に当たる)', '#202326', 1, 'mods',
@@ -647,7 +646,7 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
         dims[3] = ('リブ', f'反り止め(JLC3DP の勧め)。幅 {RIB_W:g} を約 {RIB_PITCH:g} おきの格子に、床(高さ {RIB_SHOWN[key]:g}、基板の下。THT の足とボスを避ける)')
         dims[4] = ('基板', 'station 基板 print_b(箱に合わせて配置・配線済み、build_board.py print_b)。基板だけを留めるねじは無い: 右はフードの +x 側の柱 2 本のねじ(床のボスとの間に挟む)と VoiceS3R の段付きの柱の肩、'
                            '左(指静脈の下)は床のリブが受けて指静脈に押さえられ、横はフードの壁で決まる。'
-                           f'J1 / J2 の足は実測 {TAIL_HDR:g}(床の上面から {ZB - TAIL_HDR:.1f} 上で止まり、床に当たらない)。DB9 の固定の足 2 本と信号の足 9 本は実測 {TAIL_DB9:g}(信号の足は短いが全部この長さで見る)で床に {TAIL_DB9 - ZB:.1f} 食い込むので、足の真下の床に貫通の穴(固定の足 ⌀{DB9_FIX_D:g} の外形 + {DB9_HOLE_MARGIN:g} の四角 2 つと、信号の足 9 本をまとめた 1 つ)を開ける(足の先は机から {T_FLOOR_B + ZB - TAIL_DB9:.1f})')
+                           f'J1 / J2 の足は実測 {TAIL_HDR:g}(床の上面から {ZB - TAIL_HDR:.1f} 上で止まり、床に当たらない)。DB9 の固定の足 2 本は実測 {TAIL_DB9:g}で床に {TAIL_DB9 - ZB:.1f} 食い込むので、その真下の床に ⌀{DB9_HOLE_D:g} の丸い貫通穴を 1 つずつ開ける。信号の足 9 本は実測で 2.0 より短く床に当たらないので穴は無い(干渉チェックでは目安の {TAIL_DB9_SIG:g})(固定の足の先は机から {T_FLOOR_B + ZB - TAIL_DB9:.1f})')
         dims[6] = ('ねじ', f'M2 × {SCREW_B:g} 皿小ねじ × {len(screws)}(フード 4、VoiceS3R 1)。どれも床の裏から上へ、頭は床と面一。'
                            f'フードの四隅の角柱(3.6 角)は下穴 ⌀{PILOT_B:g} に PA12 をねじ切りながら締める(+x 側の 2 本は基板を通す)。'
                            'VoiceS3R のねじは締めすぎない(基板は柱の肩とピンの間に挟まるだけ)。位置: '
