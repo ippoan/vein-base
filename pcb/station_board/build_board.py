@@ -133,6 +133,12 @@ if PF:
 POS = {}                     # sw75: ref -> (x, y, rot), overriding the places below
 DB9_ROT, DB9_BY = 0, 0.0     # sw75: the DB9 turned to the +x edge at y = DB9_BY
 DB9_X = None                 # print_b: its flange's x when not on X1
+# J4 (KiCad's DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm): pin 1's row
+# to the flange's face. The footprint's F.Fab has the flange's face 10.94 off pin 1's row (the body y -1.8..10.54, the
+# flange 10.54..10.94, the shell 10.94..16.94; station/shapes.py DB9_PIN_FACE); the name's 7.70 is the row to the
+# board's edge, the body 3.24 out past it. 7.70 was taken for the flange's face up to v0.46: the boards ordered or not
+# to be ordered (station r10..r12, pf, sw75, sw130, print_a) keep it; print_b has 10.94 from v0.47
+DB9_PIN_FACE = 7.70
 POST_CUTS = []               # print_b: round cut-outs (Edge.Cuts, x, y, r) for the case's posts, no courtyard
 J3_NETS = {'1': 'G5', '2': 'G6', '3': '3V3', '4': 'GND', 'MP': 'GND'}   # print_b: from its pads' places (see there)
 PRE_ROUTE = {}               # print_b: locked F.Cu tracks drawn here (net: points), not in the .ses
@@ -230,6 +236,7 @@ if PRINT_B:
     POST_CUTS = [(AX, AY, 2.4)]                     # the VoiceS3R's screw post (4.3) up to its M2 hole at its centre
                                                     # (concept_b's ATOM_POST_R + 0.25)
     DB9_X = X1 - 6.0                              # its flange: the shell (6.0, shapes.DB9_SHELL_L) out to the edge
+    DB9_PIN_FACE = 10.94                          # the footprint's own (v0.47; 7.70 put the DB9 3.24 out past here)
     # J3's pads from -x to +x on 3V3 / GND / G5 (RXD) / G6 (TXD): the module's 9P 3..6 (red, black, green, yellow) run
     # that way along its end face (seen from the front, window up, pin 1 on the left = -x), and the cable keeps the
     # order; the pad numbers follow from the footprint's turn (set below from the pads' places)
@@ -364,17 +371,19 @@ if RS232:  # print_c: none of these
     # ---- DB9 male right angle on the -y edge; its flange sits on the board edge
     J4 = load('Connector_Dsub.pretty', 'DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm',
               'J4', 'DB9 male RA (to FC-1200)', 0, 0, rot=0)
-    # local +y (towards the mating face) points to board -y; put the pin-1 row 7.70 inside the edge, centre at DB9_BX
+    # local +y (towards the mating face) points to board -y; put the pin-1 row DB9_PIN_FACE inside the flange's face
+    # (the edge, or DB9_X), centre at DB9_BX
     p1 = [p for p in J4.Pads() if p.GetNumber() == '1'][0]
     px, py = xy(p1.GetPosition())
-    if DB9_ROT == 90:      # sw75: mating face to +x, the pin row along +y, pin 1 7.70 in from the +x edge
+    if DB9_ROT == 90:      # sw75 / print_b: mating face to +x, the pin row along +y, pin 1 in from the +x edge / DB9_X
         J4.SetOrientationDegrees(90); px, py = xy(p1.GetPosition())
-        J4.Move(pcbnew.VECTOR2I(mm(((DB9_X if DB9_X is not None else X1) - 7.70) - px), -mm((DB9_BY - 5.54) - py)))
-    elif DB9_ROT == 180:   # print_b: mating face to +y, pin 1 7.70 in from the +y edge, centre at DB9_BX
+        J4.Move(pcbnew.VECTOR2I(mm(((DB9_X if DB9_X is not None else X1) - DB9_PIN_FACE) - px),
+                                -mm((DB9_BY - 5.54) - py)))
+    elif DB9_ROT == 180:   # mating face to +y, pin 1 in from the +y edge, centre at DB9_BX
         J4.SetOrientationDegrees(180); px, py = xy(p1.GetPosition())
-        J4.Move(pcbnew.VECTOR2I(mm((DB9_BX + 5.54) - px), -mm((Y1 - 7.70) - py)))
+        J4.Move(pcbnew.VECTOR2I(mm((DB9_BX + 5.54) - px), -mm((Y1 - DB9_PIN_FACE) - py)))
     else:
-        J4.Move(pcbnew.VECTOR2I(mm((DB9_BX - 5.54) - px), -mm((Y0 + 7.70) - py)))
+        J4.Move(pcbnew.VECTOR2I(mm((DB9_BX - 5.54) - px), -mm((Y0 + DB9_PIN_FACE) - py)))
     wire(J4, {'2': 'D2', '3': 'D3', '5': 'GND', '0': 'GND'})
     print('J4 pin1', xy(p1.GetPosition()), 'pin5', xy([p for p in J4.Pads() if p.GetNumber() == '5'][0].GetPosition()))
 

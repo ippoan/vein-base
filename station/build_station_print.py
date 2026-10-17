@@ -30,7 +30,7 @@ from shapes import (ROOT, VER, box, rbox, cyl_z, union, vein_parts, vein_step_bo
                     rib_grid, xy_box, xy_overlap, T_WALL, T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH,
                     RIB_FLOOR, RIB_LID, PILOT, CLEAR, CSK, atom_at, pins, db9, grove_at, grove_hole, VEIN_RECESS,
                     CABLE_END, CABLE_SIDE, vein_z_in, vein_lid_cuts, vein_cable, HY20_W, HY20_H, HY20_DEPTH,
-                    DB9_PLUG_W, DB9_SHELL_L, DB9_SHELL_W)
+                    DB9_PLUG_W, DB9_SHELL_L, DB9_SHELL_W, DB9_PIN_FACE, DB9_HALF_W, DB9_LEGACY)
 
 BOSS = 2.0                       # the board stands on printed bosses (M2 self-tapping screws)
 ZB = BOSS
@@ -64,13 +64,14 @@ def tail_gap_hdr():
 
 def db9_tail_holes(face, c):
     """B: the DB9's tails (J4: KiCad's DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_..., turned to
-    the +x face as build_board.py print_b does: row 1 (pins 1..5, local y 0) 7.70 in from the flange at `face`, row 2
+    the +x face as build_board.py print_b does: row 1 (pins 1..5, local y 0) DB9_PIN_FACE (10.94, the footprint's F.Fab;
+    7.70 before v0.47) in from the flange at `face`, row 2
     (pins 6..9, local y 2.84) 2.84 nearer it, pin pitch 2.77, the two fixing legs (pad 0) at local (-6.96, 1.42) and
     (18.04, 1.42) i.e. 12.5 either side of the row's centre `c`, 1.42 in from row 1) and the round holes through the
     floor under the two fixing legs (2.5 long, 0.5 into the floor). The signal pins are shorter than 2.0 (measured), so
     they get no hole (taken as 1.5, a guide, for the interference check). Returns (tails, holes (x, y, d), the fixing
     tails' tips off the desk)."""
-    x1 = face - 7.70
+    x1 = face - DB9_PIN_FACE
     sig = [(x1, c + (i - 2) * 2.77) for i in range(5)] + [(x1 + 2.84, c + (j - 1.5) * 2.77) for j in range(4)]
     fix = [(x1 + 1.42, c - 12.5), (x1 + 1.42, c + 12.5)]
     tails = pins(sig, ZB - TAIL_DB9_SIG, ZB)
@@ -261,7 +262,9 @@ def concept_a():
     # DB9 hole (±15.65). A is not ordered (B was chosen, 2026-10-08), so its shape stays: widen the hole if it is).
     # So does its plug's start, 0.8 off the flange (the real one stops at the shell's tip, 6.0; from there A's lid
     # rim fails to build in shell_and_lid)
-    d9, d9shell, d9plug = db9(0.0, ydb, 'y-', ZBT, HOOD_TOP, plug_w=15.15, plug_from=0.8)
+    # (A keeps the DB9's shape before v0.47, DB9_LEGACY, as its board keeps pin 1's row 7.70 in from the edge: A is not
+    # ordered)
+    d9, d9shell, d9plug = db9(0.0, ydb, 'y-', ZBT, HOOD_TOP, plug_w=15.15, plug_from=0.8, **DB9_LEGACY)
     row = by0 + 10.6                         # behind the DB9's body
     # MAX3232, C1..C5 and R1 / R2 under the vein module (2.9 under it: 1.75 / 0.9 / 0.5 high), footprints with pads
     u1 = on(-5.4, 5.3, -17.2, -9.7, 0, 1.75)
@@ -374,8 +377,9 @@ def concept_b():
     xo1 = ax + 12.0                                       # its +x face is the box's
     # the right column from the back (v0.46): the VoiceS3R at the back, its USB-C face (+y) the box's back face (the
     # hood's, yo1), its reset (on the face clockwise of the ports, +x) on the box's +x face; the DB9 before it (its
-    # flange ±15.4, DB9_GAP_B off the VoiceS3R's front face), face to +x; J6 before that (opening -y), its front 0.8
-    # inside the right column's front edge (yr0), which follows
+    # flange ±15.4, DB9_GAP_B off the VoiceS3R's front face; the footprint's F.Fab has it ±15.425 (DB9_HALF_W), so the
+    # gaps are 0.025 less: the places stay as v0.46), face to +x; J6 before that (opening -y), its front 0.8 inside the
+    # right column's front edge (yr0), which follows
     ay = yo1 - 12.0
     DY = ay - 12.0 - DB9_GAP_B - 15.4
     gx, gf = ax, DY - 15.4 - J6_DB9_B - HY20_DEPTH         # J6's front
@@ -449,7 +453,7 @@ def concept_b():
     # J6 on the front edge before the DB9, opening -y: the HY2.0 (C722729), its front 0.8 inside the edge, the Grove
     # plug out past it
     grove, groveplug = grove_at(gx, gf, 'y-', ZBT, out=gf - (yr0 - 8.0), back=HY20_DEPTH, w=HY20_W, h=HY20_H)
-    j6_gap = DY - 15.4 - (gf + HY20_DEPTH)
+    j6_gap = DY - DB9_HALF_W - (gf + HY20_DEPTH)
     assert j6_gap >= 0.3 - 1e-9, f'J6 is {j6_gap:.2f} off the DB9\'s flange'
     assert groveplug.val().BoundingBox().ymin < yr0, 'the Grove plug stays over the board'
     # J1 / J2 as A / C (turned half a turn, USB-C / PORT.A to +y): J1 (5 pins) at x = ax - 7.62 from y = ay - 2.54, J2
@@ -534,7 +538,7 @@ def concept_b():
     print('b: under the VoiceS3R, the nearest part %.2f off the hood\'s +x wall' % min(gaps))
     print('b: the DB9 plug starts %.2f past the board\'s +x edge, its flange %.2f off the VoiceS3R, J6 %.2f off it; '
           'the right column y %.2f..%.2f, the VoiceS3R at (%.2f, %.2f), the DB9 at y %.2f, J6 at x %.2f (front %.2f)'
-          % (gap9, ay - 12.0 - (DY + 15.4), j6_gap, yr0, yo1, ax, ay, DY, gx, gf))
+          % (gap9, ay - 12.0 - (DY + DB9_HALF_W), j6_gap, yr0, yo1, ax, ay, DY, gx, gf))
     for (p0, p1), n, kept in sides:
         print('b: edge support (%.2f, %.2f)-(%.2f, %.2f): %.1f of %.1f' % (*p0, *p1, kept, n))
     print(f'b: J1 / J2\'s tails ({TAIL_HDR:g}, measured) end {tip_gap:.2f} over the floor\'s top (keep {TAIL_GAP_MIN:g}); the DB9\'s tails ({TAIL_DB9:g}, '

@@ -457,16 +457,27 @@ DB9_PLUG_W = 17.1
 # plug's metal plate there, the frame and the plate with the shell almost whole between them: the user's photo,
 # 2026-10-18; it was taken to come 0.8 off the flange before)
 DB9_SHELL_L, DB9_SHELL_W = 6.0, 8.5
+# J4's footprint (KiCad 7's DSUB-9_Male_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm,
+# F.Fab; pad 1 at its origin, local +y to the mating face): the body y -1.8..10.54, the flange 10.54..10.94, the shell
+# 10.94..16.94, all x -9.885..20.965 about the pin row's centre 5.54. So pin 1's row is 10.94 behind the flange's face;
+# the name's 7.70 is the row to the board's edge (the body 3.24 out past it). v0.38..v0.46 took 7.70 for the flange's
+# face: B's DB9 stood 3.24 out of where it was drawn (the user's v0.38, 2026-10-18)
+DB9_PIN_FACE = 10.94                     # pin 1's row behind the flange's face
+DB9_FLANGE_T, DB9_BODY_L, DB9_HALF_W = 0.4, 12.74, 15.425   # the flange's thickness, the body + flange behind the face
+DB9_LEGACY = dict(body=(-10.5, -0.5, 15.0), flange=(-1.0, 15.4))   # the shape before v0.47 (print_a keeps it)
 
 
-def db9(c, face, facing, zbt, plug_top, plug_w=DB9_PLUG_W, plug_from=DB9_SHELL_L):
+def db9(c, face, facing, zbt, plug_top, plug_w=DB9_PLUG_W, plug_from=DB9_SHELL_L, body=None, flange=None):
     """DB9 male RA on the board (its top at zbt), its flange at `face` (x for 'x±', y for 'y±'), centred at c along
     it, mating face to `facing`. Returns (body + flange, shell, plug from the shell's tip up to plug_top, ±plug_w
-    across)."""
+    across). body (a, b, half width) / flange (a, half width) default to the footprint's F.Fab (DB9_*);
+    **DB9_LEGACY gives the shape before v0.47."""
     def on(a, b, w, z0, z1):
         return box(*_out(facing, c, face, a, b, w), zbt + z0, zbt + z1)
-    body = on(-10.5, -0.5, 15.0, 0, 12.5)
-    flange = on(-1.0, 0.0, 15.4, 0, 12.5)
+    ba, bb, bw = body or (-DB9_BODY_L, -DB9_FLANGE_T, DB9_HALF_W)
+    fa, fw = flange or (-DB9_FLANGE_T, DB9_HALF_W)
+    body = on(ba, bb, bw, 0, 12.5)
+    flange = on(fa, 0.0, fw, 0, 12.5)
     shell = on(0.0, DB9_SHELL_L, DB9_SHELL_W, 2.0, 10.5)
     plug = box(*_out(facing, c, face, plug_from, 40.0, plug_w), zbt - 0.75, plug_top)
     return body.union(flange), shell, plug
