@@ -1,0 +1,119 @@
+(session "station_board_print_c"
+  (base_design "station_board_print_c")
+  (placement
+    (resolution um 10)
+    (component "MountingHole:MountingHole_2.2mm_M2"
+      (place H4 1137000 -684000 front 0)
+      (place H3 863000 -684000 front 0)
+      (place H2 1137000 -1368000 front 0)
+      (place H1 863000 -1368000 front 0)
+    )
+    (component "Connector_Molex:Molex_PicoBlade_53398-0471_1x04-1MP_P1.25mm_Vertical"
+      (place J3 1000000 -1348000 front 180)
+    )
+    (component "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical"
+      (place J2 1076200 -530000 front 180)
+    )
+    (component "Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical"
+      (place J1 923800 -555400 front 180)
+    )
+  )
+  (was_is
+  )
+  (routes 
+    (resolution um 10)
+    (parser
+      (host_cad "KiCad's Pcbnew")
+      (host_version "7.0.11")
+    )
+    (library_out 
+      (padstack "Via[0-1]_600:300_um"
+        (shape
+          (circle F.Cu 6000 0 0)
+        )
+        (shape
+          (circle B.Cu 6000 0 0)
+        )
+        (attach off)
+      )
+    )
+    (network_out 
+      (net "3V3"
+        (wire
+          (path F.Cu 3000
+            923800 -555400
+            923800 -1330284
+            954016 -1360500
+            981250 -1360500
+          )
+        )
+      )
+      (net GND
+        (wire
+          (path F.Cu 3000
+            1076200 -453800
+            1076200 -465819
+          )
+        )
+        (wire
+          (path F.Cu 3000
+            1076200 -465819
+            1072444 -465819
+            1044250 -494013
+            1044250 -1333000
+          )
+        )
+        (wire
+          (path F.Cu 3000
+            1044250 -1333000
+            1044250 -1349449
+            1023063 -1370636
+            1001999 -1370636
+            993750 -1362387
+            993750 -1360500
+          )
+        )
+        (wire
+          (path F.Cu 3000
+            993750 -1360500
+            993750 -1357997
+            968753 -1333000
+            955750 -1333000
+          )
+        )
+      )
+      (net G5
+        (wire
+          (path F.Cu 3000
+            923800 -530000
+            923800 -542019
+          )
+        )
+        (wire
+          (path F.Cu 3000
+            923800 -542019
+            932814 -542019
+            1006250 -615455
+            1006250 -1360500
+          )
+        )
+      )
+      (net G6
+        (wire
+          (path F.Cu 3000
+            1018750 -1360500
+            1018750 -607793
+            927576 -516619
+            923800 -516619
+          )
+        )
+        (wire
+          (path F.Cu 3000
+            923800 -504600
+            923800 -516619
+          )
+        )
+      )
+    )
+  )
+)
