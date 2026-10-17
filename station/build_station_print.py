@@ -29,7 +29,7 @@ from shapes import (ROOT, VER, box, rbox, cyl_z, union, vein_parts, vein_step_bo
                     rib_grid, xy_box, xy_overlap, T_WALL, T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH,
                     RIB_FLOOR, RIB_LID, PILOT, CLEAR, CSK, atom_at, pins, db9, grove_at, grove_hole, VEIN_RECESS,
                     CABLE_END, CABLE_SIDE, vein_z_in, vein_lid_cuts, vein_cable, HY20_W, HY20_H, HY20_DEPTH,
-                    DB9_PLUG_W)
+                    DB9_PLUG_W, DB9_SHELL_L, DB9_SHELL_W)
 
 BOSS = 2.0                       # the board stands on printed bosses (M2 self-tapping screws)
 ZB = BOSS
@@ -80,10 +80,11 @@ def db9_tail_holes(face, c):
     return tails, [(x, y, DB9_HOLE_D) for x, y in fix], desk
 
 
-DB9_GAP_B = 2.0                  # B: the serial cable's plug off the VoiceS3R's back face (the user's, 2026-10-18: the
-                                 # real plug, 34.2 wide, hit it in v0.38, the model's 30.3 left 0.55)
-DB9_CUT_B = DB9_PLUG_W + 0.25    # B: the board and the floor cut before the DB9's face, half across (J6's pads' tails,
-                                 # 5.6 behind its origin, keep 0.5 of copper-to-edge behind it: build_board.py DB9_CUT)
+DB9_GAP_B = 0.3                  # B: the DB9's flange off the VoiceS3R's back face (as v0.39). Its shell's tip is at the
+                                 # board's +x edge, so the serial cable's plug (34.2 wide, measured) is out past it
+                                 # and clear of the VoiceS3R (the user's, 2026-10-18)
+DB9_CUT_B = DB9_SHELL_W + 0.5    # B: the board and the floor cut under the DB9's shell (flange to the edge), half
+                                 # across (build_board.py DB9_CUT)
 # B: under the VoiceS3R (its bottom 3.5 over the board): MAX3232, C1..C4 / C5, R1, R2 (0603, long side y) and SW1 (the
 # footprints' places in build_board.py print_b: keep them together), H_MAX_B high at most. SW1 is the KINGTEK
 # DSHP04TSGET (C40736, half pitch, 2.30 ± 0.20 high, checked at its most; the user's, 2026-10-08): the CTS
@@ -207,8 +208,10 @@ def concept_a():
     bx0, bx1, by0, by1 = -17.2, 17.2, ydb, yi1 - 0.3
     pcb = box(bx0, bx1, by0, by1, ZB, ZBT)
     # (the plug as it was modelled, 30.3 wide: the real one (34.2 at most, measured 2026-10-18) hits the front wall's
-    # DB9 hole (±15.65). A is not ordered (B was chosen, 2026-10-08), so its shape stays: widen the hole if it is)
-    d9, d9shell, d9plug = db9(0.0, ydb, 'y-', ZBT, HOOD_TOP, plug_w=15.15)
+    # DB9 hole (±15.65). A is not ordered (B was chosen, 2026-10-08), so its shape stays: widen the hole if it is).
+    # So does its plug's start, 0.8 off the flange (the real one stops at the shell's tip, 6.0; from there A's lid
+    # rim fails to build in shell_and_lid)
+    d9, d9shell, d9plug = db9(0.0, ydb, 'y-', ZBT, HOOD_TOP, plug_w=15.15, plug_from=0.8)
     row = by0 + 10.6                         # behind the DB9's body
     # MAX3232, C1..C5 and R1 / R2 under the vein module (2.9 under it: 1.75 / 0.9 / 0.5 high), footprints with pads
     u1 = on(-5.4, 5.3, -17.2, -9.7, 0, 1.75)
@@ -325,9 +328,9 @@ def concept_b():
     # out, is all on -x of it); the DB9 behind it (with the DB9 in front of it, pulled in to -x, its body stood right
     # before the reset)
     ay = yr0 + 12.0
-    DY = ay + 12.0 + DB9_GAP_B + DB9_PLUG_W               # the DB9 behind the VoiceS3R, face to +x, its plug clear of it
-    # the right column's back edge (J6 on it) goes back with the DB9 from where v0.39 had it (the DB9's flange 0.3
-    # off the VoiceS3R); the hood's back face (yo1) stays
+    DY = ay + 12.0 + DB9_GAP_B + 15.4                     # the DB9 behind the VoiceS3R (its flange ±15.4), face to +x
+    # the right column's back edge (J6 on it) as the DB9 goes (with its flange 0.3 off the VoiceS3R: the hood's back
+    # face, yo1)
     yo1r = yo1 + DY - (ay + 12.0 + 0.3 + 15.4)
     # the board: under the vein module and its slack (0.3 off the hood's -x wall, up to its end: the -x back column
     # stands 0.3 behind it) and, from under the hood's two +x columns on, out to the box's front, +x and back faces:
@@ -335,11 +338,10 @@ def concept_b():
     # there); the -x columns go down to the floor
     thru = cols[1::2]
     bx0, bxs, byv = hx0 + 0.3, thru[0][0] - COL_B - 0.3, vy1
-    # the DB9 pulled in to -x as far as the hood's +x wall lets it (its body 0.7 off it), its mating face still to
-    # +x: the board and the floor stop at its flange in front of the VoiceS3R (the box's +x face is the VoiceS3R's
-    # behind that)
-    bx1 = xh1 + 0.7 + 10.5                                # the DB9's flange (11.8; its body 1.3..11.8)
-    cy0, cy1 = DY - DB9_CUT_B, DY + DB9_CUT_B             # the board and the floor cut before the DB9's face (its plug)
+    # the DB9's mating face to +x, its shell's tip at the box's +x face (the VoiceS3R's): the serial cable's plug,
+    # which stops at the tip, is all out past the board's edge. The board and the floor are cut under the shell
+    bx1 = xo1 - DB9_SHELL_L                               # the DB9's flange
+    cy0, cy1 = DY - DB9_CUT_B, DY + DB9_CUT_B             # the board and the floor cut under the DB9's shell
     # the left part out to yf over J3, from 0.3 past the -x front column (it goes down to the floor); under the hood's
     # front wall and +x front column (H1) the right part out to the hood's front
     xt = cols[0][0] + COL_B + 0.3
@@ -351,8 +353,8 @@ def concept_b():
         pcb = box(*r, ZB, ZBT) if pcb is None else pcb.union(box(*r, ZB, ZBT))
     d9, d9shell, d9plug = db9(DY, bx1, 'x+', ZBT, HOOD_TOP)
     d9tails, d9holes, d9desk = db9_tail_holes(bx1, DY)    # the DB9's legs 2.5 under the board, holes through the floor
-    gap9 = d9plug.val().BoundingBox().ymin - (ay + 12.0)
-    assert gap9 >= DB9_GAP_B - 1e-6, f'the DB9 plug is {gap9:.2f} off the VoiceS3R (keep {DB9_GAP_B:g})'
+    gap9 = d9plug.val().BoundingBox().xmin - xo1
+    assert gap9 >= -1e-6, f'the DB9 plug comes {-gap9:.2f} in over the board\'s +x edge'
     # J3 with the 4P plug in it: the housing ±3.375 and the fitting nails ±5.075 across, -1.1..2.6 deep turned to y
     # (KiCad's footprint, Fab; the pads to -y), up to the mated height 5.7 (as Vein Unit P's J1)
     j3 = on(j3x - 5.075, j3x + 5.075, j3y - 1.1, j3y + 2.6, 0, 5.7)
@@ -460,7 +462,8 @@ def concept_b():
     screws = cols + [(ax, ay)]
     vp = vein_parts(vein, vz0, along_y=True, step=True)                  # (the socket end at -y)
     print('b: under the VoiceS3R, the nearest part %.2f off the hood\'s +x wall' % min(gaps))
-    print('b: the DB9 plug %.2f off the VoiceS3R' % gap9)
+    print('b: the DB9 plug starts %.2f past the board\'s +x edge, its flange %.2f off the VoiceS3R'
+          % (gap9, DY - 15.4 - (ay + 12.0)))
     print(f'b: J1 / J2\'s tails ({TAIL_HDR:g}, measured) end {tip_gap:.2f} over the floor\'s top (keep {TAIL_GAP_MIN:g}); the DB9\'s tails ({TAIL_DB9:g}, '
           f'measured) end {d9desk:.2f} over the desk (keep {TAIL_GAP_MIN:g}); holes through the floor under them: '
           + ', '.join('⌀%.1f at (%.2f, %.2f)' % (r[2], r[0], r[1]) for r in d9holes))
@@ -470,7 +473,7 @@ def concept_b():
              hdr.union(pins([(ax - 2.54 + 2.54 * i, ay + 7.62) for i in range(5)] + [(ax + 2.54 * i, ay - 7.62) for i in range(4)],
                             ZB - TAIL_HDR, Z_ATOM_B)))] + vp + [
         ('pcb', 'station 基板 print_b(build_board.py print_b。指静脈の下は平らで、パッドと配線だけ。基板だけのねじは無く、フードの +x 側の柱 2 本のねじで床のボスとの間に挟まり、VoiceS3R の柱の肩とピンの間に挟まり、指静脈の下は床のリブが受けてフードの壁が横の位置を決める)', '#1f7a4d', 1, 'mods', pcb_v),
-        ('db9', 'DB9 オス(右の列の VoiceS3R の後ろ、指静脈の側へ寄せた。口は右で、その前の基板と床は切ってある)', '#8a8f96', 1, 'mods', d9.union(d9shell)), ('db9plug', 'DB9 プラグ', '#5c6166', 1, 'mods', d9plug),
+        ('db9', 'DB9 オス(右の列の VoiceS3R の後ろ。口の筒の先端は右の縁で、筒の下の基板と床は切り抜いてある)', '#8a8f96', 1, 'mods', d9.union(d9shell)), ('db9plug', 'DB9 プラグ', '#5c6166', 1, 'mods', d9plug),
         ('u1', 'MAX3232・C1〜C5・R1 / R2(VoiceS3R の下)', '#202326', 1, 'mods', u1.union(caps)),
         ('sw1', f'SW1 DIP 4P KINGTEK DSHP04TSGET(C40736、ハーフピッチ、高さ 2.30 ± 0.20。VoiceS3R の下で、VoiceS3R を外して切り替え)', '#c0392b', 1, 'mods', sw1),
         ('j3', 'J3 MX1.25 4P 縦型(53398-0471)と 4P プラグ(指静脈の 9P プラグのすぐ手前、上から挿す)。ロックの窓(シルクの △ LOCK)は手前(外向き)。−x から 3V3・GND・RXD・TXD', '#f1efe8', 1, 'mods', j3),
@@ -597,7 +600,7 @@ VEIN_NOTE = {'a': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフ
                   'J3 は縦型(53398-0471)で 9P プラグのすぐ手前に立ち、ロックの窓は手前(外向き)。'
                   f'ケーブルは自作(両端のロックが同じ面でまっすぐ、9P の 3〜6 → 4P の −x から順)で、J3 に上から挿す。余り(約 7 cm)は指静脈 Unit P と同じく指静脈の両側面(フードの ±x の壁との間)に厚さ {CABLE_SIDE:g} で折り返す(底の溝も使える。巻き方は実物で合わせる)。そのために指静脈と左の部分を −x へ寄せ、+x の壁は動かしていない。フードと基板の左の部分は J3 の上まで手前へ伸ばした(右の列の手前の面は変えない)。'
                   '右の列(手前の VoiceS3R(リセットは箱の手前の面)、その後ろの DB9(指静脈の側へ寄せ、口の前の基板と床は切る)、奥の縁の J6)は壁もふたも無く、基板と床だけ。'
-                  f'DB9 に挿したシリアルケーブルのプラグ(実測で最大幅 {2 * DB9_PLUG_W:g}、厚み 14.6)と VoiceS3R の奥の面の間を {DB9_GAP_B:g} 空ける(v0.38 の実物でプラグが VoiceS3R に当たった)。そのため右の列の奥の縁はフードの奥の面より奥へ出る。'
+                  f'DB9 の口の筒の先端は基板の右の縁(VoiceS3R の USB-C と同じ面)にそろえ、筒の下の基板と床は切り抜く。挿したシリアルケーブルのプラグ(実測で最大幅 {2 * DB9_PLUG_W:g}、厚み 14.6)は筒の先端で止まるので基板の外に出て、VoiceS3R に当たらない(DB9 の枠と VoiceS3R の奥の面の間は {DB9_GAP_B:g})。'
                   f'MAX3232・C1〜C5・R1 / R2・SW1 は VoiceS3R の真下(部品は基板から {H_MAX_B:.1f} 以下。SW1 は KINGTEK DSHP04TSGET、高さ最大 {SW1_H:g}、VoiceS3R を外して切り替える)。'
                   f'VoiceS3R は基板から 3.5 浮き(実測、ピンが底に当たる)、床から立てた段付きの柱(下の段 ⌀{2 * ATOM_POST_R0:g} が基板を受ける肩、上の段 ⌀{2 * ATOM_POST_R:g} が基板の丸い切り欠き ⌀{2 * ATOM_CUT_R:g} を通って VoiceS3R の底の穴のまわり(0.2 の凹み)まで)を通した '
                   f'M2 × {SCREW_B:g} の皿小ねじで底の中心の M2 穴に留める(穴に {-T_FLOOR_B + SCREW_B - Z_ATOM_B - ATOM_RECESS:.1f} 入る。基板は柱の肩とピンの間に挟まる)'}
