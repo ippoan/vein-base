@@ -184,7 +184,9 @@ if PRINT_B:
     VX0 = -29.2                                     # the module's -x side (1.7 to -x of where it stood on its stand:
                                                     # the slack's 2.0 between it and the hood's +x wall, which stays)
     HX0 = VX0 - 2.0                                 # the hood's -x wall's inside (the slack's 2.0 on -x)
-    X0, X1, Y0, Y1 = HX0 + 0.3, 24.9, -36.5, 27.7   # (Y0 / Y1: the module's front end / the right column's back edge)
+    X0, X1, Y0, Y1 = HX0 + 0.3, 24.9, -36.5, 31.1   # (Y0 / Y1: the module's front end / the right column's back edge,
+                                                    # 3.4 behind the hood's back face YB with the DB9 from v0.40)
+    YB = 27.7                                       # the hood's back face: the board under it stops there
     YL1 = 22.5                                      # the left part's back edge: the module's back end (the hood's -x
                                                     # back column stands 0.3 behind it)
     # J3 (2026-10-08): vertical, just in front of the module's 9P plug (2.0 out of its end face): its fitting nails'
@@ -201,7 +203,10 @@ if PRINT_B:
     YR, YH, XH = -41.7, -46.9, 0.6                  # the right column's front, the hood's front face, its +x face
     AX, AY = 12.9, -29.7                            # VoiceS3R centre at the front (its reset on the box's front face),
                                                     # USB-C / PORT.A to +x (flush with the box's +x)
-    DB9_ROT, DB9_BY = 90, -2.0                      # mating face to +x, behind the VoiceS3R
+    # mating face to +x, behind the VoiceS3R: the serial cable's plug (34.2 wide, measured 2026-10-18) 2.0 off its
+    # back face (concept_b's DY; v0.39 had -2.0, the plug hit the VoiceS3R), the board cut 17.35 either side before
+    # its face (concept_b's DB9_CUT_B: the plug's half width 17.1 + 0.25; J6's pads' tails, 19.3, keep 0.55 to it)
+    DB9_ROT, DB9_BY, DB9_CUT = 90, 1.4, 17.35
     HOLE_FP = 'MountingHole_2.2mm_M2'
     HOLES = [(-2.5, -43.8), (-2.5, 24.6)]                               # H1 / H2: the hood's screws through the board
     # v0.39 (J6 the HY2.0): freerouting ran G38 down the +x edge and under J2's pads on B.Cu, round J2-4 (GND), whose
@@ -217,8 +222,9 @@ if PRINT_B:
     J3_NETS = None
     XR = -4.6                                       # the right column's -x edge (0.3 past the hood's +x columns)
     EDGE = [(X0, Y0), (XT, Y0), (XT, YF), (XR, YF), (XR, YH), (XH, YH), (XH, YR), (X1, YR),
-            (X1, DB9_BY - 16.0), (DB9_X, DB9_BY - 16.0),
-            (DB9_X, DB9_BY + 16.0), (X1, DB9_BY + 16.0), (X1, Y1), (XR, Y1), (XR, YL1), (X0, YL1)]
+            (X1, DB9_BY - DB9_CUT), (DB9_X, DB9_BY - DB9_CUT),
+            (DB9_X, DB9_BY + DB9_CUT), (X1, DB9_BY + DB9_CUT), (X1, Y1), (XH, Y1), (XH, YB), (XR, YB), (XR, YL1),
+            (X0, YL1)]
     # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
     # under the VoiceS3R (its bottom 3.5 over the board, every part 3.2 high at most; concept_b's U1_B / SMALL_B /
     # SW1_B): MAX3232 along y on -x of the post, C1..C4 in front of it, C5 and R1 / R2 behind it (0603, long side y),
