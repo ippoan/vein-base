@@ -458,18 +458,27 @@ def db9(c, face, facing, zbt, plug_top):
     return body.union(flange), shell, plug
 
 
-# the Grove socket: JST PH S4B-PH-SM4-TB (C265102; the HY2.0 C722729's pins missed the pads), 12 across, 6 high, and
-# the Grove plug in it; a wall's hole for the plug: 12.6 × 6.7 (the HY2.0 body 12 × 6 goes through)
+# the Grove socket as sw130 / print_a have it (JST PH S4B-PH-SM4-TB, C265102), 12 across, 6 high, and the Grove plug in
+# it; a wall's hole for the plug: 12.6 × 6.7 (the HY2.0 body 12 × 6 goes through). The PH socket does not take the
+# Grove plug (found on Vein Unit P's board 2026-10-17; it was thought to take it without the latch): those boards need
+# the HY2.0 before they are ordered again. These numbers stay, as sw130's ordered GROVE_CUT / SIDE_CUT and print_a
+# use them
 GROVE_W, GROVE_H = 6.0, 6.0               # half its width, its height
 GROVE_PLUG = (4.5, 0.6, 5.4)              # the plug: half its width, z0 / z1 over the board
 GROVE_HOLE = (6.3, -0.3, 6.4)             # a wall's hole: half its width, z0 / z1 over the board
+# the HY2.0 socket (CAX HY2.0-4P-WT, C722729; Vein Unit P's J2 and print_b's J6, footprint
+# pcb/vein_base.pretty/HY2.0_CAX_HY2.0-4P-WT_1x04-1MP_P2.00mm_Horizontal): its body in EasyEDA's 3D model is 12 across
+# and 5.2 high, its front 5.4 before the footprint's origin and its ears' back 3.85 behind it (the pads' tails 5.6 / the
+# mounting pads' front 5.7: the board must reach past them). grove_at(..., w=HY20_W, h=HY20_H, back=HY20_DEPTH)
+HY20_W, HY20_H = 6.0, 5.2                 # half its width, its height
+HY20_FRONT, HY20_DEPTH = 5.4, 9.25        # its front before the origin, its depth behind the front
 
 
-def grove_at(c, face, facing, zbt, back=7.7, out=8.0):
+def grove_at(c, face, facing, zbt, back=7.7, out=8.0, w=GROVE_W, h=GROVE_H):
     """The Grove socket on the board (its top at zbt), its front at `face` (x for 'x±', y for 'y±'), centred at c
-    along it, opening to `facing`, `back` deep behind its front; and its plug `out` long in front of it.
-    Returns (socket, plug)."""
-    body = box(*_out(facing, c, face, -back, 0.0, GROVE_W), zbt, zbt + GROVE_H)
+    along it, opening to `facing`, `back` deep behind its front, ±w across and h high (the PH's by default, HY20_* for
+    the HY2.0); and its plug `out` long in front of it. Returns (socket, plug)."""
+    body = box(*_out(facing, c, face, -back, 0.0, w), zbt, zbt + h)
     plug = box(*_out(facing, c, face, 0.0, out, GROVE_PLUG[0]), zbt + GROVE_PLUG[1], zbt + GROVE_PLUG[2])
     return body, plug
 

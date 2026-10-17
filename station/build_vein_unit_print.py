@@ -1,7 +1,8 @@
 """Vein Unit P: the finger vein module (Waveshare Finger Vein Scanner Module (A)) alone in the smallest printed box
 (MJF PA12) with one Grove cable to the VoiceS3R's PORT.A. The board u4 (pcb/vein_unit_board/build_board.py p) lies on
 the floor's ribs under the module and carries J1 (MX1.25 4P vertical, the module's cable) in the -x end just past the
-module's 9P plug, U1 (5 V -> 3.3 V) with C1 / C2 beside the Grove J2 in the +x end, J2 opening through the +x wall.
+module's 9P plug, U1 (5 V -> 3.3 V) with C1 / C2 beside the Grove J2 (HY2.0, C722729; vp5 had the JST PH, which does not take the
+Grove plug) in the +x end, J2 opening through the +x wall.
   - The module stands on the board and is held down by the lid: its top 2.0 is a 57 × 25 step, which goes through the
     lid's window (57.5 × 25.5); the 59 × 26 body under it bears on a 0.7 deep recess in the lid's underside
     (59.4 × 26.4), so the module's top is 0.5 proud of the lid. The board is pinned between the module and the ribs,
@@ -22,17 +23,17 @@ import cadquery as cq
 from shapes import (ROOT, VER, box, union, vein_parts, vein_step_box, write_page, shell_and_lid, check, T_WALL,
                     T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, SCREW_IN, RIB_W, RIB_PITCH, RIB_FLOOR, RIB_LID, VEIN_GROOVE, ledge_notches,
                     way_in, grove_at, grove_hole, VEIN_RECESS, CABLE_END, CABLE_SIDE, vein_z_in, vein_window,
-                    vein_lid_cuts, vein_cable)
+                    vein_lid_cuts, vein_cable, HY20_W, HY20_H, HY20_FRONT, HY20_DEPTH)
 
-REV = 'vp5'
+REV = 'vp6'
 # ---- shared with pcb/vein_unit_board/build_board.py p (u4): the outline, J1 and J2. Keep the two together ------------
 VEIN = (-29.5, 29.5, -13.0, 13.0)        # the module, the 9P end at -x
-BRD = (-37.3, 39.8, -15.0, 15.0)         # the board u4 (x0, x1, y0, y1), less NOTCHES
+BRD = (-37.3, 41.6, -15.0, 15.0)         # the board u4 (x0, x1, y0, y1), less NOTCHES (vp6: x1 39.8 -> 41.6 for the HY2.0)
 # the board goes in from above past the lid screws' ledges (shapes.ledges, from the lid down to LEDGE_H): notched
 # 0.3 round each, through to the board's edge where less than 2.0 would be left (checked against the ledges below)
-NOTCHES = [(-37.3, -33.4, -15.0, -7.8), (35.9, 39.8, -15.0, -7.8), (-37.3, -33.4, 7.6, 15.0), (35.9, 39.8, 7.6, 15.0)]
+NOTCHES = [(-37.3, -33.4, -15.0, -7.8), (37.7, 41.6, -15.0, -7.8), (-37.3, -33.4, 7.6, 15.0), (37.7, 41.6, 7.6, 15.0)]
 J1 = (-34.8, 0.0)                        # MX1.25 4P vertical (53398-0471), footprint origin, turned 90 (tails and lock to -x)
-J2 = (34.4, 0.0)                         # Grove (JST S4B-PH-SM4-TB), footprint origin, turned 90 (opening +x)
+J2 = (35.4, 0.0)                         # Grove (HY2.0, C722729), footprint origin, turned 90 (opening +x)
 U1 = (32.6, 10.5)                        # LDO (SOT-23) beside J2, clear of the +x/+y notch, C2 / C1 at y 7.8 / 13.3
 # ----------------------------------------------------------------------------------------------------------------------
 GAP = 0.3                                # the board / the module / the cable to the walls
@@ -51,7 +52,9 @@ VZ0 = ZBT                                # the module straight on the board
 RECESS = VEIN_RECESS                     # the lid's recess for the module's body
 Z_IN = vein_z_in(VZ0)                    # the module's step face bears on the recess's floor
 Z_TOP = Z_IN + T_TOP                     # the module's top 0.5 over it
-assert J2[0] - 4.6 >= VEIN[1] + 0.3 - 1e-9, 'J2 against the module'
+# J2 (HY2.0): its tails' pads (5.6 behind the origin) 0.3 off the module, its mounting pads (5.7 before it) 0.5 and its
+# body's front 0.8 inside the board's edge
+assert abs(J2[0] - 5.6 - (VEIN[1] + 0.3)) < 1e-9 and abs(BRD[1] - (J2[0] + 5.7 + 0.5)) < 1e-9, 'J2 against the module / the edge'
 
 vein = vein_step_box(VEIN, VZ0)
 board = box(*BRD, ZB, ZBT)
@@ -61,8 +64,10 @@ for n in NOTCHES:
 # deep turned to x (the tails on the board's edge side, the nails on the module's), up to the mated height 5.7 (Molex
 # PicoBlade 53398)
 j1 = box(J1[0] - 1.1, J1[0] + 2.6, J1[1] - 5.075, J1[1] + 5.075, ZBT, ZBT + 5.7)
-# the Grove: JST PH S4B-PH-SM4-TB (Fab -3.2..4.4 front, ±5.95 across, 6 high), the plug through the +x wall
-grove, grove_plug = grove_at(J2[1], J2[0] + 4.4, 'x+', ZBT, back=7.6, out=xi1 + T_WALL + 8.0 - (J2[0] + 4.4))
+# the Grove: HY2.0 (C722729; EasyEDA's 3D model: front 5.4 before the origin, 9.25 deep with the ears, ±6.0 across,
+# 5.2 high), the plug through the +x wall
+grove, grove_plug = grove_at(J2[1], J2[0] + HY20_FRONT, 'x+', ZBT, back=HY20_DEPTH, out=xi1 + T_WALL + 8.0 - (J2[0] + HY20_FRONT),
+                             w=HY20_W, h=HY20_H)
 ldo = box(U1[0] - 2.0, U1[0] + 2.0, U1[1] - 3.3, U1[1] + 3.4, ZBT, ZBT + 1.2)        # U1 + C1 / C2
 # the module's 9P plug (14.4 wide as station/build_vein_unit.py, low in the end face) with the wires bent round the
 # -x end (one envelope, CABLE_END out); the cable folded along both long sides and across in the groove, round the
@@ -109,7 +114,7 @@ view = [('shell', f'ふた(窓 {win[1] - win[0]:.1f} × {win[3] - win[2]:.1f}、
     ('plug9', f'指静脈の MX1.25 9P プラグと −x 端を回る線(端面から {CABLE_END:g}、付属ケーブル④、3〜6 に差し替え)', '#e7e1cf', 1, 'mods', plug9),
     ('cable', f'4 線のケーブルの置き場(両側面に厚さ {CABLE_SIDE:g} で折り返し、底の溝、−x/+y の角を回って J1 の上へ。巻き方は実物で合わせる)', '#d9775c', 1, 'mods', cable),
     ('ldo', 'U1 LDO 5V → 3.3V と C1 / C2(+x 端、J2 の横)', '#202326', 1, 'mods', ldo),
-    ('grove', 'J2 Grove(JST S4B-PH-SM4-TB、+x の端面)とプラグ(VoiceS3R の PORT.A へ)', '#c47f0e', 1, 'mods',
+    ('grove', 'J2 Grove(HY2.0 4P 横型、C722729、+x の端面)とプラグ(VoiceS3R の PORT.A へ)', '#c47f0e', 1, 'mods',
      grove.union(grove_plug)),
     ('lid', '本体(床・壁・リブ・ふたのねじの受け、MJF PA12 で造形)', '#8fa09c', 0.9, 'lid', tray)]
 dims = [('外形', '%.1f × %.1f × %.1f(長さ × 幅 × 高さ、ふた込み)' % size), ('体積', '%.1f cm³(本体 + ふた)' % vol),
