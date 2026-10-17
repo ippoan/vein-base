@@ -428,7 +428,9 @@ elif PRINT_B:
     # pin by pin, from the nets (22 characters at 0.8, ~14.1 wide), between J3's fitting nails and the module's end
     short = {'3V3': '3V3', 'GND': 'G', 'G5': 'RX', 'G6': 'TX'}
     text('J3 ' + ' '.join(f'{n}:{short[J3_NETS[n]]}' for n in '1234'), J3_XY[0], -37.7, size=0.8)
-    text('NFC: G38 G39 5V G', AX, AY + 13.3, size=0.8)
+    # behind the VoiceS3R, 0.3 off the DB9's cut-out (its 0.8 high glyphs: the middle 0.5 under it; v0.39 had it at
+    # AY + 13.3, half over the cut-out)
+    text('NFC: G38 G39 5V G', AX, DB9_BY - DB9_CUT - 0.3 - 0.5, size=0.8)
     J6.Reference().SetPosition(P(AX - 8.3, pad(J6, '1')[1] + 4.0))   # (the HY2.0's own sat on the DB9's cut-out edge)
     text(f'vein-station board {REV} (print B)', -6.0, 16.0, layer=pcbnew.B_SilkS)   # (inside the left part's back edge)
     # a '1' beside pin 1 of each cable's 4P (the footprints' pin-1 mark is a short line the part hides): one pitch out

@@ -451,15 +451,15 @@ def _out(facing, c, face, a, b, w):
 DB9_PLUG_W = 17.1
 
 
-def db9(c, face, facing, zbt, plug_top):
+def db9(c, face, facing, zbt, plug_top, plug_w=DB9_PLUG_W):
     """DB9 male RA on the board (its top at zbt), its flange at `face` (x for 'x±', y for 'y±'), centred at c along
-    it, mating face to `facing`. Returns (body + flange, shell, plug up to plug_top)."""
+    it, mating face to `facing`. Returns (body + flange, shell, plug up to plug_top, ±plug_w across)."""
     def on(a, b, w, z0, z1):
         return box(*_out(facing, c, face, a, b, w), zbt + z0, zbt + z1)
     body = on(-10.5, -0.5, 15.0, 0, 12.5)
     flange = on(-1.0, 0.0, 15.4, 0, 12.5)
     shell = on(0.0, 6.0, 8.5, 2.0, 10.5)
-    plug = box(*_out(facing, c, face, 0.8, 40.0, DB9_PLUG_W), zbt - 0.75, plug_top)
+    plug = box(*_out(facing, c, face, 0.8, 40.0, plug_w), zbt - 0.75, plug_top)
     return body.union(flange), shell, plug
 
 

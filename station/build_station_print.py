@@ -95,7 +95,9 @@ def concept_a():
     yi1 = ay + 12.0 + 0.3
     bx0, bx1, by0, by1 = -17.2, 17.2, ydb, yi1 - 0.3
     pcb = box(bx0, bx1, by0, by1, ZB, ZBT)
-    d9, d9shell, d9plug = db9(0.0, ydb, 'y-', ZBT, HOOD_TOP)
+    # (the plug as it was modelled, 30.3 wide: the real one (34.2 at most, measured 2026-10-18) hits the front wall's
+    # DB9 hole (±15.65). A is not ordered (B was chosen, 2026-10-08), so its shape stays: widen the hole if it is)
+    d9, d9shell, d9plug = db9(0.0, ydb, 'y-', ZBT, HOOD_TOP, plug_w=15.15)
     row = by0 + 10.6                         # behind the DB9's body
     # MAX3232, C1..C5 and R1 / R2 under the vein module (2.9 under it: 1.75 / 0.9 / 0.5 high), footprints with pads
     u1 = on(-5.4, 5.3, -17.2, -9.7, 0, 1.75)
