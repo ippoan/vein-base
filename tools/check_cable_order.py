@@ -55,6 +55,13 @@ def print_b():
     return ('pcb/station_board/station_board_print_b.kicad_pcb', 'J3', (vx0 + vw / 2, vy0), (0.0, -1.0), +1)
 
 
+def print_c():
+    """3D 印刷 C (concept_c): as B, one row: the module's 9P end at -y, J3 (vertical) just in front of it, lock out (-y)."""
+    v = literals(os.path.join(ROOT, 'station/build_station_print.py'), 'concept_c')
+    vx0, vy0, vw = v['vx0'], v['vy0'], v['vw']
+    return ('pcb/station_board/station_board_print_c.kicad_pcb', 'J3', (vx0 + vw / 2, vy0), (0.0, -1.0), +1)
+
+
 def unit_p():
     """Vein Unit P (station/build_vein_unit_print.py): the module's 9P end at -x; the cable goes out -x, up over and
     down into the vertical J1 past it, whose lock faces out (-x)."""
@@ -115,6 +122,6 @@ def check(name, spec):
 
 if __name__ == '__main__':
     ok = True
-    for name, spec in (('3D 印刷 B', print_b), ('Vein Unit P', unit_p)):
+    for name, spec in (('3D 印刷 B', print_b), ('3D 印刷 C', print_c), ('Vein Unit P', unit_p)):
         ok &= check(name, spec())
     sys.exit(0 if ok else 1)

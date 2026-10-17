@@ -72,9 +72,10 @@ jobs:
         # (station_board_sw75 -> fab/station_sw75/, placed and routed on its own), and all of it inside a Takachi
         # SW-130B (station_board_sw130 -> fab/station_sw130/, with a Grove for the NFC, its own BOM), and the printed
         # case A (station_board_print_a -> fab/station_print_a/, sw130's parts and BOM) and B (station_board_print_b ->
-        # fab/station_print_b/, sw130's parts with J3 vertical, its own BOM)
+        # fab/station_print_b/, sw130's parts with J3 vertical, its own BOM) and C (station_board_print_c ->
+        # fab/station_print_c/, J1 / J2 / J3 only, its own BOM)
         run: |
-          cd pcb/station_board && python3 build_board.py && python3 build_board.py pf && python3 build_board.py sw75 && python3 build_board.py sw130 && python3 build_board.py print_a && python3 build_board.py print_b && cd ../..
+          cd pcb/station_board && python3 build_board.py && python3 build_board.py pf && python3 build_board.py sw75 && python3 build_board.py sw130 && python3 build_board.py print_a && python3 build_board.py print_b && python3 build_board.py print_c && cd ../..
           sfab() {  # $1 = board name, $2 = output dir, $3 = BOM
             local B=pcb/station_board/$1.kicad_pcb
             mkdir -p $2/gerber
@@ -92,6 +93,7 @@ jobs:
           sfab station_board_sw130 fab/station_sw130 jlc_bom_sw130.csv
           sfab station_board_print_a fab/station_print_a jlc_bom_sw130.csv
           sfab station_board_print_b fab/station_print_b jlc_bom_print_b.csv
+          sfab station_board_print_c fab/station_print_c jlc_bom_print_c.csv
 
       - name: Vein Station board DRC
         # silk_edge_clearance: the DB9 footprint's outline silk runs off the board edge; only this board is exempt.
@@ -102,6 +104,7 @@ jobs:
           python3 tools/check_drc.py --board pcb/station_board/station_board_sw130.kicad_pcb --report fab/station_sw130/drc.rpt --ignore silk_edge_clearance
           python3 tools/check_drc.py --board pcb/station_board/station_board_print_a.kicad_pcb --report fab/station_print_a/drc.rpt --ignore silk_edge_clearance
           python3 tools/check_drc.py --board pcb/station_board/station_board_print_b.kicad_pcb --report fab/station_print_b/drc.rpt --ignore silk_edge_clearance
+          python3 tools/check_drc.py --board pcb/station_board/station_board_print_c.kicad_pcb --report fab/station_print_c/drc.rpt --ignore silk_edge_clearance
 
       - name: Build Vein Station ESP boards (KiCad) + DRC
         # the station board with the VoiceS3R's circuit on it (ESP32-S3-WROOM-1, ES8311, NS4150B, mic, speaker), in three
@@ -146,7 +149,7 @@ jobs:
           ufab vein_unit_board fab/vein_unit jlc_bom.csv jlc_cpl_corrections.csv
           ufab vein_unit_board_p fab/vein_unit_p jlc_bom_p.csv jlc_cpl_corrections_p.csv
 
-      - name: Vein cable order (9P 3..6 -> 4P 1..4 straight, no twist) on print_b's J3 and Vein Unit P's J1
+      - name: Vein cable order (9P 3..6 -> 4P 1..4 straight, no twist) on print_b's / print_c's J3 and Vein Unit P's J1
         run: python3 tools/check_cable_order.py
 
       - name: Build case (CadQuery)
@@ -173,7 +176,7 @@ jobs:
       - name: Build Vein Station SW130 (Takachi SW-130B, all inside, slim) 3D preview + interference check
         run: python3 station/build_station_sw130.py
 
-      - name: Build Vein Station printed concepts A / B (MJF PA12, board drawn anew) 3D previews + interference check
+      - name: Build Vein Station printed concepts A / B / C (MJF PA12, board drawn anew) 3D previews + interference check
         run: python3 station/build_station_print.py
 
       - name: Build Vein Unit (finger vein module alone in a small Takachi case) cutting templates + 3D previews + interference check
@@ -211,6 +214,7 @@ jobs:
             fab/station_sw130/*
             fab/station_print_a/*
             fab/station_print_b/*
+            fab/station_print_c/*
             fab/station_esp/*
             fab/station_esp_sw/*
             fab/station_esp_sw75/*
@@ -219,6 +223,7 @@ jobs:
             site/station-sw130/*
             site/station-print-a/*
             site/station-print-b/*
+            site/station-print-c/*
             site/vein-unit-print/*
             fab/vein_unit/*
             fab/vein_unit_p/*
