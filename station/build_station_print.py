@@ -43,9 +43,10 @@ HX1_B = -1.2                     # B: the hood's +x wall's inside (the right col
 J3_ROOM = 1.8                    # B: over J3's mated plug (5.7) for the wires' bend (as Vein Unit P's J1_ROOM)
 J3_MATED = 5.7                   # J3 (53398-0471) with the 4P plug in it, over the board
 # J1 / J2 (XFCN PZ254V-11-05P / 04P-A40, C42419912 / C42419911: mating 4, tail 3.0, plastic 2.5): the tails as
-# delivered would go 1.0 into the floor (the board's underside at ZB = 2.0); they are cut to TAIL_CUT (the pages:
-# "THT の足は 2 に切る"), which C's interference check takes as their length
-TAIL_DELIVERED, TAIL_CUT = 3.0, 2.0
+# delivered go 1.0 below the floor's top (the board's underside at ZB = 2.0). C: not cut, into a slot through the
+# floor under each row (the user's, 2026-10-18), the pins' ends + TAIL_SLOT_END at either end, TAIL_SLOT_W wide
+TAIL_DELIVERED = 3.0
+TAIL_SLOT_END, TAIL_SLOT_W = 0.8, 1.6
 DB9_GAP_B = 2.0                  # B: the serial cable's plug off the VoiceS3R's back face (the user's, 2026-10-18: the
                                  # real plug, 34.2 wide, hit it in v0.38, the model's 30.3 left 0.55)
 DB9_CUT_B = DB9_PLUG_W + 0.25    # B: the board and the floor cut before the DB9's face, half across (J6's pads' tails,
@@ -481,8 +482,15 @@ def concept_c():
     # (4 pins) at x = ax + 7.62 from y = ay, both to ay + 7.62
     hdr = on(ax - 8.89, ax - 6.35, ay - 3.81, ay + 8.89, 0, 2.5).union(on(ax + 6.35, ax + 8.89, ay - 1.27, ay + 8.89, 0, 2.5))
     hdr_pts = [(ax - 7.62, ay - 2.54 + 2.54 * i) for i in range(5)] + [(ax + 7.62, ay + 2.54 * i) for i in range(4)]
-    tails = pins(hdr_pts, ZB - TAIL_CUT, ZB)          # under the board, cut (the floor's top at 0)
-    assert ZB - TAIL_CUT >= -1e-9, f'the pin headers\' tails cut to {TAIL_CUT:g} reach into the floor'
+    tails = pins(hdr_pts, ZB - TAIL_DELIVERED, ZB)    # under the board as delivered, into the floor's slots
+    tip_gap = ZB - TAIL_DELIVERED + T_FLOOR_B          # the tails' ends over the desk (the floor's underside)
+    assert tip_gap >= 0.5, f'the pin headers\' tails come {tip_gap:.2f} over the desk'
+    # a slot through the floor under each row (J1 at ax - 7.62, J2 at ax + 7.62), square cornered
+    slots = []
+    for x in (ax - 7.62, ax + 7.62):
+        ys = [y for px, y in hdr_pts if abs(px - x) < 1e-6]
+        slots.append((x - TAIL_SLOT_W / 2, x + TAIL_SLOT_W / 2, min(ys) - 0.32 - TAIL_SLOT_END,
+                      max(ys) + 0.32 + TAIL_SLOT_END))
     # J3's mated plug and the wires' bend over it stay under the hood's top (its underside Z_IN)
     j3_gap = Z_IN - (ZBT + J3_MATED + J3_ROOM)
     assert j3_gap >= 0.5, f'J3\'s plug and the bend over it are {j3_gap:.2f} under the hood\'s top'
@@ -500,7 +508,8 @@ def concept_c():
     body = rbox(*brd, -T_FLOOR_B, 0, 3.0).union(bs).union(post)
     av = [(a - 1.0, b + 1.0, c - 1.0, d + 1.0) for a, b, c, d in [xy_box(hdr)]] + \
         [(x - 3.5, x + 3.5, y - 3.5, y + 3.5) for x, y in thru] + \
-        [(ax - ATOM_POST_R0 - 1.0, ax + ATOM_POST_R0 + 1.0, ay - ATOM_POST_R0 - 1.0, ay + ATOM_POST_R0 + 1.0)]
+        [(ax - ATOM_POST_R0 - 1.0, ax + ATOM_POST_R0 + 1.0, ay - ATOM_POST_R0 - 1.0, ay + ATOM_POST_R0 + 1.0)] + \
+        [(a - 1.0, b + 1.0, c - 1.0, d + 1.0) for a, b, c, d in slots]
     g = rib_grid(brd[0] + 0.5, brd[1] - 0.5, brd[2] + 0.5, brd[3] - 0.5, -0.01, ZB, av)
     if g is not None:
         body = body.union(g)
@@ -508,6 +517,8 @@ def concept_c():
     walls = [(xo0, hx0, yo0, yo1, ZBT), (xo0, xo1, yo0, hy0, ZBT), (xo0, xo1, hy1, yo1, ZBT), (hx1, xo1, yo0, yo1, ZBT)]
     hood = hood_over_vein(vein, (xo0, xo1, yo0, yo1), (hx0, hx1, hy0, hy1), walls, cols, thru, Z_IN, Z_TOP)
     body = floor_screws(body, cols, ax, ay, z_atom_hole)
+    for r in slots:
+        body = body.cut(box(*r, -T_FLOOR_B - 1, 1))
     pcb_v = pcb.cut(cyl_z(ax, ay, ATOM_CUT_R, ZB - 1, ZBT + 1))
     for x, y in thru:
         pcb_v = pcb_v.cut(cyl_z(x, y, 1.1, ZB - 1, ZBT + 1))
@@ -530,11 +541,12 @@ def concept_c():
     screws = cols + [(ax, ay)]
     vp = vein_parts(vein, vz0, along_y=True, step=True)
     print(f'c: J3 + plug + bend {J3_MATED + J3_ROOM:g} over the board, {j3_gap:.2f} under the hood\'s top; the header tails '
-          f'cut to {TAIL_CUT:g} end {ZB - TAIL_CUT:.2f} over the floor (as delivered, {TAIL_DELIVERED:g}: {ZB - TAIL_DELIVERED:.2f})')
+          f'({TAIL_DELIVERED:g}, not cut) end {ZB - TAIL_DELIVERED:.2f} in the floor\'s slots, {tip_gap:.2f} over the desk; slots '
+          + ', '.join('(%.2f..%.2f, %.2f..%.2f)' % r for r in slots))
     view = [('shell', f'フード(B と同じ作り。指静脈の窓と裏の座ぐり、4 面の壁(一周の枠、どれも基板の上に立つ)と四隅の柱。床の裏から M2 × {SCREW_B:g} の皿小ねじ 4 本で、基板を挟んで締める)', '#2b2f33', 0.45, 'shell', hood),
             ('atom', f'VoiceS3R(公式 CAD、+y の端。USB-C は +y の端面で、まわりに壁もふたも無い。基板から 3.5 浮き、床の裏から段付きの柱を通した M2 × {SCREW_B:g} の皿小ねじで底の中心の穴に留める)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'y+', Z_ATOM_B, Z_TOP)),
             ('hdr', 'ピンヘッダー J1 / J2(樹脂の台 2.5 とピン。VoiceS3R の底は基板から 3.5 で、ピンが底に当たる)', '#202326', 1, 'mods',
-             hdr.union(pins(hdr_pts, ZB - TAIL_CUT, Z_ATOM_B)))] + vp + [
+             hdr.union(pins(hdr_pts, ZB - TAIL_DELIVERED, Z_ATOM_B)))] + vp + [
         ('pcb', 'station 基板 print_c(build_board.py print_c。部品は J1 / J2 / J3 だけ。指静脈の下は平らで、パッドと配線だけ。基板だけのねじは無く、フードの 4 本の柱のねじで床のボスとの間に挟まり、VoiceS3R の柱の肩とピンの間に挟まる)', '#1f7a4d', 1, 'mods', pcb_v),
         ('j3', 'J3 MX1.25 4P 縦型(53398-0471)と 4P プラグ(指静脈の 9P プラグのすぐ手前、上から挿す)。ロックの窓(シルクの △ LOCK)は −y(外向き)。−x から 3V3・GND・RXD・TXD', '#f1efe8', 1, 'mods', j3),
         ('plug9', f'指静脈の 9P プラグと −y の端を回る線(端面から {CABLE_END:g}。窓を上にして −y から見て左が 1 番、3〜6 = 赤・黒・緑・黄)', '#e7e1cf', 1, 'mods', plug9),
@@ -608,7 +620,7 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
         dims[2] = ('肉厚', f'床 {T_FLOOR_B}、フードの壁 {T_WALL}・天板 {T_TOP}(MJF PA12)')
         dims[3] = ('リブ', f'反り止め(JLC3DP の勧め)。幅 {RIB_W:g} を約 {RIB_PITCH:g} おきの格子に、床(高さ {RIB_SHOWN[key]:g}、基板の下。THT の足とボスを避ける)')
         dims[4] = ('基板', 'station 基板 print_c(箱に合わせて配置・配線済み、build_board.py print_c。部品は J1 / J2 / J3 だけ)。基板だけを留めるねじは無い: フードの 4 本の柱のねじ(床のボスとの間に挟む)と VoiceS3R の段付きの柱の肩。'
-                           '指静脈の下は床のリブが受けて指静脈に押さえられ、横はフードの壁で決まる。THT の足は 2 に切る')
+                           f'指静脈の下は床のリブが受けて指静脈に押さえられ、横はフードの壁で決まる。J1 / J2 の足({TAIL_DELIVERED:g})は切らず、各列の真下の床を貫通する穴(幅 {TAIL_SLOT_W:g}、ピンの端から {TAIL_SLOT_END:g})に逃がす(足の先は机から {T_FLOOR_B + ZB - TAIL_DELIVERED:.1f})')
         dims[6] = ('ねじ', f'M2 × {SCREW_B:g} 皿小ねじ × {len(screws)}(フード 4、VoiceS3R 1)。どれも床の裏から上へ、頭は床と面一。'
                            f'フードの四隅の角柱(3.6 角)は下穴 ⌀{PILOT_B:g} に PA12 をねじ切りながら締める(4 本とも基板を通す)。'
                            'VoiceS3R のねじは締めすぎない(基板は柱の肩とピンの間に挟まるだけ)。位置: '
