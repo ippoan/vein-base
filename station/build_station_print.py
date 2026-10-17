@@ -41,6 +41,11 @@ Z_IN_A = ZBT + 8.7 + 0.4         # A: the DB9 outside the lid (a notch), so the 
 Z_IN_B = vein_z_in(ZBT)          # B: the vein module straight on the board (as Vein Unit P), held down by the hood
 HX1_B = -1.2                     # B: the hood's +x wall's inside (the right column is placed from it)
 J3_ROOM = 1.8                    # B: over J3's mated plug (5.7) for the wires' bend (as Vein Unit P's J1_ROOM)
+J3_MATED = 5.7                   # J3 (53398-0471) with the 4P plug in it, over the board
+# J1 / J2 (XFCN PZ254V-11-05P / 04P-A40, C42419912 / C42419911: mating 4, tail 3.0, plastic 2.5): the tails as
+# delivered would go 1.0 into the floor (the board's underside at ZB = 2.0); they are cut to TAIL_CUT (the pages:
+# "THT の足は 2 に切る"), which C's interference check takes as their length
+TAIL_DELIVERED, TAIL_CUT = 3.0, 2.0
 DB9_GAP_B = 2.0                  # B: the serial cable's plug off the VoiceS3R's back face (the user's, 2026-10-18: the
                                  # real plug, 34.2 wide, hit it in v0.38, the model's 30.3 left 0.55)
 DB9_CUT_B = DB9_PLUG_W + 0.25    # B: the board and the floor cut before the DB9's face, half across (J6's pads' tails,
@@ -465,7 +470,7 @@ def concept_c():
     edge = [(xo0 + CH, yo0), (xo1 - CH, yo0), (xo1, yo0 + CH), (xo1, ye - CH), (xo1 - CH, ye), (xo0 + CH, ye),
             (xo0, ye - CH), (xo0, yo0 + CH)]
     pcb = cq.Workplane('XY').workplane(offset=ZB).polyline(edge).close().extrude(ZBT - ZB)
-    j3 = on(j3x - 5.075, j3x + 5.075, j3y - 1.1, j3y + 2.6, 0, 5.7)    # J3 with the 4P plug in it (as B)
+    j3 = on(j3x - 5.075, j3x + 5.075, j3y - 1.1, j3y + 2.6, 0, J3_MATED)    # J3 with the 4P plug in it (as B)
     plug9, runs = vein_cable(vein, vz0, Z_IN - 0.3, (j3x, j3y), J3_ROOM, along_y=True)
     colz = None
     for x, y in cols:
@@ -475,6 +480,12 @@ def concept_c():
     # J1 / J2 as A (turned half a turn, USB-C / PORT.A to +y): J1 (5 pins) at x = ax - 7.62 from y = ay - 2.54, J2
     # (4 pins) at x = ax + 7.62 from y = ay, both to ay + 7.62
     hdr = on(ax - 8.89, ax - 6.35, ay - 3.81, ay + 8.89, 0, 2.5).union(on(ax + 6.35, ax + 8.89, ay - 1.27, ay + 8.89, 0, 2.5))
+    hdr_pts = [(ax - 7.62, ay - 2.54 + 2.54 * i) for i in range(5)] + [(ax + 7.62, ay + 2.54 * i) for i in range(4)]
+    tails = pins(hdr_pts, ZB - TAIL_CUT, ZB)          # under the board, cut (the floor's top at 0)
+    assert ZB - TAIL_CUT >= -1e-9, f'the pin headers\' tails cut to {TAIL_CUT:g} reach into the floor'
+    # J3's mated plug and the wires' bend over it stay under the hood's top (its underside Z_IN)
+    j3_gap = Z_IN - (ZBT + J3_MATED + J3_ROOM)
+    assert j3_gap >= 0.5, f'J3\'s plug and the bend over it are {j3_gap:.2f} under the hood\'s top'
     atom_box = rbox(ax - 12, ax + 12, ay - 12, ay + 12, Z_ATOM_B, Z_ATOM_B + 16.8, 3.0) \
         .cut(cyl_z(ax, ay, 2.75, Z_ATOM_B - 1, Z_ATOM_B + ATOM_RECESS))    # the recess round its hole (STL)
     usb = box(ax - 6, ax + 6, ye + 6.5, ye + 24, Z_ATOM_B + 4, Z_ATOM_B + 11).union(
@@ -500,7 +511,8 @@ def concept_c():
     pcb_v = pcb.cut(cyl_z(ax, ay, ATOM_CUT_R, ZB - 1, ZBT + 1))
     for x, y in thru:
         pcb_v = pcb_v.cut(cyl_z(x, y, 1.1, ZB - 1, ZBT + 1))
-    parts = [('J3 + 4P plug', j3), ('9P plug', plug9), ('cable', cable), ('headers', hdr), ('VoiceS3R', atom_box),
+    parts = [('J3 + 4P plug', j3), ('9P plug', plug9), ('cable', cable), ('headers', hdr), ('header tails', tails),
+             ('VoiceS3R', atom_box),
              ('USB plug', usb), ('PORT.A plug', porta), ('vein', vbox), ('board', pcb_v)]
     # the way in (as B): the board with its parts and the vein module, then the hood comes down past them
     down = [(xo0, hx0, yo0, yo1), (xo0, xo1, yo0, hy0), (xo0, xo1, hy1, yo1), (hx1, xo1, yo0, yo1)] + \
@@ -517,11 +529,12 @@ def concept_c():
     size = (xo1 - xo0, ye - yo0, Z_ATOM_B + 16.8 + T_FLOOR_B)
     screws = cols + [(ax, ay)]
     vp = vein_parts(vein, vz0, along_y=True, step=True)
+    print(f'c: J3 + plug + bend {J3_MATED + J3_ROOM:g} over the board, {j3_gap:.2f} under the hood\'s top; the header tails '
+          f'cut to {TAIL_CUT:g} end {ZB - TAIL_CUT:.2f} over the floor (as delivered, {TAIL_DELIVERED:g}: {ZB - TAIL_DELIVERED:.2f})')
     view = [('shell', f'フード(B と同じ作り。指静脈の窓と裏の座ぐり、4 面の壁(一周の枠、どれも基板の上に立つ)と四隅の柱。床の裏から M2 × {SCREW_B:g} の皿小ねじ 4 本で、基板を挟んで締める)', '#2b2f33', 0.45, 'shell', hood),
             ('atom', f'VoiceS3R(公式 CAD、+y の端。USB-C は +y の端面で、まわりに壁もふたも無い。基板から 3.5 浮き、床の裏から段付きの柱を通した M2 × {SCREW_B:g} の皿小ねじで底の中心の穴に留める)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'y+', Z_ATOM_B, Z_TOP)),
             ('hdr', 'ピンヘッダー J1 / J2(樹脂の台 2.5 とピン。VoiceS3R の底は基板から 3.5 で、ピンが底に当たる)', '#202326', 1, 'mods',
-             hdr.union(pins([(ax - 7.62, ay - 2.54 + 2.54 * i) for i in range(5)] + [(ax + 7.62, ay + 2.54 * i) for i in range(4)],
-                            ZB, Z_ATOM_B)))] + vp + [
+             hdr.union(pins(hdr_pts, ZB - TAIL_CUT, Z_ATOM_B)))] + vp + [
         ('pcb', 'station 基板 print_c(build_board.py print_c。部品は J1 / J2 / J3 だけ。指静脈の下は平らで、パッドと配線だけ。基板だけのねじは無く、フードの 4 本の柱のねじで床のボスとの間に挟まり、VoiceS3R の柱の肩とピンの間に挟まる)', '#1f7a4d', 1, 'mods', pcb_v),
         ('j3', 'J3 MX1.25 4P 縦型(53398-0471)と 4P プラグ(指静脈の 9P プラグのすぐ手前、上から挿す)。ロックの窓(シルクの △ LOCK)は −y(外向き)。−x から 3V3・GND・RXD・TXD', '#f1efe8', 1, 'mods', j3),
         ('plug9', f'指静脈の 9P プラグと −y の端を回る線(端面から {CABLE_END:g}。窓を上にして −y から見て左が 1 番、3〜6 = 赤・黒・緑・黄)', '#e7e1cf', 1, 'mods', plug9),
