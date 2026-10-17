@@ -24,7 +24,7 @@ import cadquery as cq
 from shapes import (ROOT, VER, box, rbox, cyl_z, union, vein_parts, vein_step_box, write_page, shell_and_lid, check,
                     rib_grid, xy_box, xy_overlap, T_WALL, T_FLOOR, T_TOP, LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH,
                     RIB_FLOOR, RIB_LID, PILOT, CLEAR, CSK, atom_at, pins, db9, grove_at, grove_hole, VEIN_RECESS,
-                    CABLE_END, CABLE_SIDE, vein_z_in, vein_lid_cuts, vein_cable)
+                    CABLE_END, CABLE_SIDE, vein_z_in, vein_lid_cuts, vein_cable, HY20_W, HY20_H, HY20_DEPTH)
 
 BOSS = 2.0                       # the board stands on printed bosses (M2 self-tapping screws)
 ZB = BOSS
@@ -265,8 +265,9 @@ def concept_b():
         colz = c if colz is None else colz.union(c)
     runs = [r.cut(colz) for r in runs]
     cable = union(*runs)
-    gx, gf = ax, yo1 - 2.3                                # J6 on the back edge behind the VoiceS3R, opening +y
-    grove, groveplug = grove_at(gx, gf, 'y+', ZBT, out=yo1 + 8.0 - gf)
+    # J6 on the back edge behind the VoiceS3R, opening +y: the HY2.0 (C722729), its front 0.8 inside the edge
+    gx, gf = ax, yo1 - 0.8
+    grove, groveplug = grove_at(gx, gf, 'y+', ZBT, out=yo1 + 8.0 - gf, back=HY20_DEPTH, w=HY20_W, h=HY20_H)
     # J1 / J2 turned a quarter with the VoiceS3R (vein-base's x_vb -> y, y_vb -> -x): J1 (5 pins) at y = ay + 7.62
     # from x = ax - 2.54, J2 (4 pins) at y = ay - 7.62 from x = ax, both to ax + 7.62 (the USB-C side)
     hdr = on(ax - 3.81, ax + 8.89, ay + 6.35, ay + 8.89, 0, 2.5).union(on(ax - 1.27, ax + 8.89, ay - 8.89, ay - 6.35, 0, 2.5))
@@ -374,7 +375,7 @@ def concept_b():
         ('j3', 'J3 MX1.25 4P 縦型(53398-0471)と 4P プラグ(指静脈の 9P プラグのすぐ手前、上から挿す)。ロックの窓(シルクの △ LOCK)は手前(外向き)。−x から 3V3・GND・RXD・TXD', '#f1efe8', 1, 'mods', j3),
         ('plug9', f'指静脈の 9P プラグと手前の端を回る線(端面から {CABLE_END:g}。窓を上にして手前から見て左が 1 番、3〜6 = 赤・黒・緑・黄)', '#e7e1cf', 1, 'mods', plug9),
         ('cable', f'9P → 4P のケーブル(自作、両端のロックが同じ面でまっすぐ)の置き場: 余りは指静脈の両側面に厚さ {CABLE_SIDE:g} で折り返し、底の溝も使える。手前の端の −x の角を回って J3 の上へ、上から挿す。巻き方は実物で合わせる', '#d9775c', 1, 'mods', cable),
-        ('grove', 'J6 Grove とプラグ(右の列の奥の縁、口は奥)', '#c47f0e', 1, 'mods', grove.union(groveplug)),
+        ('grove', 'J6 Grove(HY2.0 4P 横型、C722729)とプラグ(右の列の奥の縁、口は奥)', '#c47f0e', 1, 'mods', grove.union(groveplug)),
         ('usb', 'USB-C / PORT.A プラグ(右の面)', '#24292d', 1, 'mods', usb.union(porta)),
         ('lid', '本体(床・ボス・VoiceS3R の段付きの柱・リブ、MJF PA12 で造形)', '#8fa09c', 0.9, 'lid', body)]
     return view, bad, size, body, hood, screws, Z_TOP

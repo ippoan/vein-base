@@ -29,8 +29,11 @@ Routing is written here (a handful of tracks). Run with KiCad's python from pcb/
   - U1 / C1 / C2 as u3, beside J2 in the +x end (+y of it, clear of the notch)
   - the outline notched in the corners for the lid screws' ledges, which the board passes on its way in from above
         (NOTCHES, = station/build_vein_unit_print.py)
-  - J2: Grove (JST S4B-PH-SM4-TB, C265102) in the +x end, opening +x: 1 = TXD (-> G2, white), 2 = RXD (<- G1,
-        yellow), 3 = 5V, 4 = GND (the nets of u3)
+  - J2: Grove (HY2.0-4P right angle, CAX HY2.0-4P-WT, C722729, pcb/vein_base.pretty: LCSC / EasyEDA's pads) in the
+        +x end, opening +x: 1 = TXD (-> G2, white), 2 = RXD (<- G1, yellow), 3 = 5V, 4 = GND (the nets of u3). u4 up
+        to v0.38 had the JST PH S4B-PH-SM4-TB (C265102), which does not take the Grove plug (the real board,
+        2026-10-17); the HY2.0's pads reach 2.0 further (its tails' pads 0.3 off the module, its body's front 0.8
+        inside the edge), so v0.39 ran the board 1.8 further to +x
   The outline, J1 and J2 are also in station/build_vein_unit_print.py (BRD, J1, J2): keep the two together.
 """
 import os, sys
@@ -52,20 +55,23 @@ NOTCHES = []                         # p: (x0, x1, y0, y1) cut out of the outlin
 if UNIT_P:
     # = BRD / J1 / J2 / U1 in station/build_vein_unit_print.py (keep them together); the module x -29.5..29.5,
     # y -13..13, its cable folded along both long sides (2.0) over the board
-    X0, X1, Y0, Y1, BR = -37.3, 39.8, -15.0, 15.0, 1.0
+    X0, X1, Y0, Y1, BR = -37.3, 41.6, -15.0, 15.0, 1.0
     HOLES = []
     POS = {'J1': (-34.8, 0.0, 90),            # tails to -x, 0.6 in the edge; the fitting nails' pads 0.3 off the 9P plug
-           'J2': (34.4, 0.0, 90),             # its back pads 0.3 clear of the module's +x end, front 1.0 in the edge
+           'J2': (35.4, 0.0, 90),             # its tails' pads (5.6 behind the origin) 0.3 clear of the module's +x
+                                              # end; its MP pads (5.7 before it) 0.5 and its body's front 0.8 in the edge
            'U1': (32.6, 10.5, 0), 'C2': (32.6, 7.8, 0), 'C1': (32.6, 13.3, 180)}   # a column clear of the +x/+y notch
     # the lid screws' ledges + 0.3, through to the edge (= NOTCHES in station/build_vein_unit_print.py, which checks them)
-    NOTCHES = [(-37.3, -33.4, -15.0, -7.8), (35.9, 39.8, -15.0, -7.8), (-37.3, -33.4, 7.6, 15.0), (35.9, 39.8, 7.6, 15.0)]
+    NOTCHES = [(-37.3, -33.4, -15.0, -7.8), (37.7, 41.6, -15.0, -7.8), (-37.3, -33.4, 7.6, 15.0), (37.7, 41.6, 7.6, 15.0)]
 VEIN = (-29.5, 29.5, -16.5, 9.5)
 JC = 14.3                            # J1's centre across (pads 9.6..19.0, nails 10.3..18.3)
 XJ = 2.65                            # J1's origin: its front (the opening) at x = 0
-XG = BX - 4.45 - 2.3                 # J2's origin: its footprint front 2.3 inside the edge. JLC's HY2.0 body (C722729)
-                                     # stands 2.1 further out than the footprint's (measured on the assembly preview:
-                                     # 1.4 over the edge with the front 0.7 in, u1; 0.8 over with 1.3 in, u2), so it
-                                     # now ends 0.2 inside the edge, 0.8 off the case wall
+XG = BX - 4.45 - 2.3                 # u3's J2 origin: its footprint front 2.3 inside the edge. u3 has KiCad's JST PH
+                                     # footprint under the HY2.0 C722729, whose body stands 2.1 further out than the
+                                     # footprint's (its pads are 2.05 longer from the front: measured on the assembly
+                                     # preview, 1.4 over the edge with the front 0.7 in, u1; 0.8 over with 1.3 in,
+                                     # u2), so it ends 0.2 inside the edge, 0.8 off the case wall. p (u4) has the
+                                     # HY2.0's own footprint instead (pcb/vein_base.pretty)
 
 
 def P(x, y):
@@ -113,8 +119,14 @@ def wire(fp, table):
             p.SetNet(nets[n])
 
 
-# ---- J2 Grove on the +x edge, opening +x (footprint front = its +y, turned 90°)
-J2 = load('Connector_JST.pretty', 'JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal', 'J2', 'Grove HY2.0-4P RA', XG, 0, rot=90)
+# ---- J2 Grove on the +x edge, opening +x (footprint front = its +y, turned 90°); p: the HY2.0's own footprint
+LOCAL = dict(base=os.path.join(HERE, '..') + '/', uri_base='${KIPRJMOD}/../')    # pcb/vein_base.pretty
+if UNIT_P:
+    J2 = load('vein_base.pretty', 'HY2.0_CAX_HY2.0-4P-WT_1x04-1MP_P2.00mm_Horizontal', 'J2', 'Grove HY2.0-4P RA', XG, 0,
+              rot=90, **LOCAL)
+else:
+    J2 = load('Connector_JST.pretty', 'JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal', 'J2', 'Grove HY2.0-4P RA', XG, 0,
+              rot=90)
 wire(J2, {'1': 'TXD', '2': 'RXD', '3': '5V', '4': 'GND', 'MP': 'GND'})
 
 # ---- J1 vein cable, opening -x (footprint front = its +y, turned 270°); p: vertical, plugged from above, turned 90
@@ -126,7 +138,7 @@ if UNIT_P:
     wire(J1, {**J1NET, 'MP': 'GND'})
 else:
     J1 = load('vein_base.pretty', 'Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal_NarrowMP', 'J1',
-              'MX1.25-4P RA (Molex 53261-0471)', XJ, JC, rot=270, base=os.path.join(HERE, '..') + '/', uri_base='${KIPRJMOD}/../')
+              'MX1.25-4P RA (Molex 53261-0471)', XJ, JC, rot=270, **LOCAL)
     wire(J1, {'1': 'RXD', '2': 'TXD', '3': '3V3', '4': 'GND', 'MP': 'GND'})
 
 # ---- U1 LDO and its caps beside J1, towards the board edge (SOT-23: 1 VSS, 2 VOUT, 3 VIN)
@@ -147,7 +159,7 @@ for i, (x, y) in enumerate(HOLES, 1):
 for fp in (J1, J2, U1, C1, C2):
     print(fp.GetReference(), {p.GetNumber(): pad(fp, p.GetNumber()) for p in fp.Pads()})
 
-# ---- outline: 78 × 39 rounded rectangle (p: 77.1 × 30.0, notched)
+# ---- outline: 78 × 39 rounded rectangle (p: 78.9 × 30.0, notched)
 
 
 def seg(a, c, layer=pcbnew.Edge_Cuts):
@@ -237,6 +249,7 @@ if UNIT_P:
     text('J1 ' + ' '.join(f'{n}:{short[J1NET[n]]}' for n in '1234'), -20.0, -5.0, size=0.8)
     # 21 characters at 0.8, turned: y -6.7..6.7 at x 27.4, in front of the Grove's pads
     text('J2 1:TX 2:RX 3:5V 4:G', 27.4, 0.0, size=0.8, rot=90)
+    J2.Reference().SetVisible(False)             # (the text names it; the HY2.0's reference sat on it)
     text(f'vein unit board {REV}', 0, 0, layer=pcbnew.B_SilkS)
     # a '1' beside pin 1 of each cable's 4P (the footprints' pin-1 mark is a short line the part hides): one pitch out
     # of the row, and on J1 a filled triangle pointing at the side of the locking window, with 'LOCK' (Molex
@@ -320,8 +333,9 @@ for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
 pcbnew.ZONE_FILLER(b).Fill(b.Zones())
 b.Save(f'{NAME}.kicad_pcb')
 LIBS['MountingHole'] = FP + 'MountingHole.pretty'
-if UNIT_P:    # one fp-lib-table for both boards: p (run after u3 in CI) also lists u3's J1 library
+if UNIT_P:    # one fp-lib-table for both boards: p (run after u3 in CI) also lists u3's J1 / J2 libraries
     LIBS['vein_base'] = '${KIPRJMOD}/../vein_base.pretty'
+    LIBS['Connector_JST'] = FP + 'Connector_JST.pretty'
 with open('fp-lib-table', 'w') as f:
     f.write('(fp_lib_table\n  (version 7)\n')
     for nick, uri in sorted(LIBS.items()):

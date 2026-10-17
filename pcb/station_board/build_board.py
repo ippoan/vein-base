@@ -38,7 +38,9 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  plugs into J6 on the +x edge under the vein module instead of the VoiceS3R's PORT.A (NFC and USB on
                  different faces): J6 = G38 (SDA) / G39 (SCL) / 5V / GND from the Ext.Pin, 4.7 k pull-ups R1 / R2, so
                  the firmware opens that I2C on G38 / G39. J6 is the genuine JST S4B-PH-SM4-TB (C265102; JLC found the
-                 HY2.0 C722729's pins off the pads), its front 2.3 inside the edge. v0.17 (silk r12c) moved J6 from the
+                 HY2.0 C722729's pins off the pads on KiCad's PH footprint), its front 2.3 inside the edge. The PH
+                 socket does not take the Grove plug (Vein Unit P's board, 2026-10-17): put the HY2.0's own footprint
+                 in (as print_b) before ordering sw130 again. v0.17 (silk r12c) moved J6 from the
                  -x edge by the DB9 to the +x edge, the face of the VoiceS3R's reset, so the case is machined on four
                  faces instead of five (v0.15 / r12b, the first four cases, has it on -x); v0.18 (silk r12d) moved it
                  on along that edge to just short of the VoiceS3R, so one notch in the +x side serves J6 and the reset. Its own BOM (jlc_bom_sw130.csv). The board
@@ -64,7 +66,9 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  lid: the VoiceS3R at the front on J1 / J2 turned a quarter (USB-C / PORT.A to +x, its reset on the
                  box's front face) with MAX3232, C1..C5, R1 / R2 and SW1 (KINGTEK DSHP04TSGET, half pitch, 2.5 high at
                  most; set with the VoiceS3R off) under it, the DB9 behind it (mating face +x, pulled in to -x, the
-                 board cut before its face), J6 on the back edge behind that (opening +y). No screws of its own: the
+                 board cut before its face), J6 on the back edge behind that (opening +y; the HY2.0 C722729 on its
+                 own footprint from v0.39, pcb/vein_base.pretty; v0.38 had the JST PH, which does not take the Grove
+                 plug). No screws of its own: the
                  hood's +x screws (H1 / H2) clamp it to the floor's bosses, the VoiceS3R's screw post (a shoulder under
                  the board, through a round cut-out at the VoiceS3R's centre up to its M2 hole) holds it under J1 /
                  J2, the hood's walls place it sideways. Board coords = case coords; keep the numbers together with
@@ -119,6 +123,7 @@ DB9_X = None                 # print_b: its flange's x when not on X1
 POST_CUTS = []               # print_b: round cut-outs (Edge.Cuts, x, y, r) for the case's posts, no courtyard
 J3_NETS = {'1': 'G5', '2': 'G6', '3': '3V3', '4': 'GND', 'MP': 'GND'}   # print_b: from its pads' places (see there)
 PRE_ROUTE = {}               # print_b: locked F.Cu tracks drawn here (net: points), not in the .ses
+NO_TRACK_B = []              # print_b: (x0, x1, y0, y1) kept free of B.Cu tracks (rule areas, in the DSN too)
 EDGE = None                  # sw75: the outline as a polygon
 NOTCH = None                 # sw75: (x0, x1, depth) cut into the -y edge for the vein cable (not in the DSN)
 if SW75:
@@ -199,6 +204,10 @@ if PRINT_B:
     DB9_ROT, DB9_BY = 90, -2.0                      # mating face to +x, behind the VoiceS3R
     HOLE_FP = 'MountingHole_2.2mm_M2'
     HOLES = [(-2.5, -43.8), (-2.5, 24.6)]                               # H1 / H2: the hood's screws through the board
+    # v0.39 (J6 the HY2.0): freerouting ran G38 down the +x edge and under J2's pads on B.Cu, round J2-4 (GND), whose
+    # thermal to the B.Cu pour kept one spoke (starved_thermal): keep B.Cu tracks off its +x side and off its -y side
+    J2X4, J2Y = AX + 7.62, AY - 7.62                # J2-4 (GND)
+    NO_TRACK_B = [(J2X4 + 1.1, X1, J2Y - 2.7, J2Y + 2.7), (J2X4 - 1.3, J2X4 + 1.1, J2Y - 2.3, J2Y - 1.1)]
     POST_CUTS = [(AX, AY, 2.4)]                     # the VoiceS3R's screw post (4.3) up to its M2 hole at its centre
                                                     # (concept_b's ATOM_POST_R + 0.25)
     DB9_X = 11.8                                  # pulled in to -x (its body 0.7 off the hood's +x wall), mating face still +x
@@ -221,7 +230,8 @@ if PRINT_B:
            'C5': (2.0, -20.3, 90), 'R1': (4.5, -20.3, 90), 'R2': (7.0, -20.3, 90),
            'SW1': (AX + 7.4, AY, 90),
            'J3': (*J3_XY, 180),                   # tails (the pads) and the locking window to -y
-           'J6': (AX, Y1 - 4.45 - 2.3, 180)}    # behind the VoiceS3R on the back edge, opening +y
+           'J6': (AX, Y1 - 0.8 - 5.4, 180)}     # behind the VoiceS3R on the back edge, opening +y: the HY2.0's
+                                                # body front (5.4 before the origin) 0.8 inside the edge
 def P(x, y):
     return pcbnew.VECTOR2I(mm(OX + x), mm(OY - y))
 
@@ -249,9 +259,11 @@ for n in ['3V3', 'GND', '5V', 'G5', 'G6', 'G7', 'G8', 'G38', 'G39',
 LIBS = {}
 
 
-def load(lib, name, ref, value, x, y, rot=0, flip=False):
-    fp = pcbnew.FootprintLoad(FP + lib, name)
-    nick = lib.removesuffix('.pretty'); LIBS[nick] = FP + lib
+def load(lib, name, ref, value, x, y, rot=0, flip=False, local=False):
+    """local: from the project's own pcb/vein_base.pretty (as pcb/vein_unit_board/build_board.py)"""
+    base, uri = (os.path.join(HERE, '..') + '/', '${KIPRJMOD}/../') if local else (FP, FP)
+    fp = pcbnew.FootprintLoad(base + lib, name)
+    nick = lib.removesuffix('.pretty'); LIBS[nick] = uri + lib
     fp.SetFPID(pcbnew.LIB_ID(nick, name))
     fp.SetReference(ref); fp.SetValue(value)
     b.Add(fp)
@@ -322,10 +334,13 @@ else:
 wire(J4, {'2': 'D2', '3': 'D3', '5': 'GND', '0': 'GND'})
 print('J4 pin1', xy(p1.GetPosition()), 'pin5', xy([p for p in J4.Pads() if p.GetNumber() == '5'][0].GetPosition()))
 
-# ---- sw130 / print_a: Grove for the Unit NFC on G38 (SDA) / G39 (SCL), with pull-ups
+# ---- sw130 / print_a / print_b: Grove for the Unit NFC on G38 (SDA) / G39 (SCL), with pull-ups. print_b has the
+# HY2.0's own footprint (LCSC / EasyEDA's pads, pcb/vein_base.pretty); sw130 / print_a keep KiCad's JST PH, whose part
+# (C265102) does not take the Grove plug (Vein Unit P's board, 2026-10-17): change it before ordering them again
 if SW130 or PRINT_A or PRINT_B:
-    J6 = load('Connector_JST.pretty', 'JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal', 'J6',
-              'Grove HY2.0-4P RA (NFC: G38 SDA, G39 SCL)', 0, 0)
+    J6 = load(*(('vein_base.pretty', 'HY2.0_CAX_HY2.0-4P-WT_1x04-1MP_P2.00mm_Horizontal') if PRINT_B else
+                ('Connector_JST.pretty', 'JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal')), 'J6',
+              'Grove HY2.0-4P RA (NFC: G38 SDA, G39 SCL)', 0, 0, local=PRINT_B)
     wire(J6, {'1': 'G38', '2': 'G39', '3': '5V', '4': 'GND', 'MP': 'GND'})
     for ref, n in (('R1', 'G38'), ('R2', 'G39')):
         wire(load('Resistor_SMD.pretty', 'R_0603_1608Metric', ref, '4.7k', 0, 0), {'1': '3V3', '2': n})
@@ -344,6 +359,14 @@ for x, y, r in POST_CUTS:  # keep tracks and vias 0.5 off the cut-outs (freerout
     for i in range(24):
         a = 2 * math.pi * i / 24
         ol.Append(mm(OX + x + (r + 0.7) * math.cos(a)), mm(OY - y - (r + 0.7) * math.sin(a)))
+    b.Add(ra)
+for x0, x1, y0, y1 in NO_TRACK_B:
+    ra = pcbnew.ZONE(b); ra.SetIsRuleArea(True); ra.SetDoNotAllowTracks(True); ra.SetDoNotAllowVias(False)
+    ra.SetDoNotAllowPads(False); ra.SetDoNotAllowCopperPour(False); ra.SetDoNotAllowFootprints(False)
+    ra.SetLayer(pcbnew.B_Cu)
+    ol = ra.Outline(); ol.NewOutline()
+    for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
+        ol.Append(mm(OX + x), mm(OY - y))
     b.Add(ra)
 for x, y, r in [(x, y, 1.3) for x, y in BOSSES] + POST_CUTS:
     c = pcbnew.PCB_SHAPE(b); c.SetShape(pcbnew.SHAPE_T_CIRCLE)
@@ -400,6 +423,7 @@ elif PRINT_B:
     short = {'3V3': '3V3', 'GND': 'G', 'G5': 'RX', 'G6': 'TX'}
     text('J3 ' + ' '.join(f'{n}:{short[J3_NETS[n]]}' for n in '1234'), J3_XY[0], -37.7, size=0.8)
     text('NFC: G38 G39 5V G', AX, AY + 13.3, size=0.8)
+    J6.Reference().SetPosition(P(AX - 8.3, pad(J6, '1')[1] + 4.0))   # (the HY2.0's own sat on the DB9's cut-out edge)
     text(f'vein-station board {REV} (print B)', -6.0, 16.0, layer=pcbnew.B_SilkS)   # (inside the left part's back edge)
     # a '1' beside pin 1 of each cable's 4P (the footprints' pin-1 mark is a short line the part hides): one pitch out
     # of the row; checked against the pads and the vias after import_ses (the .ses brings the vias)
@@ -507,6 +531,7 @@ else:
 LIBS['MountingHole'] = FP + 'MountingHole.pretty'   # the table is shared by all outlines
 for lib in ('Connector_JST', 'Resistor_SMD'):         # sw130's J6 / R1 / R2
     LIBS[lib] = FP + lib + '.pretty'
+LIBS['vein_base'] = '${KIPRJMOD}/../vein_base.pretty'   # print_b's J6
 with open('fp-lib-table', 'w') as f:
     f.write('(fp_lib_table\n  (version 7)\n')
     for nick, uri in sorted(LIBS.items()):
