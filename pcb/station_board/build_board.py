@@ -62,13 +62,14 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  from under the floor, the cable's slack folded along both its long sides inside the hood, and J3
                  (MX1.25 4P vertical, 53398-0471) just in front of its 9P plug, its locking window to -y (the cable,
                  made with both latches on the same face, goes into it from above); the board's left part and the
-                 hood run out to -y over J3. On the right, out to the box's front, +x and back faces with no walls nor
-                 lid: the VoiceS3R at the front on J1 / J2 turned a quarter (USB-C / PORT.A to +x, its reset on the
-                 box's front face) with MAX3232, C1..C5, R1 / R2 and SW1 (KINGTEK DSHP04TSGET, half pitch, 2.5 high at
-                 most; set with the VoiceS3R off) under it, the DB9 behind it (mating face +x, its shell's tip at
-                 the +x edge, the board cut under the shell: the serial cable's plug stays out past the board), J6 on the back edge behind that (opening +y; the HY2.0 C722729 on its
-                 own footprint from v0.39, pcb/vein_base.pretty; v0.38 had the JST PH, which does not take the Grove
-                 plug). No screws of its own: the
+                 hood run out to -y over J3. On the right, out to the box's +x and back faces with no walls nor lid,
+                 from the front (v0.46): J6 on the front edge (opening -y; the HY2.0 C722729 on its own footprint from
+                 v0.39, pcb/vein_base.pretty; v0.38 had the JST PH, which does not take the Grove plug), the DB9
+                 (mating face +x, its shell's tip at the +x edge, the board cut under the shell: the serial cable's
+                 plug stays out past the board), the VoiceS3R at the back on J1 / J2 turned half a turn (USB-C /
+                 PORT.A to +y on the box's back face, its reset on the box's +x face) with MAX3232, C1..C5, R1 / R2
+                 and SW1 (KINGTEK DSHP04TSGET, half pitch, 2.5 high at most; set with the VoiceS3R off) under it. No
+                 screws of its own: the
                  hood's +x screws (H1 / H2) clamp it to the floor's bosses, the VoiceS3R's screw post (a shoulder under
                  the board, through a round cut-out at the VoiceS3R's centre up to its M2 hole) holds it under J1 /
                  J2, the hood's walls place it sideways. Board coords = case coords; keep the numbers together with
@@ -189,10 +190,10 @@ if PRINT_B:
     # on the board (2026-10-08, as Vein Unit P: nothing under it but flat pads and tracks) under a hood walled all
     # round (its +x wall, x -1.2..0.6, stands on the board) screwed up from under the floor (its +x screws H1 / H2
     # through the board, which it clamps to the floor's bosses); the cable's slack folded along both the module's long
-    # sides (2.0, shapes.CABLE_SIDE) inside the hood's ±x walls; the right column (x -4.6..24.9, out to the box's
-    # front, +x and back faces, under the hood's +x columns): the VoiceS3R at the front (its reset on the box's front
-    # face) with MAX3232, C1..C5, R1 / R2 and SW1 under it, the DB9 behind it (mating face +x, pulled in to -x, the
-    # board cut before its face), J6 on the back edge behind that (opening +y)
+    # sides (2.0, shapes.CABLE_SIDE) inside the hood's ±x walls; the right column (x -4.6..24.9, out to the box's +x
+    # and back faces, under the hood's +x columns), from the front (v0.46, the user's, 2026-10-18): J6 on the front
+    # edge (opening -y), the DB9 (mating face +x, the board cut under its shell), the VoiceS3R at the back (USB-C on
+    # the box's back face, its reset on its +x face) with MAX3232, C1..C5, R1 / R2 and SW1 under it
     VX0 = -29.2                                     # the module's -x side (1.7 to -x of where it stood on its stand:
                                                     # the slack's 2.0 between it and the hood's +x wall, which stays)
     HX0 = VX0 - 2.0                                 # the hood's -x wall's inside (the slack's 2.0 on -x)
@@ -207,24 +208,25 @@ if PRINT_B:
     J3_XY = (VX0 + 13.0, -36.5 - 2.0 - 0.3 - 3.0)  # x = the module's middle (concept_b's j3x)
     # the left part runs out past J3 to -y: its pads' front (1.9 before the origin) and the lock mark (a triangle and
     # 'LOCK', 0.6 high, 0.15 off the pads) 0.35 inside it (0.3 + 0.05 to spare); out of the hood's -x front column (0.3
-    # off it, it goes down to the floor). The right column keeps its front at -41.7 (the VoiceS3R's reset on the box's
-    # front face) but from XR to the hood's +x face (XH), under the hood's front wall and +x front column (H1), it runs
-    # out with it (concept_b: the same numbers)
+    # off it, it goes down to the floor). From XR to the hood's +x face (XH), under the hood's front wall and +x front
+    # column (H1), the board runs out to the hood's front face; the right column's front (YR) follows from its parts
+    # (concept_b: the same numbers)
     YF, XT = J3_XY[1] - 1.9 - 0.15 - 0.6 - 0.35, HX0 + 1.3 + 1.8 + 0.3
-    YR, YH, XH = -41.7, -46.9, 0.6                  # the right column's front, the hood's front face, its +x face
-    AX, AY = 12.9, -29.7                            # VoiceS3R centre at the front (its reset on the box's front face),
-                                                    # USB-C / PORT.A to +x (flush with the box's +x)
-    # mating face to +x, behind the VoiceS3R (its flange 0.3 off its back face: concept_b's DY), its shell's tip at
+    YH, XH = -46.9, 0.6                             # the hood's front face, its +x face
+    AX, AY = 12.9, Y1 - 12.0                        # VoiceS3R centre at the back, USB-C / PORT.A to +y (its face on
+                                                    # Y1, the box's back face), its reset to +x (flush with the box's +x)
+    # mating face to +x, before the VoiceS3R (its flange 0.3 off its front face: concept_b's DY), its shell's tip at
     # the +x edge (X1): the serial cable's plug stops there, out past the board and clear of the VoiceS3R (the user's,
     # 2026-10-18). The board is cut under the shell (from the flange to the edge), 9.0 either side (concept_b's
     # DB9_CUT_B: the shell's half width 8.5 + 0.5)
-    DB9_ROT, DB9_BY, DB9_CUT = 90, -2.0, 9.0
+    DB9_ROT, DB9_BY, DB9_CUT = 90, AY - 12.0 - 0.3 - 15.4, 9.0
+    # J6 before the DB9, opening -y: the HY2.0's body (its front 5.4 before the origin, 9.25 deep) 2.6 off the DB9's
+    # flange (concept_b's J6_DB9_B: its pads and courtyard clear of the DB9's courtyard), its front 0.8 inside the right
+    # column's front edge YR
+    J6_FRONT = DB9_BY - 15.4 - 2.6 - 9.25
+    YR = J6_FRONT - 0.8                             # the right column's front
     HOLE_FP = 'MountingHole_2.2mm_M2'
     HOLES = [(-2.5, -43.8), (-2.5, 24.6)]                               # H1 / H2: the hood's screws through the board
-    # v0.39 (J6 the HY2.0): freerouting ran G38 down the +x edge and under J2's pads on B.Cu, round J2-4 (GND), whose
-    # thermal to the B.Cu pour kept one spoke (starved_thermal): keep B.Cu tracks off its +x side and off its -y side
-    J2X4, J2Y = AX + 7.62, AY - 7.62                # J2-4 (GND)
-    NO_TRACK_B = [(J2X4 + 1.1, X1, J2Y - 2.7, J2Y + 2.7), (J2X4 - 1.3, J2X4 + 1.1, J2Y - 2.3, J2Y - 1.1)]
     POST_CUTS = [(AX, AY, 2.4)]                     # the VoiceS3R's screw post (4.3) up to its M2 hole at its centre
                                                     # (concept_b's ATOM_POST_R + 0.25)
     DB9_X = X1 - 6.0                              # its flange: the shell (6.0, shapes.DB9_SHELL_L) out to the edge
@@ -236,19 +238,21 @@ if PRINT_B:
     EDGE = [(X0, Y0), (XT, Y0), (XT, YF), (XR, YF), (XR, YH), (XH, YH), (XH, YR), (X1, YR),
             (X1, DB9_BY - DB9_CUT), (DB9_X, DB9_BY - DB9_CUT),
             (DB9_X, DB9_BY + DB9_CUT), (X1, DB9_BY + DB9_CUT), (X1, Y1), (XR, Y1), (XR, YL1), (X0, YL1)]
-    # turned a quarter (USB-C / PORT.A edge, vein-base -y, to +x): x = AX - y_vb, y = AY + x_vb
+    # turned half a turn (USB-C / PORT.A edge, vein-base -y, to +y) as print_a / print_c: x = AX - x_vb, y = AY - y_vb
     # under the VoiceS3R (its bottom 3.5 over the board, every part 3.2 high at most; concept_b's U1_B / SMALL_B /
-    # SW1_B): MAX3232 along y on -x of the post, C1..C4 in front of it, C5 and R1 / R2 behind it (0603, long side y),
-    # SW1 (KINGTEK DSHP04TSGET, half pitch, 2.5 high at most) on +x of the post between the header rows, its leads
-    # along y (set with the VoiceS3R off); clear of the post's cut-out (0.7 round it) and J1 / J2's plastic
-    POS = {'J1': (AX - 2.54, AY + 7.62, 90), 'J2': (AX, AY - 7.62, 90),
-           'U1': (5.0, AY, 0),
-           'C1': (2.0, -38.1, 90), 'C2': (4.5, -38.1, 90), 'C3': (7.0, -38.1, 90), 'C4': (9.5, -38.1, 90),
-           'C5': (2.0, -20.3, 90), 'R1': (4.5, -20.3, 90), 'R2': (7.0, -20.3, 90),
-           'SW1': (AX + 7.4, AY, 90),
+    # SW1_B), turned a quarter with it in v0.46 (the same places round its centre): MAX3232 along x in front of the
+    # post (the DB9's side), C1..C4 on +x of it, C5 and R1 / R2 on -x (0603, long side x), SW1 (KINGTEK DSHP04TSGET,
+    # half pitch, 2.5 high at most) behind the post between the header rows, its leads along x (set with the VoiceS3R
+    # off); clear of the post's cut-out (0.7 round it) and J1 / J2's plastic
+    POS = {'J1': (AX - 7.62, AY - 2.54, 180), 'J2': (AX + 7.62, AY, 180),
+           'U1': (AX, AY - 7.9, 90),
+           'C1': (AX + 8.4, AY - 10.9, 180), 'C2': (AX + 8.4, AY - 8.4, 180), 'C3': (AX + 8.4, AY - 5.9, 180),
+           'C4': (AX + 8.4, AY - 3.4, 180),
+           'C5': (AX - 9.4, AY - 10.9, 180), 'R1': (AX - 9.4, AY - 8.4, 180), 'R2': (AX - 9.4, AY - 5.9, 180),
+           'SW1': (AX, AY + 7.4, 180),
            'J3': (*J3_XY, 180),                   # tails (the pads) and the locking window to -y
-           'J6': (AX, Y1 - 0.8 - 5.4, 180)}     # behind the VoiceS3R on the back edge, opening +y: the HY2.0's
-                                                # body front (5.4 before the origin) 0.8 inside the edge
+           'J6': (AX, J6_FRONT + 5.4, 0)}       # on the front edge, opening -y: the HY2.0's body front (5.4 before
+                                                # the origin) 0.8 inside the edge; pin 1 at -x, the pads behind (+y)
 if PRINT_C:
     # case C (concept_c): the vein module (x -13..13, y VY0..VY0 + 59, its 9P end at -y) straight on the board under
     # B's hood (inside x ±15: the slack's 2.0 on either side), J3 just in front of its 9P plug as in print_b, the
@@ -450,11 +454,12 @@ elif PRINT_A:
     text(f'vein-station board {REV} (print A)', 0.0, 0.0, layer=pcbnew.B_SilkS)
 elif PRINT_B:
     SILK = []                                          # (x0, x1, y0, y1), label: checked after import_ses
-    text('VoiceS3R: USB-C / PORT.A this way', AX + 11.4, AY, size=0.8, rot=90)    # (past SW1's body, 24.04)
+    # between SW1's outline (its silk 3.4 behind it) and the back edge; short of the SW1 labels beside J1 (on -x)
+    text('USB-C / PORT.A this way', AX, Y1 - 0.65, size=0.8)
     SW1.Reference().SetVisible(False)
-    # behind SW1 under the VoiceS3R (take it off to set), between J1's plastic and the VoiceS3R's back
-    text('SW1 1+2 ON=PASS', AX + 5.6, AY + 11.0, size=0.8)
-    text('3+4 ON=CROSS', AX + 5.6, AY + 9.8, size=0.8)
+    # beside SW1 under the VoiceS3R (take it off to set), between J1's plastic and the VoiceS3R's -x face
+    text('SW1 1+2 ON=PASS', AX - 11.0, AY + 5.6, size=0.8, rot=90)
+    text('3+4 ON=CROSS', AX - 9.8, AY + 5.6, size=0.8, rot=90)
     for fp in b.GetFootprints():                       # the holes' references sat on the labels
         if fp.GetReference().startswith('H'):
             fp.Reference().SetVisible(False)
@@ -462,10 +467,9 @@ elif PRINT_B:
     # pin by pin, from the nets (22 characters at 0.8, ~14.1 wide), between J3's fitting nails and the module's end
     short = {'3V3': '3V3', 'GND': 'G', 'G5': 'RX', 'G6': 'TX'}
     text('J3 ' + ' '.join(f'{n}:{short[J3_NETS[n]]}' for n in '1234'), J3_XY[0], -37.7, size=0.8)
-    # between the DB9's flange (15.4 either side of DB9_BY) and J6's pads' tails (5.6 behind its origin), 0.4 off the
-    # flange (its 0.8 high glyphs: the middle 0.4 over their foot); clear of the cut under the shell
-    text('NFC: G38 G39 5V G', AX, DB9_BY + 15.4 + 0.4 + 0.4, size=0.8)
-    J6.Reference().SetPosition(P(AX - 8.3, pad(J6, '1')[1] + 4.0))   # (the HY2.0's own sat on the DB9's cut-out edge)
+    # beside J6 on +x (17 characters at 0.8, ~10.9 long, along y), clear of its mounting pads (6.05 off its centre)
+    text('NFC: G38 G39 5V G', AX + 9.5, J6_FRONT + 6.0, size=0.8, rot=90)
+    J6.Reference().SetPosition(P(AX - 8.3, J6_FRONT + 3.0))   # beside it on -x
     text(f'vein-station board {REV} (print B)', -6.0, 16.0, layer=pcbnew.B_SilkS)   # (inside the left part's back edge)
 elif PRINT_C:
     SILK = []                                          # as print_b: J3's '1', the lock mark (checked after import_ses)
