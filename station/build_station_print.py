@@ -82,6 +82,74 @@ def bosses(pts):
     return s
 
 
+# ---- B / C: the hood over the vein module (screwed up from under the floor into its four columns) and the VoiceS3R's
+# stepped screw post (the board clamped between its shoulder and the VoiceS3R's pins)
+def thru_bosses(pts):
+    """Bosses (2 high) under the board for the hood's screws that go through it (drilled through, no thread: the
+    hood's columns clamp the board on them)."""
+    bs = None
+    for x, y in pts:
+        b = cyl_z(x, y, 2.5, 0, ZB).cut(cyl_z(x, y, CLEAR / 2, -1, ZB + 1))
+        bs = b if bs is None else bs.union(b)
+    return bs
+
+
+def atom_post(ax, ay):
+    """The VoiceS3R's screw post at its centre: a foot (the shoulder the board sits on) up to the board, then through
+    the board's round cut-out up to the VoiceS3R's bottom round its M2 hole (in the 0.2 recess), where its pins bottom
+    out (measured): longer would lift it off them, shorter would pull it down on them. Returns (post, z of the hole)."""
+    z_atom_hole = Z_ATOM_B + ATOM_RECESS
+    post = cyl_z(ax, ay, ATOM_POST_R0, 0, ZB).union(cyl_z(ax, ay, ATOM_POST_R, ZB - 0.01, z_atom_hole))
+    assert ATOM_POST_R + 0.2 <= ATOM_CUT_R < ATOM_POST_R0 - 0.5, 'the board drops over the post onto its shoulder'
+    assert ATOM_POST_R - CLEAR / 2 >= 1.0, 'the post is 1.0 thick round the screw'
+    return post, z_atom_hole
+
+
+def hood_over_vein(vein, outer, inner, walls, cols, thru, z_in, z_top):
+    """The hood: the top (window + recess, vein_lid_cuts), walls (walls = [(x0, x1, y0, y1, z0)], each up to the top:
+    z0 = 0 down to the floor, ZBT on the board where it runs under them), four columns in its corners (cols, those in
+    thru on the board), a 45° fillet under the top along the front and back walls between the columns (the ±x walls
+    are the cable's slack's room off the module); all of it inside one R3 outline (the columns too: past it they stood
+    0.5 proud of the walls' rounded corners, a slit down each corner); pilot-drilled from below for SCREW_B.
+    outer / inner = the hood's outside / inside (x0, x1, y0, y1)."""
+    xo0, xh1, yo0, yo1 = outer
+    hx0, hx1, hy0, hy1 = inner
+    top = rbox(xo0, xh1, yo0, yo1, z_in, z_top, 3.0)
+    w = None
+    for x0, x1, y0, y1, z0 in walls:
+        b = box(x0, x1, y0, y1, z0, z_in + 0.01)
+        w = b if w is None else w.union(b)
+    for x, y in cols:
+        w = w.union(box(x - COL_B, x + COL_B, y - COL_B, y + COL_B, ZBT if (x, y) in thru else 0, z_in + 0.01))
+    FIL = 1.5
+    for y_w, s in ((hy0, 1), (hy1, -1)):                 # the fillets, between the columns
+        x_a, x_b = hx0 + COL_IN_B + COL_B, hx1 - COL_IN_B - COL_B
+        f = cq.Workplane('YZ').polyline([(y_w, z_in + 0.01), (y_w + s * FIL, z_in + 0.01), (y_w, z_in - FIL)]).close() \
+            .extrude(x_b - x_a).translate((x_a, 0, 0))
+        w = w.union(f)
+    hood = top.union(w.intersect(rbox(xo0, xh1, yo0, yo1, -1, z_in + 1, 3.0)))
+    for c in vein_lid_cuts(vein, z_in, z_top, along_y=True):
+        hood = hood.cut(c)
+    tip = -T_FLOOR_B + SCREW_B
+    for x, y in cols:
+        z_col = ZBT if (x, y) in thru else 0.0
+        assert tip - z_col >= 6.0 and tip + 1.0 < z_in, 'the hood screw: 6.0 of thread in its column, under the top'
+        hood = hood.cut(cyl_z(x, y, PILOT_B / 2, -1, tip + 1.0))
+    return hood
+
+
+def floor_screws(body, cols, ax, ay, z_atom_hole):
+    """The floor drilled and countersunk for the screws (one kind, SCREW_B, up from under it, heads flush): the hood's
+    into its columns, the VoiceS3R's through its post into its M2 hole."""
+    eng = -T_FLOOR_B + SCREW_B - z_atom_hole
+    assert 2.0 <= eng <= 3.0, f'the VoiceS3R screw: {eng:.1f} into its hole (the STL boss is 3.0)'
+    for x, y in cols + [(ax, ay)]:
+        cone = cq.Workplane().add(cq.Solid.makeCone(CSK / 2, CLEAR / 2, (CSK - CLEAR) / 2,
+                                                    cq.Vector(x, y, -T_FLOOR_B), cq.Vector(0, 0, 1)))
+        top_c = z_atom_hole + 1 if (x, y) == (ax, ay) else 1
+        body = body.cut(cyl_z(x, y, CLEAR / 2, -T_FLOOR_B - 1, top_c)).cut(cone)
+    return body
+
 
 def concept_a():
     Z_IN, Z_TOP = Z_IN_A, Z_IN_A + T_TOP
@@ -294,24 +362,15 @@ def concept_b():
     # no screws of the board's own: bosses under it for the hood's through screws (H1 / H2), drilled through (the
     # hood's columns clamp the board on them); the VoiceS3R's screw post holds it under J1 / J2 (below); the floor's
     # ribs carry it under the vein module, where the hood's walls place it sideways
-    bs = None
-    for x, y in thru:
-        b = cyl_z(x, y, 2.5, 0, ZB).cut(cyl_z(x, y, CLEAR / 2, -1, ZB + 1))
-        bs = b if bs is None else bs.union(b)
-    # the VoiceS3R's screw post at its centre: a foot (the shoulder the board sits on) up to the board, then through
-    # the board's round cut-out up to the VoiceS3R's bottom round its M2 hole (in the 0.2 recess), where its pins
-    # bottom out (measured): longer would lift it off them, shorter would pull it down on them
-    z_atom_hole = Z_ATOM_B + ATOM_RECESS
-    atom_post = cyl_z(ax, ay, ATOM_POST_R0, 0, ZB).union(cyl_z(ax, ay, ATOM_POST_R, ZB - 0.01, z_atom_hole))
-    assert ATOM_POST_R + 0.2 <= ATOM_CUT_R < ATOM_POST_R0 - 0.5, 'the board drops over the post onto its shoulder'
-    assert ATOM_POST_R - CLEAR / 2 >= 1.0, 'the post is 1.0 thick round the screw'
+    bs = thru_bosses(thru)
+    post, z_atom_hole = atom_post(ax, ay)              # the VoiceS3R's screw post at its centre
     # the body: the floor (R3 corners), the bosses, the VoiceS3R's post, floor ribs up to the board (clear of the THT
     # legs, the bosses and the post) where the board is
     # (the right column's floor out to yo1r from the hood's +x face on: a step at the hood's back corner)
     body = rbox(xo0, xh1 + 3.0, yr0, yo1, -T_FLOOR_B, 0, 3.0).union(rbox(xh1, xo1, yr0, yo1r, -T_FLOOR_B, 0, 3.0)) \
         .union(box(xh1, xh1 + 3.0, yr0, yo1, -T_FLOOR_B, 0)).union(rbox(xo0, xh1, yo0, yo1, -T_FLOOR_B, 0, 3.0)) \
         .cut(box(bx1, xo1 + 1, cy0, cy1, -T_FLOOR_B - 1, 1)) \
-        .union(bs).union(atom_post)
+        .union(bs).union(post)
     tht = [bb for o in (d9, hdr) for bb in [xy_box(o)]]
     av = [(a - 1.0, b + 1.0, c - 1.0, d + 1.0) for a, b, c, d in tht] + \
         [(x - 3.5, x + 3.5, y - 3.5, y + 3.5) for x, y in thru] + \
@@ -321,41 +380,13 @@ def concept_b():
         g = rib_grid(r[0] + 0.5, r[1] - 0.5, r[2] + 0.5, r[3] - 0.5, -0.01, ZB, av)
         if g is not None:
             body = body.union(g)
-    # the hood: the top (window + recess), walls all round (a closed frame: -x, the front and the back down to the
-    # floor, +x and the front / back walls' +x ends down to the board, which runs under them), the four columns, a
-    # 45° fillet under the top along the front and back walls (the ±x walls are the slack's room off the module);
-    # all of it inside one R3 outline (the columns too: past it they stood 0.5 proud of the walls' rounded corners, a
-    # slit down each corner); tapped from below (pilot), the floor under them drilled and countersunk for the screws'
-    # heads
-    top = rbox(xo0, xh1, yo0, yo1, Z_IN, Z_TOP, 3.0)
-    # (the front and back walls stand on the board where it runs under them)
-    walls = box(xo0, hx0, yo0, yo1, 0, Z_IN + 0.01).union(box(xo0, bxs, yo0, hy0, 0, Z_IN + 0.01)) \
-        .union(box(xo0, bxs, hy1, yo1, 0, Z_IN + 0.01)).union(box(bxs, xh1, yo0, hy0, ZBT, Z_IN + 0.01)) \
-        .union(box(bxs, xh1, hy1, yo1, ZBT, Z_IN + 0.01)).union(box(hx1, xh1, yo0, yo1, ZBT, Z_IN + 0.01))
-    for x, y in cols:
-        walls = walls.union(box(x - COL_B, x + COL_B, y - COL_B, y + COL_B, ZBT if (x, y) in thru else 0, Z_IN + 0.01))
-    FIL = 1.5
-    for y_w, s in ((hy0, 1), (hy1, -1)):                 # the fillets, between the columns
-        x_a, x_b = hx0 + COL_IN_B + COL_B, hx1 - COL_IN_B - COL_B
-        w = cq.Workplane('YZ').polyline([(y_w, Z_IN + 0.01), (y_w + s * FIL, Z_IN + 0.01), (y_w, Z_IN - FIL)]).close() \
-            .extrude(x_b - x_a).translate((x_a, 0, 0))
-        walls = walls.union(w)
-    hood = top.union(walls.intersect(rbox(xo0, xh1, yo0, yo1, -1, Z_IN + 1, 3.0)))
-    for c in vein_lid_cuts(vein, Z_IN, Z_TOP, along_y=True):
-        hood = hood.cut(c)
-    # the screws (one kind, SCREW_B): the hood's into its columns, the VoiceS3R's through its post into its M2 hole
-    tip = -T_FLOOR_B + SCREW_B
-    for x, y in cols:
-        z_col = ZBT if (x, y) in thru else 0.0
-        assert tip - z_col >= 6.0 and tip + 1.0 < Z_IN, 'the hood screw: 6.0 of thread in its column, under the top'
-        hood = hood.cut(cyl_z(x, y, PILOT_B / 2, -1, tip + 1.0))
-    eng = tip - z_atom_hole
-    assert 2.0 <= eng <= 3.0, f'the VoiceS3R screw: {eng:.1f} into its hole (the STL boss is 3.0)'
-    for x, y in cols + [(ax, ay)]:
-        cone = cq.Workplane().add(cq.Solid.makeCone(CSK / 2, CLEAR / 2, (CSK - CLEAR) / 2,
-                                                    cq.Vector(x, y, -T_FLOOR_B), cq.Vector(0, 0, 1)))
-        top_c = z_atom_hole + 1 if (x, y) == (ax, ay) else 1
-        body = body.cut(cyl_z(x, y, CLEAR / 2, -T_FLOOR_B - 1, top_c)).cut(cone)
+    # the hood: walls all round (a closed frame: -x, the front and the back down to the floor, +x and the front / back
+    # walls' +x ends down to the board, which runs under them), the four columns; the floor under them drilled and
+    # countersunk for the screws' heads
+    walls = [(xo0, hx0, yo0, yo1, 0), (xo0, bxs, yo0, hy0, 0), (xo0, bxs, hy1, yo1, 0), (bxs, xh1, yo0, hy0, ZBT),
+             (bxs, xh1, hy1, yo1, ZBT), (hx1, xh1, yo0, yo1, ZBT)]
+    hood = hood_over_vein(vein, (xo0, xh1, yo0, yo1), (hx0, hx1, hy0, hy1), walls, cols, thru, Z_IN, Z_TOP)
+    body = floor_screws(body, cols, ax, ay, z_atom_hole)
     pcb_v = pcb.cut(cyl_z(ax, ay, ATOM_CUT_R, ZB - 1, ZBT + 1))
     for x, y in thru:
         pcb_v = pcb_v.cut(cyl_z(x, y, 1.1, ZB - 1, ZBT + 1))
