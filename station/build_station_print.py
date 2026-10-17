@@ -428,10 +428,6 @@ def concept_b():
         g = rib_grid(r[0] + 0.5, r[1] - 0.5, r[2] + 0.5, r[3] - 0.5, -0.01, ZB, av)
         if g is not None:
             body = body.union(g)
-    # rib_grid brings a bar back when a later avoid box meets a bar an earlier one has cut away whole (cq's cut on an
-    # empty result falls back to the first solid), which left ribs under the DB9's pins; clear the DB9's box again
-    # (A and the other boards keep their ribs: shapes.py stays as it is)
-    body = body.cut(box(*[(a - 1.0, b + 1.0, c - 1.0, d + 1.0) for a, b, c, d in [xy_box(d9)]][0], 0.001, ZB + 0.5))
     # the hood: walls all round (a closed frame: -x, the front and the back down to the floor, +x and the front / back
     # walls' +x ends down to the board, which runs under them), the four columns; the floor under them drilled and
     # countersunk for the screws' heads

@@ -282,6 +282,8 @@ def rib_grid(xi0, xi1, yi0, yi1, z0, z1, avoid):
         for x0, x1, y0, y1 in avoid:
             if x0 < x + w and x1 > x - w:
                 b = b.cut(box(x - 1, x + 1, y0, y1, z0 - 1, z1 + 1))
+                if not b.solids().vals():
+                    break       # cut away whole: a later cut of the empty result would give the bar back
         bars += b.solids().vals()
     for i in range(1, ny + 1):
         y = yi0 + (yi1 - yi0) * i / (ny + 1)
@@ -289,6 +291,8 @@ def rib_grid(xi0, xi1, yi0, yi1, z0, z1, avoid):
         for x0, x1, y0, y1 in avoid:
             if y0 < y + w and y1 > y - w:
                 b = b.cut(box(x0, x1, y - 1, y + 1, z0 - 1, z1 + 1))
+                if not b.solids().vals():
+                    break
         bars += b.solids().vals()
     keep = [v for v in bars if max(v.BoundingBox().xlen, v.BoundingBox().ylen) >= 6.0]
     if not keep:
