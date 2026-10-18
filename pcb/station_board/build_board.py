@@ -59,11 +59,14 @@ Two outlines of the same circuit (same parts, same routing), both r12:
   'print_b'      the same circuit for the printed case B (concept_b() in station/build_station_print.py, two rows):
                  the vein module on the left, its 9P socket end at the front, straight on the board (as Vein Unit P:
                  nothing under it but flat pads and tracks; the floor's ribs carry the board) under a hood screwed up
-                 from under the floor, the cable's slack folded along both its long sides inside the hood, and J3
-                 (MX1.25 4P vertical, 53398-0471) just in front of its 9P plug, its locking window to -y (the cable,
-                 made with both latches on the same face, goes into it from above); the board's left part and the
-                 hood run out to -y over J3. On the right, out to the box's +x and back faces with no walls nor lid,
-                 from the front (v0.46): J6 on the front edge (opening -y; the HY2.0 C722729 on its own footprint from
+                 from under the floor, the cable's slack folded along both its long sides inside the hood. J3
+                 (MX1.25 4P vertical, 53398-0471; v0.48, before it stood just in front of the 9P plug) on the right
+                 column's front beside J6, between the hood's +x face and J6, its pads' row along y and its locking
+                 window to +x (the cable, made with both latches on the same face, leaves the 9P to -y, turns +x in
+                 front of the module's end, through a cut in the hood's +x wall and into J3 from above); the board's
+                 left part and the hood stay out to -y where v0.47 had them. On the right, out to the box's +x and
+                 back faces with no walls nor lid,
+                 from the front (v0.46): J3 and J6 on the front edge (J6 opening -y; the HY2.0 C722729 on its own footprint from
                  v0.39, pcb/vein_base.pretty; v0.38 had the JST PH, which does not take the Grove plug), the DB9
                  (mating face +x, its shell's tip at the +x edge, the board cut under the shell: the serial cable's
                  plug stays out past the board), the VoiceS3R at the back on J1 / J2 turned half a turn (USB-C /
@@ -141,7 +144,8 @@ DB9_X = None                 # print_b: its flange's x when not on X1
 DB9_PIN_FACE = 7.70
 POST_CUTS = []               # print_b: round cut-outs (Edge.Cuts, x, y, r) for the case's posts, no courtyard
 J3_NETS = {'1': 'G5', '2': 'G6', '3': '3V3', '4': 'GND', 'MP': 'GND'}   # print_b: from its pads' places (see there)
-PRE_ROUTE = {}               # print_b: locked F.Cu tracks drawn here (net: points), not in the .ses
+PRE_ROUTE = {}               # print_b: locked tracks and vias drawn here (net: [(layer, points)], vias at the points
+PRE_VIA = []                 # (net, x, y)), not in the .ses
 NO_TRACK_B = []              # print_b: (x0, x1, y0, y1) kept free of B.Cu tracks (rule areas, in the DSN too)
 EDGE = None                  # sw75: the outline as a polygon
 NOTCH = None                 # sw75: (x0, x1, depth) cut into the -y edge for the vein cable (not in the DSN)
@@ -207,17 +211,11 @@ if PRINT_B:
                                                     # the hood's back face)
     YL1 = 22.5                                      # the left part's back edge: the module's back end (the hood's -x
                                                     # back column stands 0.3 behind it)
-    # J3 (2026-10-08): vertical, just in front of the module's 9P plug (2.0 out of its end face): its fitting nails'
-    # pads (3.0 behind the origin, turned half a turn) 0.3 off the plug, its tails and locking window to -y. The
-    # cable's two latches are on one face (made so): it goes into J3 from above, J3's latch facing away from the 9P
-    # (as Vein Unit P's J1)
-    J3_XY = (VX0 + 13.0, -36.5 - 2.0 - 0.3 - 3.0)  # x = the module's middle (concept_b's j3x)
-    # the left part runs out past J3 to -y: its pads' front (1.9 before the origin) and the lock mark (a triangle and
-    # 'LOCK', 0.6 high, 0.15 off the pads) 0.35 inside it (0.3 + 0.05 to spare); out of the hood's -x front column (0.3
-    # off it, it goes down to the floor). From XR to the hood's +x face (XH), under the hood's front wall and +x front
-    # column (H1), the board runs out to the hood's front face; the right column's front (YR) follows from its parts
-    # (concept_b: the same numbers)
-    YF, XT = J3_XY[1] - 1.9 - 0.15 - 0.6 - 0.35, HX0 + 1.3 + 1.8 + 0.3
+    # the left part runs out to -y (YF, where v0.47 had it with J3 in front of the module's 9P plug: kept, the cable
+    # runs across there to J3), out of the hood's -x front column (0.3 off it, it goes down to the floor). From XR to
+    # the hood's +x face (XH), under the hood's front wall and +x front column (H1), the board runs out to the hood's
+    # front face; the right column's front (YR) follows from its parts (concept_b: the same numbers)
+    YF, XT = -44.8, HX0 + 1.3 + 1.8 + 0.3
     YH, XH = -46.9, 0.6                             # the hood's front face, its +x face
     AX, AY = 12.9, Y1 - 12.0                        # VoiceS3R centre at the back, USB-C / PORT.A to +y (its face on
                                                     # Y1, the box's back face), its reset to +x (flush with the box's +x)
@@ -231,15 +229,22 @@ if PRINT_B:
     # column's front edge YR
     J6_FRONT = DB9_BY - 15.4 - 2.6 - 9.25
     YR = J6_FRONT - 0.8                             # the right column's front
+    # J3 (v0.48, the user's, 2026-10-18): vertical beside J6 on the right column's front, turned 270: its pads' row
+    # along y, its tails and locking window to +x (J6's side), its fitting nails' pads (MP, 3.0 to -x of the origin,
+    # ±5.475) 0.3 off the hood's +x face (XH) and 0.5 off the front edge (the copper-to-edge clearance, as J6's); its
+    # courtyard (2.425 to +x) just meets J6's. The cable's two latches are on one face (made so): it leaves the 9P
+    # latch up to -y, turns +x in front of the module's end and goes into J3 from above, J3's latch facing +x
+    J3_XY = (XH + 0.3 + 3.0, YR + 0.5 + 5.475)     # concept_b's j3x, j3y
     HOLE_FP = 'MountingHole_2.2mm_M2'
     HOLES = [(-2.5, -43.8), (-2.5, 24.6)]                               # H1 / H2: the hood's screws through the board
     POST_CUTS = [(AX, AY, 2.4)]                     # the VoiceS3R's screw post (4.3) up to its M2 hole at its centre
                                                     # (concept_b's ATOM_POST_R + 0.25)
     DB9_X = X1 - 6.0                              # its flange: the shell (6.0, shapes.DB9_SHELL_L) out to the edge
     DB9_PIN_FACE = 10.94                          # the footprint's own (v0.47; 7.70 put the DB9 3.24 out past here)
-    # J3's pads from -x to +x on 3V3 / GND / G5 (RXD) / G6 (TXD): the module's 9P 3..6 (red, black, green, yellow) run
-    # that way along its end face (seen from the front, window up, pin 1 on the left = -x), and the cable keeps the
-    # order; the pad numbers follow from the footprint's turn (set below from the pads' places)
+    # J3's pads from -y to +y on 3V3 / GND / G5 (RXD) / G6 (TXD): the module's 9P 3..6 (red, black, green, yellow) run
+    # -x to +x along its end face (seen from the front, window up, pin 1 on the left = -x); going -y and turning left
+    # to +x the -x end (red) comes to -y, and the cable keeps the order down into J3; the pad numbers follow from the
+    # footprint's turn (set below from the pads' places)
     J3_NETS = None
     XR = -4.6                                       # the right column's -x edge (0.3 past the hood's +x columns)
     EDGE = [(X0, Y0), (XT, Y0), (XT, YF), (XR, YF), (XR, YH), (XH, YH), (XH, YR), (X1, YR),
@@ -257,9 +262,19 @@ if PRINT_B:
            'C4': (AX + 8.4, AY - 3.4, 180),
            'C5': (AX - 9.4, AY - 10.9, 180), 'R1': (AX - 9.4, AY - 8.4, 180), 'R2': (AX - 9.4, AY - 5.9, 180),
            'SW1': (AX, AY + 7.4, 180),
-           'J3': (*J3_XY, 180),                   # tails (the pads) and the locking window to -y
+           'J3': (*J3_XY, 270),                   # tails (the pads) and the locking window to +x
            'J6': (AX, J6_FRONT + 5.4, 0)}       # on the front edge, opening -y: the HY2.0's body front (5.4 before
                                                 # the origin) 0.8 inside the edge; pin 1 at -x, the pads behind (+y)
+    # v0.48: with J3's and J6's nets both up the left of J1, freerouting left G8 (J1-5 -> U1-12) and TXO (SW1-1 ->
+    # U1-14) unrouted. TXO is drawn here as v0.47's router had it (F.Cu from U1-14 to a via, B.Cu, a via, F.Cu to
+    # SW1-1, from the pads' centres: U1's rows 2.475 off its centre, SW1's pin 1 1.905 off its); the router then
+    # routes the rest, G8 too
+    F, B = pcbnew.F_Cu, pcbnew.B_Cu
+    PRE_ROUTE = {'TXO': [(F, [(AX - 1.905, AY - 5.425), (AX - 1.9, AY - 3.93)]),
+                         (B, [(AX - 1.9, AY - 3.93), (AX - 1.4, AY - 4.44), (AX + 2.19, AY - 4.44), (AX + 4.8, AY - 1.83),
+                              (AX + 4.8, AY - 0.08)]),
+                         (F, [(AX + 4.8, AY - 0.08), (AX + 4.8, AY + 5.495), (AX + 3.81, AY + 5.495)])]}
+    PRE_VIA = [('TXO', AX - 1.9, AY - 3.93), ('TXO', AX + 4.8, AY - 0.08)]
 if PRINT_C:
     # case C (concept_c): the vein module (x -13..13, y VY0..VY0 + 59, its 9P end at -y) straight on the board under
     # B's hood (inside x ±15: the slack's 2.0 on either side), J3 just in front of its 9P plug as in print_b, the
@@ -343,7 +358,9 @@ wire(J2, {'1': 'G39', '2': 'G38', '3': '5V', '4': 'GND'})
 if PRINT_B or PRINT_C:
     J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53398-0471_1x04-1MP_P1.25mm_Vertical', 'J3',
               'MX1.25-4P vertical (Molex 53398-0471)', 0, 0)
-    J3_NETS = dict(zip(sorted('1234', key=lambda n: pad(J3, n)[0]), ('3V3', 'GND', 'G5', 'G6')), MP='GND')
+    # along the cable's last run: print_b's pads' row along y (-y first), print_c's along x (-x first)
+    J3_NETS = dict(zip(sorted('1234', key=lambda n: pad(J3, n)[1 if PRINT_B else 0]), ('3V3', 'GND', 'G5', 'G6')),
+                   MP='GND')
 else:
     J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53261-0471_1x04-1MP_P1.25mm_Horizontal', 'J3',
               'MX1.25-4P RA (Molex 53261-0471)', -30.0, J3_EDGE - 3.1, rot=180)
@@ -473,12 +490,16 @@ elif PRINT_B:
         if fp.GetReference().startswith('H'):
             fp.Reference().SetVisible(False)
     J3.Reference().SetVisible(False)                   # (the text names it)
-    # pin by pin, from the nets (22 characters at 0.8, ~14.1 wide), between J3's fitting nails and the module's end
+    # pin by pin, from the nets (22 characters at 0.8, ~14.1 long), along y behind J3 (between the hood's +x face and
+    # the DB9's body), checked as the marks
     short = {'3V3': '3V3', 'GND': 'G', 'G5': 'RX', 'G6': 'TX'}
-    text('J3 ' + ' '.join(f'{n}:{short[J3_NETS[n]]}' for n in '1234'), J3_XY[0], -37.7, size=0.8)
+    tx, ty = J3_XY[0] - 0.55, J3_XY[1] + 5.475 + 0.6 + 7.1
+    text('J3 ' + ' '.join(f'{n}:{short[J3_NETS[n]]}' for n in '1234'), tx, ty, size=0.8, rot=90)
+    SILK.append(((tx - 0.5, tx + 0.5, ty - 7.1, ty + 7.1), 'J3 order'))
     # beside J6 on +x (17 characters at 0.8, ~10.9 long, along y), clear of its mounting pads (6.05 off its centre)
     text('NFC: G38 G39 5V G', AX + 9.5, J6_FRONT + 6.0, size=0.8, rot=90)
-    J6.Reference().SetPosition(P(AX - 8.3, J6_FRONT + 3.0))   # beside it on -x
+    # past the end of that text (J3 stands beside J6 on -x from v0.48)
+    J6.Reference().SetPosition(P(AX + 9.5, J6_FRONT + 6.0 + 5.45 + 1.2)); J6.Reference().SetTextAngleDegrees(90)
     text(f'vein-station board {REV} (print B)', -6.0, 16.0, layer=pcbnew.B_SilkS)   # (inside the left part's back edge)
 elif PRINT_C:
     SILK = []                                          # as print_b: J3's '1', the lock mark (checked after import_ses)
@@ -515,18 +536,28 @@ if PRINT_B or PRINT_C:
         x, y = 2 * p1[0] - p2[0], 2 * p1[1] - p2[1]
         text('1', x, y, size=0.8)
         SILK.append(((x - 0.4, x + 0.4, y - 0.4, y + 0.4), f"{fp.GetReference()} '1'"))
-    # J3's locking window (Molex 533980000-SD: the long wall on the tails' side, here -y): a filled triangle in front
-    # of its pads, its tip at that wall (+y), 0.15 off the pads, and 'LOCK' (0.6, 4 characters ~1.9 long) beside it
-    # (-x): plug the 4P with its latch that way
-    yt = min(pad(J3, n)[1] for n in '1234') - 0.65 - 0.15     # the pads' front (1.3 long) - 0.15
+    # J3's locking window (Molex 533980000-SD: the long wall on the tails' side; print_c -y, print_b +x): a filled
+    # triangle out past its pads, its tip at that wall, 0.15 off the pads, and 'LOCK' (0.6, 4 characters ~1.9 long)
+    # beside it (print_c -x, print_b +y along it): plug the 4P with its latch that way
+    if PRINT_B:
+        xt = max(pad(J3, n)[0] for n in '1234') + 0.65 + 0.15     # the pads' +x end (1.3 long) + 0.15
+        pts = ((xt, J3_XY[1]), (xt + 0.6, J3_XY[1] + 0.4), (xt + 0.6, J3_XY[1] - 0.4))
+        lock = dict(x=xt + 0.3, y=J3_XY[1] + 1.9, rot=90)
+        marks = [((xt, xt + 0.65, J3_XY[1] - 0.45, J3_XY[1] + 0.45), 'J3 lock triangle'),
+                 ((xt, xt + 0.6, J3_XY[1] + 0.9, J3_XY[1] + 2.9), 'J3 LOCK')]
+    else:
+        yt = min(pad(J3, n)[1] for n in '1234') - 0.65 - 0.15     # the pads' front (1.3 long) - 0.15
+        pts = ((J3_XY[0], yt), (J3_XY[0] + 0.4, yt - 0.6), (J3_XY[0] - 0.4, yt - 0.6))
+        lock = dict(x=J3_XY[0] - 1.9, y=yt - 0.3)
+        marks = [((J3_XY[0] - 0.45, J3_XY[0] + 0.45, yt - 0.65, yt), 'J3 lock triangle'),
+                 ((J3_XY[0] - 2.9, J3_XY[0] - 0.9, yt - 0.6, yt), 'J3 LOCK')]
     tri = pcbnew.PCB_SHAPE(b); tri.SetShape(pcbnew.SHAPE_T_POLY)
     ps = pcbnew.SHAPE_POLY_SET(); ps.NewOutline()
-    for x, y in ((J3_XY[0], yt), (J3_XY[0] + 0.4, yt - 0.6), (J3_XY[0] - 0.4, yt - 0.6)):
+    for x, y in pts:
         ps.Append(mm(OX + x), mm(OY - y))
     tri.SetPolyShape(ps); tri.SetLayer(pcbnew.F_SilkS); tri.SetWidth(mm(0.1)); tri.SetFilled(True); b.Add(tri)
-    text('LOCK', J3_XY[0] - 1.9, yt - 0.3, size=0.6)
-    SILK += [((J3_XY[0] - 0.45, J3_XY[0] + 0.45, yt - 0.65, yt), 'J3 lock triangle'),
-             ((J3_XY[0] - 2.9, J3_XY[0] - 0.9, yt - 0.6, yt), 'J3 LOCK')]
+    text('LOCK', size=0.6, **lock)
+    SILK += marks
     for (x0, x1, y0, y1), _ in SILK:      # no vias on the marks (a via by J3's pad 1 sat on its '1')
         ra = pcbnew.ZONE(b); ra.SetIsRuleArea(True); ra.SetDoNotAllowVias(True); ra.SetDoNotAllowTracks(False)
         ra.SetDoNotAllowPads(False); ra.SetDoNotAllowCopperPour(False); ra.SetDoNotAllowFootprints(False)
@@ -537,13 +568,18 @@ if PRINT_B or PRINT_C:
         b.Add(ra)
 
 os.chdir(HERE)
-for n, pts in PRE_ROUTE.items():     # locked: freerouting routes round them and leaves them out of the .ses
-    for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
-        t = pcbnew.PCB_TRACK(b); t.SetStart(P(x1, y1)); t.SetEnd(P(x2, y2)); t.SetWidth(mm(0.3))
-        t.SetLayer(pcbnew.F_Cu); t.SetNet(nets[n]); t.SetLocked(True); b.Add(t)
+for n, runs in PRE_ROUTE.items():    # locked: freerouting routes round them and leaves them out of the .ses
+    for layer, pts in runs:
+        for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+            t = pcbnew.PCB_TRACK(b); t.SetStart(P(x1, y1)); t.SetEnd(P(x2, y2)); t.SetWidth(mm(0.3))
+            t.SetLayer(layer); t.SetNet(nets[n]); t.SetLocked(True); b.Add(t)
+for n, x, y in PRE_VIA:
+    v = pcbnew.PCB_VIA(b); v.SetPosition(P(x, y)); v.SetWidth(mm(0.6)); v.SetDrill(mm(0.3))
+    v.SetNet(nets[n]); v.SetLocked(True); b.Add(v)
 if 'dsn' in sys.argv[1:]:
     b.Save(f'{NAME}.kicad_pcb')
-    print('dsn', pcbnew.ExportSpecctraDSN(b, f'{NAME}.dsn'))
+    # from the saved board: exported from the one built in memory, the DSN's wiring (PRE_ROUTE) came out empty
+    print('dsn', pcbnew.ExportSpecctraDSN(pcbnew.LoadBoard(f'{NAME}.kicad_pcb'), f'{NAME}.dsn'))
 else:
     import_ses(b, nets, SES)
     # print_b / print_c's marks by the cable's 4Ps: JLC trims silk off pads, and check_drc.py ignores silk_over_copper, so each
