@@ -46,7 +46,7 @@ J3_MATED = 5.7                   # J3 (53398-0471) with the 4P plug in it, over 
 # B (v0.48): J3 turned 270 (its pads' row along y, its signal pads to +x; KiCad's footprint): its fitting nails' pads
 # (MP) x -3.0..0 and ±5.475 along y off the origin, the signal pads' +x end 1.9, its housing (Fab) x -2.6..1.1 and
 # ±5.075, its courtyard x -3.525..2.425 and ±6.005
-J3_MP_X, J3_MP_Y, J3_PAD_X = 3.0, 5.475, 1.9
+J3_MP_X, J3_MP_Y, J3_PAD_X = 3.0, 5.475, 1.9    # (J3_MP_X: the origin to the MP's -x end, J3_MP_Y: to its front)
 J3_BODY = (-2.6, 1.1, 5.075)
 J3_CRT = (-3.525, 2.425, 6.005)
 HY20_CRT = 0.575                 # J6's (the HY2.0's) courtyard past its body's -x / +x ends (its footprint)
@@ -493,6 +493,14 @@ def concept_b():
     j6_gap = DY - DB9_HALF_W - (gf + HY20_DEPTH)
     assert j6_gap >= 0.3 - 1e-9, f'J6 is {j6_gap:.2f} off the DB9\'s flange'
     assert groveplug.val().BoundingBox().ymin < yr0, 'the Grove plug stays over the board'
+    # J3's mated plug and the wires' bend over it (5.7 + J3_ROOM) beside J6 and the Grove plug in it: apart in xy (their
+    # heights overlap), 0.3 at least
+    ju = xy_box(on(j3x + J3_BODY[0], j3x + J3_BODY[1], j3y - J3_BODY[2], j3y + J3_BODY[2], 0, zc))
+    j3_j6 = []
+    for o in (grove, groveplug):
+        r = xy_box(o)
+        j3_j6.append(max(r[0] - ju[1], ju[0] - r[1], r[2] - ju[3], ju[2] - r[3]))
+    assert min(j3_j6) >= 0.3, f'J3\'s plug is {min(j3_j6):.2f} off J6 / the Grove plug'
     # J1 / J2 as A / C (turned half a turn, USB-C / PORT.A to +y): J1 (5 pins) at x = ax - 7.62 from y = ay - 2.54, J2
     # (4 pins) at x = ax + 7.62 from y = ay, both to ay + 7.62
     hdr = on(ax - 8.89, ax - 6.35, ay - 3.81, ay + 8.89, 0, 2.5).union(on(ax + 6.35, ax + 8.89, ay - 1.27, ay + 8.89, 0, 2.5))
@@ -579,7 +587,8 @@ def concept_b():
     print('b: under the VoiceS3R, the nearest part %.2f off the hood\'s +x wall' % min(gaps))
     print('b: J3 at (%.3f, %.3f) turned 270: its fitting nails %.2f off the hood\'s +x face, its pads %.2f off J6, %.2f off the edge, '
           'courtyards %.2f apart; %.2f off the hood\'s walls / columns; the cable over it %.2f under the hood\'s top; '
-          'the +x wall cut y %.2f..%.2f' % (j3x, j3y, *j3_gaps, j3_down, j3_gap, yc0, yc1))
+          'the +x wall cut y %.2f..%.2f; J3\'s plug and bend %.2f off J6, %.2f off the Grove plug'
+          % (j3x, j3y, *j3_gaps, j3_down, j3_gap, yc0, yc1, *j3_j6))
     print('b: the DB9 plug starts %.2f past the board\'s +x edge, its flange %.2f off the VoiceS3R, J6 %.2f off it; '
           'the right column y %.2f..%.2f, the VoiceS3R at (%.2f, %.2f), the DB9 at y %.2f, J6 at x %.2f (front %.2f)'
           % (gap9, ay - 12.0 - (DY + DB9_HALF_W), j6_gap, yr0, yo1, ax, ay, DY, gx, gf))
