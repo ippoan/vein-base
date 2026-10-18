@@ -3,20 +3,27 @@ reach the board's 4P with no twist and no wires crossed. Fails (exit 1) if not.
 
 The module's 9P: pin 1 is the left end of its end face seen from outside with the window up (checked on the real one,
 2026-10-07: the plug's holes read, from the left, - - red black green yellow - - -). The cable leaves the end face and
-bends about an axis along that face (B: down under the module and back into J3; Unit P: out, up over and down into
-J1), which keeps the wires' order along the face. So 9P 3..6 run left to right along it, and the 4P's pads, taken
-in their order along the same axis (whatever their numbers), have to be on the nets of 9P 3..6 in turn, one pitch
-apart in a row.
+bends about an axis along that face (C: down into J3 just in front of it; Unit P: out, up over and down into J1),
+which keeps the wires' order along the face. So 9P 3..6 run left to right along it, and the 4P's pads, taken in their
+order along the same axis (whatever their numbers), have to be on the nets of 9P 3..6 in turn, one pitch apart in a
+row.
+
+A cable may also turn flat on its way before it bends down (a board's 6th spec entry, the turns in degrees, +90 = to
+the left seen from above). B (v0.48): out of the end face to -y, a left turn to +x in front of the module's end, then
+down into J3 beside J6. Turning left about the vertical, the wire on the left of the way (seen from behind, going)
+stays on its left: so the face's axes are turned with the cable, and the check runs as if the end face stood across
+the last run, facing along it (B: facing +x, 9P 3..6 from -y to +y).
 
 The lock (a board's 5th spec entry, None = not checked): the cable made with both ends' locks on the same face (the
-user's, 2026-10-08) leaves the 9P lock up and bends down into a vertical 4P, so the 4P's lock must face out of the
-9P's end face (+1; -1 = back towards the module). A vertical 53398's locking window is the long wall on its tails'
-side (Molex 533980000-SD): seen from the row of pads 1..4, away from its fitting nails (MP).
+user's, 2026-10-08) leaves the 9P lock up and bends down into a vertical 4P, so the 4P's lock must face the way the
+cable last ran before it bent down (+1; -1 = back): out of the 9P's end face with no turns (C, Unit P), +x for B. A
+vertical 53398's locking window is the long wall on its tails' side (Molex 533980000-SD): seen from the row of pads
+1..4, away from its fitting nails (MP).
 
 The module's place comes from the case scripts (read as literals, no CadQuery), the 4P's pads from the generated
 .kicad_pcb (pcbnew): run after the boards are built.
 Run from the repository root:  python3 tools/check_cable_order.py"""
-import ast, os, sys
+import ast, math, os, sys
 import pcbnew
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -48,15 +55,17 @@ def literals(path, func=None):
 
 
 def print_b():
-    """3D 印刷 B (station/build_station_print.py concept_b): the module's 9P end at -y (the front); the cable goes out
-    -y and bends down into the vertical J3 just in front of it, whose lock faces out (-y)."""
+    """3D 印刷 B (station/build_station_print.py concept_b): the module's 9P end at -y (the front, face9_n); the cable
+    goes out -y, turns left (cable_turns) to +x in front of the module's end and bends down into the vertical J3 beside
+    J6, whose lock faces +x (v0.48)."""
     v = literals(os.path.join(ROOT, 'station/build_station_print.py'), 'concept_b')
     vx0, vy0, vw = v['vx0'], v['vy0'], v['vw']
-    return ('pcb/station_board/station_board_print_b.kicad_pcb', 'J3', (vx0 + vw / 2, vy0), (0.0, -1.0), +1)
+    return ('pcb/station_board/station_board_print_b.kicad_pcb', 'J3', (vx0 + vw / 2, vy0), v['face9_n'], +1,
+            v['cable_turns'])
 
 
 def print_c():
-    """3D 印刷 C (concept_c): as B, one row: the module's 9P end at -y, J3 (vertical) just in front of it, lock out (-y)."""
+    """3D 印刷 C (concept_c): one row: the module's 9P end at -y, J3 (vertical) just in front of it, lock out (-y)."""
     v = literals(os.path.join(ROOT, 'station/build_station_print.py'), 'concept_c')
     vx0, vy0, vw = v['vx0'], v['vy0'], v['vw']
     return ('pcb/station_board/station_board_print_c.kicad_pcb', 'J3', (vx0 + vw / 2, vy0), (0.0, -1.0), +1)
@@ -70,7 +79,12 @@ def unit_p():
 
 
 def check(name, spec):
-    board, ref, (cx, cy), (nx, ny), lock = spec
+    board, ref, (cx, cy), (nx, ny), lock, *turns = spec
+    turns = turns[0] if turns else ()
+    fx, fy = nx, ny                                      # the 9P's own end face
+    for t in turns:                                      # the face's axes turned with the cable, flat
+        c, s = round(math.cos(math.radians(t))), round(math.sin(math.radians(t)))
+        nx, ny = nx * c - ny * s, nx * s + ny * c
     # seen from outside (looking along -n) with the window up (+z), the viewer's right is (-n) x z = (-ny, nx)
     rx, ry = -ny, nx
     along = lambda x, y: (x - cx) * rx + (y - cy) * ry   # noqa: E731
@@ -91,8 +105,9 @@ def check(name, spec):
             mps.append(across(x, y))
     pads.sort()                                          # along the face, 9P pin 3's side first
     ok = sorted(r[2] for r in pads) == ['1', '2', '3', '4']
-    print(f'{name}: {board} {ref}; 9P end face at ({cx:g}, {cy:g}) facing ({nx:g}, {ny:g}), '
-          f'pin 1 on its left seen from outside = toward ({-rx:g}, {-ry:g})')
+    print(f'{name}: {board} {ref}; 9P end face at ({cx:g}, {cy:g}) facing ({fx:g}, {fy:g})'
+          + (f', the cable turned {", ".join(f"{t:+g}°" for t in turns)} flat to run ({nx:g}, {ny:g})' if turns else '')
+          + f', pin 1 on its left seen from outside = toward ({-rx:g}, {-ry:g})')
     print('  wire  9P pin (along the face)       4P pad (along the face, out of the face)  net')
     for k, ((p9, what, nets), (a, c, num, net)) in enumerate(zip(WIRES, pads), start=1):
         a9 = (p9 - 5) * PITCH_9P                             # the 9P's middle pin (5) on the face's middle
@@ -114,8 +129,8 @@ def check(name, spec):
         faces = (side > 0) - (side < 0)
         good = faces == lock
         ok &= good
-        print(f'  lock (the tails\' wall, away from the fitting nails) faces {"out of" if faces > 0 else "into"} the '
-              f'9P\'s end face{"" if good else ", should face " + ("out of it" if lock > 0 else "into it") + " (both ends' locks on the same face)"}')
+        print(f'  lock (the tails\' wall, away from the fitting nails) faces {"along" if faces > 0 else "against"} the '
+              f'cable\'s last run ({nx:g}, {ny:g}){"" if good else ", should face " + ("along it" if lock > 0 else "against it") + " (both ends' locks on the same face)"}')
     print(f'  {"OK: straight, no twist, no wires crossed" if ok else "FAIL"}')
     return ok
 
