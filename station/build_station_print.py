@@ -39,7 +39,10 @@ Z_ATOM = ZBT + 2.5               # VoiceS3R bottom on the pin headers (plastic 2
 Z_ATOM_B = ZBT + 3.5             # B: measured on the real one (2026-10-07): its bottom 3.5 over the board, top + 20.3
 DB9_TOP, HOOD_TOP = ZBT + 12.5, ZBT + 13.25
 Z_IN_A = ZBT + 8.7 + 0.4         # A: the DB9 outside the lid (a notch), so the lid goes down to the cable's slack
-Z_IN_B = vein_z_in(ZBT)          # B: the vein module straight on the board (as Vein Unit P), held down by the hood
+HOOD_UP_B = 0.5                  # B / C: the hood's top raised over the stack (ribs + board + module) by the gap the
+                                 # user measured on the real B (2026-10-21: the hood's -x walls stood 0.5 off
+                                 # the floor with the module on the board; the stack had no margin)
+Z_IN_B = vein_z_in(ZBT) + HOOD_UP_B   # B: the vein module straight on the board (as Vein Unit P), held down by the hood
 HX1_B = -1.2                     # B: the hood's +x wall's inside (the right column is placed from it)
 J3_ROOM = 1.8                    # B: over J3's mated plug (5.7) for the wires' bend (as Vein Unit P's J1_ROOM)
 J3_MATED = 5.7                   # J3 (53398-0471) with the 4P plug in it, over the board
