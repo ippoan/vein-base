@@ -139,6 +139,8 @@ WASHER_D, WASHER_T = 6.0, 0.5    # under the VoiceS3R's screw head, over the boa
 SCREW_FLOOR_B = 8.0              # M2 x 8 countersunk (L includes the head): floor 2.0 + boss 2.0 + board 1.6 + nut 1.6
 NUT_S, NUT_M = 4.0, 1.6          # M2 nut: 4.0 across the flats, 1.6 high
 FLOOR_SCREWS = [(3.1, -11.0), (3.1, 1.5), (21.8, -36.95), (21.8, -30.3)]   # H5..H8 (build_board.py print_b HOLES)
+NUT_POCKET = 4.2                 # B: the hood's hex pockets for the floor's nuts under the left part (4.0 + 0.2 across the flats)
+T_WALL_MIN = 1.0                 # the wall left outside them (the thickness check's limit)
 CSK_FLOOR_B = 4.0                # their countersinks (the M2 countersunk head 3.8 across at most): H7 / H8's 1.1 inside
                                  # the floor's +x face (CSK 4.2 left 0.71 under the 1.0 check)
 BOARD_CH = 1.5                   # the board's corners under the hood's -x / front-+x corners chamfered (print_b CH)
@@ -434,12 +436,14 @@ def concept_b():
     # the board (v0.50): under the whole hood, out to its faces (its walls and four columns all stand on it, screwed to
     # it from under it), and the right column out to the box's front, +x and back faces; the corners under the hood's
     # -x and front-+x corners chamfered (BOARD_CH)
-    # v0.51 (the user's, 2026-10-21: screws under the left part too): a fifth and sixth column in the middle of the
-    # hood's front and back walls (as the corner ones: 0.3 off the module's ends; the cable's run across the front
-    # starts 0.3 behind the front one), and countersunk screws (SCREW_B) up from under the floor through bosses and the
-    # board into them: the floor held to the board under the vein module, where there is no room for a nut
-    mids = [((hx0 + hx1) / 2, hy0 + COL_IN_B), ((hx0 + hx1) / 2, hy1 - COL_IN_B)]
-    thru = cols + mids
+    # v0.52 (the user's, 2026-10-21: the floor to the board, the hood to the board, nothing from the floor into the
+    # hood; "cut the hood round the nuts"): under the left part too, the floor is screwed to the board as in the right
+    # column (countersunk up from under the floor, a nut on the board), the nuts in the middle of the hood's front and
+    # back walls, in hex pockets cut up into the walls' feet (flats along the wall, NUT_POCKET across; 1.0 of wall left
+    # outside, the cable's run across the front / the module's back end just clear inside). The pocket holds the nut
+    # while the screw goes in from below. (v0.51 had columns there and the screws into them.)
+    mids = [((hx0 + hx1) / 2, yo0 + T_WALL_MIN + NUT_POCKET / 2), ((hx0 + hx1) / 2, yo1 - T_WALL_MIN - NUT_POCKET / 2)]
+    thru = cols
     # the DB9's mating face to +x, its shell's tip at the box's +x face (the VoiceS3R's): the serial cable's plug,
     # which stops at the tip, is all out past the board's edge. The board and the floor are cut under the shell
     bx1 = xo1 - DB9_SHELL_L                               # the DB9's flange
@@ -556,8 +560,6 @@ def concept_b():
     for x, y in FLOOR_SCREWS + mids:
         b_ = cyl_z(x, y, 2.5, -0.01, ZB)
         fb = b_ if fb is None else fb.union(b_)
-        if (x, y) in mids:
-            continue
         n = cq.Workplane('XY').polygon(6, NUT_S / math.cos(math.pi / 6)).extrude(NUT_M).translate((x, y, ZBT)) \
             .union(cyl_z(x, y, 1.0, ZBT, -T_FLOOR_B + SCREW_FLOOR_B))    # the screw's end past the nut
         nuts = n if nuts is None else nuts.union(n)
@@ -599,9 +601,11 @@ def concept_b():
              (hx1, xh1, yc1, yo1, ZBT)]
     assert abs(ZB + SCREW_PAN_B - (-T_FLOOR_B + SCREW_B)) < 1e-9, 'hood_over_vein drills for SCREW_B from the floor'
     hood = hood_over_vein(vein, (xo0, xh1, yo0, yo1), (hx0, hx1, hy0, hy1), walls, thru, thru, Z_IN, Z_TOP)
+    for x, y in mids:                    # the nuts' pockets, and room over them for the screws' ends
+        hood = hood.cut(cq.Workplane('XY').polygon(6, NUT_POCKET / math.cos(math.pi / 6)).extrude(NUT_M + 0.2)
+                        .translate((x, y, ZBT - 0.01))).cut(cyl_z(x, y, 1.2, ZBT, -T_FLOOR_B + SCREW_FLOOR_B + 0.5))
     for x, y in FLOOR_SCREWS + mids:
-        csk = CSK if (x, y) in mids else CSK_FLOOR_B
-        cone = cq.Workplane().add(cq.Solid.makeCone(csk / 2, CLEAR / 2, (csk - CLEAR) / 2,
+        cone = cq.Workplane().add(cq.Solid.makeCone(CSK_FLOOR_B / 2, CLEAR / 2, (CSK_FLOOR_B - CLEAR) / 2,
                                                     cq.Vector(x, y, -T_FLOOR_B), cq.Vector(0, 0, 1)))
         body = body.cut(cyl_z(x, y, CLEAR / 2, -T_FLOOR_B - 1, ZB + 1)).cut(cone)
     for x, y, d in d9holes:
@@ -617,7 +621,7 @@ def concept_b():
     down = [(xo0, hx0, yo0, yo1), (xo0, xh1, yo0, hy0), (xo0, xh1, hy1, yo1), (hx1, xh1, yo0, yc0),
             (hx1, xh1, yc1, yo1)] + [(x - COL_B, x + COL_B, y - COL_B, y + COL_B) for x, y in thru]
     for name, o in parts:
-        if name in ('DB9 plug', 'Grove plug', 'USB plug', 'PORT.A plug', 'cable', '9P plug', 'board', 'screw heads'):
+        if name in ('DB9 plug', 'Grove plug', 'USB plug', 'PORT.A plug', 'cable', '9P plug', 'board', 'screw heads', 'nuts'):  # (the left nuts go into the hood's pockets)
             continue
         assert not any(xy_overlap(xy_box(o), r) for r in down), f'{name} is under the walls / columns of the hood'
     assert not xy_overlap(xy_box(atom_box), (xo0, xh1, yo0, yo1)), 'the VoiceS3R under the top of the hood'
@@ -631,6 +635,10 @@ def concept_b():
         bad.append(f'body/hood {v:.2f}')
     size = (xo1 - xo0, yo1 - yo0, Z_ATOM_B + 16.8 + T_FLOOR_B)
     screws = cols + [(ax, ay)] + FLOOR_SCREWS + mids
+    # the pockets' fronts: the cable's run across the front starts behind the front one, the module's back end before
+    # the back one
+    assert yo0 + T_WALL_MIN + NUT_POCKET <= yb0 + 1e-9 and yo1 - T_WALL_MIN - NUT_POCKET >= vy1 - 1e-9, \
+        'a nut pocket runs into the cable\'s run / the vein module'
     vp = vein_parts(vein, vz0, along_y=True, step=True)                  # (the socket end at -y)
     print('b: under the VoiceS3R, the nearest part %.2f off the hood\'s +x wall' % min(gaps))
     print('b: J3 at (%.3f, %.3f) turned 270: its fitting nails %.2f off the hood\'s +x face, its pads %.2f off J6, %.2f off the edge, '
@@ -645,11 +653,11 @@ def concept_b():
     print(f'b: J1 / J2\'s tails ({TAIL_HDR:g}, measured) end {tip_gap:.2f} over the floor\'s top (keep {TAIL_GAP_MIN:g}); the DB9\'s tails ({TAIL_DB9:g}, '
           f'measured) end {d9desk:.2f} over the desk (keep {TAIL_GAP_MIN:g}); holes through the floor under them: '
           + ', '.join('⌀%.1f at (%.2f, %.2f)' % (r[2], r[0], r[1]) for r in d9holes))
-    view = [('shell', f'フード(指静脈の窓と裏の座ぐり、4 面の壁(一周の枠、+x の壁は J3 へのケーブルの所を切り抜き)と四隅の柱。どれも基板の上に立ち、基板の下から M2 × {SCREW_PAN_B:g} のなべ小ねじ 4 本で締める。手前・奥の壁の真ん中の柱 2 本には床の裏から M2 × {SCREW_B:g} の皿小ねじ)', '#2b2f33', 0.45, 'shell', hood),
+    view = [('shell', f'フード(指静脈の窓と裏の座ぐり、4 面の壁(一周の枠、+x の壁は J3 へのケーブルの所を切り抜き)と四隅の柱。どれも基板の上に立ち、基板の下から M2 × {SCREW_PAN_B:g} のなべ小ねじ 4 本で締める。手前・奥の壁の真ん中の下端に、基板を床に留めるナットの六角の逃げ)', '#2b2f33', 0.45, 'shell', hood),
             ('atom', f'VoiceS3R(公式 CAD、右の列の奥の端。USB-C は奥 +y で箱の奥の面、リセットはポートの面の時計回りの隣 = 右 +x の面で箱の右の面にそろい、どちらも前に何も無い。基板から 3.5 浮き、下に MAX3232・SW1 など。基板の下から M2 × {SCREW_PAN_B:g} のなべ小ねじとワッシャーで底の中心の穴に留める)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'y+', Z_ATOM_B, Z_TOP)),
             ('hdr', 'ピンヘッダー J1 / J2(樹脂の台 2.5 とピン。VoiceS3R の底は基板から 3.5 で、ピンが底に当たる)', '#202326', 1, 'mods',
              hdr.union(pins(hdr_pts, ZB - TAIL_HDR, Z_ATOM_B)))] + vp + [
-        ('pcb', 'station 基板 print_b(build_board.py print_b。フードの下全体と右の列。指静脈の下は平らで、パッドと配線だけ。フードと VoiceS3R を基板の下からねじで留め、基板は右の列の 4 か所(ナット)とフードの手前・奥の真ん中の 2 か所(フードの柱へ)で床に留める)', '#1f7a4d', 1, 'mods', pcb_v),
+        ('pcb', 'station 基板 print_b(build_board.py print_b。フードの下全体と右の列。指静脈の下は平らで、パッドと配線だけ。フードと VoiceS3R を基板の下からねじで留め、基板は右の列の 4 か所とフードの手前・奥の真ん中の 2 か所(ナットはフードの壁の六角の逃げに入る)で床に留める)', '#1f7a4d', 1, 'mods', pcb_v),
         ('screws', f'ねじ: フードと VoiceS3R のなべ小ねじの頭(基板の下)、床と基板の皿小ねじのナット(基板の上)', '#9aa0a6', 1, 'mods', heads.union(nuts)),
         ('db9', 'DB9 オス(右の列の J6 と VoiceS3R の間、口は右。口の筒の先端は右の縁で、筒の下の基板と床は切り抜いてある)', '#8a8f96', 1, 'mods', d9.union(d9shell)), ('db9plug', 'DB9 プラグ', '#5c6166', 1, 'mods', d9plug),
         ('u1', 'MAX3232・C1〜C5・R1 / R2(VoiceS3R の下)', '#202326', 1, 'mods', u1.union(caps)),
@@ -827,8 +835,7 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
                            f'基板の縁ぐるりに、床の上面から基板の裏まで届く受け(幅 {EDGE_W:g}、縁から {EDGE_IN:g} 内側)を入れる。床のリブと同じものを 1.0 離して避け、フードの壁が基板を挟む所・フードの柱・床の R3 の角(手前 3.0 で止める)には入れない。'
                            f'J1 / J2 の足は実測 {TAIL_HDR:g}(床の上面から {ZB - TAIL_HDR:.1f} 上で止まり、床に当たらない)。DB9 の固定の足 2 本は実測 {TAIL_DB9:g}で床に {TAIL_DB9 - ZB:.1f} 食い込むので、その真下の床に ⌀{DB9_HOLE_D:g} の丸い貫通穴を 1 つずつ開ける。信号の足 9 本は実測で 2.0 より短く床に当たらないので穴は無い(干渉チェックでは目安の {TAIL_DB9_SIG:g})(固定の足の先は机から {T_FLOOR_B + ZB - TAIL_DB9:.1f})')
         dims[6] = ('ねじ', f'M2 × {SCREW_PAN_B:g} なべ小ねじ × 5(フード 4、VoiceS3R 1、基板の下から上へ。VoiceS3R の 1 本は ⌀{WASHER_D:g} 以下のワッシャーを入れる)、'
-                           f'M2 × {SCREW_FLOOR_B:g} 皿小ねじ + M2 ナット × 4(床と基板、右の列。床の裏から上へ、頭は床と面一、ナットは基板の上)、'
-                           f'M2 × {SCREW_B:g} 皿小ねじ × 2(床と基板、左の部分。床の裏から基板を通してフードの手前・奥の壁の真ん中の柱へ)。'
+                           f'M2 × {SCREW_FLOOR_B:g} 皿小ねじ + M2 ナット × 6(床と基板。右の列に 4、左の部分のフードの手前・奥の真ん中に 2。床の裏から上へ、頭は床と面一、ナットは基板の上、左の 2 つはフードの壁の六角の逃げに入る)。'
                            f'フードの四隅の角柱(3.6 角)は下穴 ⌀{PILOT_B:g} に PA12 をねじ切りながら締める。VoiceS3R のねじは締めすぎない。位置: '
                            + ', '.join(f'({x:.1f}, {y:.1f})' for x, y in screws))
     if key == 'c':        # C: B's hood and floor, the VoiceS3R at the +y end with no walls round it
@@ -842,9 +849,9 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
                            f'フードの四隅の角柱(3.6 角)は下穴 ⌀{PILOT_B:g} に PA12 をねじ切りながら締める(4 本とも基板を通す)。'
                            'VoiceS3R のねじは締めすぎない(基板は柱の肩とピンの間に挟まるだけ)。位置: '
                            + ', '.join(f'({x:.1f}, {y:.1f})' for x, y in screws))
-    bom = (f'ねじの部品表: M2 × {SCREW_PAN_B:g} なべ小ねじ × 5(フード 4、VoiceS3R 1)、ワッシャー × 1、M2 × {SCREW_FLOOR_B:g} 皿小ねじ × 4、M2 ナット × 4、M2 × {SCREW_B:g} 皿小ねじ × 2。'
+    bom = (f'ねじの部品表: M2 × {SCREW_PAN_B:g} なべ小ねじ × 5(フード 4、VoiceS3R 1)、ワッシャー × 1、M2 × {SCREW_FLOOR_B:g} 皿小ねじ × 6、M2 ナット × 6。'
            '組み立て: SW1 を 1+2 ON にして、VoiceS3R を J1 / J2 に挿し、基板の下からワッシャーを入れたねじで留める(締めすぎない)。指静脈を基板に載せてケーブルを J3 に上から挿し、余りを指静脈の両側面に折り返して、'
-           'フードをかぶせ、基板の下から 4 本で締める。これを床に載せ、床の裏から皿小ねじ 4 本を通して基板の上でナットを締め、M2 × 12 の 2 本をフードの手前・奥の真ん中の柱へ締める。') if key == 'b' else \
+           '左の 2 つのナットを基板の穴(フードの手前・奥の真ん中)に置いてフードをかぶせ(ナットは壁の六角の逃げに入る)、基板の下から 4 本で締める。これを床に載せ、床の裏から皿小ねじ 6 本を通して基板の上のナットに締める(右の 4 つはナットを手で押さえる)。') if key == 'b' else \
         (f'ねじの部品表: M2 × {SCREW_B:g} 皿小ねじ × 5(フード 4、VoiceS3R 1)。組み立て: 基板を床に落とし込み(VoiceS3R の柱の肩に載る)、VoiceS3R を J1 / J2 に挿して床の裏からねじで留める。'
          '指静脈を基板に載せてケーブルを J3 に上から挿し、余りを指静脈の両側面に折り返して、フードをかぶせ、床の裏から 4 本で締める(基板も挟まる)。VoiceS3R のねじは締めすぎない。') if key == 'c' else ''
     write_page(f'station-print-{key}', f'案 {title}', view,

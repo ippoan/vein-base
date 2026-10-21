@@ -245,7 +245,8 @@ if PRINT_B:
     # order on the silk, before C5), and between J6 and the +x edge (J4's courtyard takes all of x 5.6..25.4 over
     # y -27.9..4.0, its shell's cut too)
     HOLES += [(VX0 + 13.0, YH + 1.8 + 1.3), (VX0 + 13.0, Y1 - 1.8 - 1.3)]   # H9 / H10: the floor's screws under the
-    # left part, up through the board into columns in the middle of the hood's front and back walls (concept_b's mids)
+    # left part, nuts on the board in hex pockets in the middle of the hood's front and back walls (concept_b's mids,
+    # v0.52; v0.51 screwed them into columns there)
     POST_CUTS = [(AX, AY, 2.4)]                     # the VoiceS3R's screw post (4.3) up to its M2 hole at its centre
                                                     # (concept_b's ATOM_POST_R + 0.25)
     DB9_X = X1 - 6.0                              # its flange: the shell (6.0, shapes.DB9_SHELL_L) out to the edge
