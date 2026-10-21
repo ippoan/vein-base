@@ -138,9 +138,10 @@ PAN_D, PAN_K = 4.0, 1.3
 WASHER_D, WASHER_T = 6.0, 0.5    # under the VoiceS3R's screw head, over the board's 4.8 cut-out
 SCREW_FLOOR_B = 8.0              # M2 x 8 countersunk (L includes the head): floor 2.0 + boss 2.0 + board 1.6 + nut 1.6
 NUT_S, NUT_M = 4.0, 1.6          # M2 nut: 4.0 across the flats, 1.6 high
-FLOOR_SCREWS = [(3.1, 1.5), (21.8, -36.95)]   # H5 / H6 (build_board.py print_b HOLES): the right column's two (v0.53,
-                                 # the user's, 2026-10-21: four nuts there were too many; (3.1, -11.0) and (21.8, -30.3)
-                                 # dropped), with the left part's two in the hood's pockets (H7 / H8) near the corners
+FLOOR_SCREWS = [(21.8, -36.95), (21.8, 0.5)]  # H5 / H8 (build_board.py print_b HOLES / HOLES_NOCRT): the right
+                                 # column's two, at its +x side (v0.54, the user's, 2026-10-21: the one behind the DB9
+                                 # to its +x side, (3.1, 1.5) before; v0.53 dropped (3.1, -11.0) and (21.8, -30.3)), with
+                                 # the left part's two in the hood's pockets (H6 / H7) near the corners
 NUT_POCKET = 4.2                 # B: the hood's hex pockets for the floor's nuts under the left part (4.0 + 0.2 across the flats)
 T_WALL_MIN = 1.0                 # the wall left outside them (the thickness check's limit)
 CSK_FLOOR_B = 4.0                # their countersinks (the M2 countersunk head 3.8 across at most): H7 / H8's 1.1 inside
