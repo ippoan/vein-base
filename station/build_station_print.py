@@ -133,7 +133,9 @@ ATOM_RECESS = 0.2                # the VoiceS3R's bottom face is 0.2 up round it
 # (a pan-head screw and a washer up through the board's round cut-out into its M2 hole; no post: its pins set its
 # height), and the board to the floor by four of its own (M2 countersunk screws up from under the floor through bosses
 # and the board, nuts on the board's top: H5..H8, build_board.py print_b). No screw goes from the floor into the hood.
-SCREW_PAN_B = 8.0                # M2 x 8 pan head (ISO 7045: head 4.0 across, 1.3 high): the hood's four, the VoiceS3R's
+SCREW_PAN_B = 8.0                # 2 x 8 pan head (head 4.0 across, 1.3 high): the VoiceS3R's an M2 machine screw (into its
+                                 # M2 hole), the hood's four self-tapping (into the PA12 columns' 1.6 pilots: a machine screw
+                                 # hardly cuts its thread there; the user's order, 2026-10-21)
 PAN_D, PAN_K = 4.0, 1.3
 WASHER_D, WASHER_T = 6.0, 0.5    # under the VoiceS3R's screw head, over the board's 4.8 cut-out
 SCREW_FLOOR_B = 8.0              # M2 x 8 countersunk (L includes the head): floor 2.0 + boss 2.0 + board 1.6 + nut 1.6
@@ -656,7 +658,7 @@ def concept_b():
     print(f'b: J1 / J2\'s tails ({TAIL_HDR:g}, measured) end {tip_gap:.2f} over the floor\'s top (keep {TAIL_GAP_MIN:g}); the DB9\'s tails ({TAIL_DB9:g}, '
           f'measured) end {d9desk:.2f} over the desk (keep {TAIL_GAP_MIN:g}); holes through the floor under them: '
           + ', '.join('⌀%.1f at (%.2f, %.2f)' % (r[2], r[0], r[1]) for r in d9holes))
-    view = [('shell', f'フード(指静脈の窓と裏の座ぐり、4 面の壁(一周の枠、+x の壁は J3 へのケーブルの所を切り抜き)と四隅の柱。どれも基板の上に立ち、基板の下から M2 × {SCREW_PAN_B:g} のなべ小ねじ 4 本で締める。手前・奥の壁の真ん中の下端に、基板を床に留めるナットの六角の逃げ)', '#2b2f33', 0.45, 'shell', hood),
+    view = [('shell', f'フード(指静脈の窓と裏の座ぐり、4 面の壁(一周の枠、+x の壁は J3 へのケーブルの所を切り抜き)と四隅の柱。どれも基板の上に立ち、基板の下から 2 × {SCREW_PAN_B:g} のなべタッピングねじ 4 本で締める。手前・奥の壁の真ん中の下端に、基板を床に留めるナットの六角の逃げ)', '#2b2f33', 0.45, 'shell', hood),
             ('atom', f'VoiceS3R(公式 CAD、右の列の奥の端。USB-C は奥 +y で箱の奥の面、リセットはポートの面の時計回りの隣 = 右 +x の面で箱の右の面にそろい、どちらも前に何も無い。基板から 3.5 浮き、下に MAX3232・SW1 など。基板の下から M2 × {SCREW_PAN_B:g} のなべ小ねじとワッシャーで底の中心の穴に留める)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'y+', Z_ATOM_B, Z_TOP)),
             ('hdr', 'ピンヘッダー J1 / J2(樹脂の台 2.5 とピン。VoiceS3R の底は基板から 3.5 で、ピンが底に当たる)', '#202326', 1, 'mods',
              hdr.union(pins(hdr_pts, ZB - TAIL_HDR, Z_ATOM_B)))] + vp + [
@@ -785,7 +787,7 @@ VEIN_NOTE = {'a': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフ
              'b': f'指静脈は 9P の端(ケーブル)を手前に向け、指静脈 Unit P と同じく基板にじかに載せてフードで押さえる(段差受け)。指静脈の下は平らで、基板にはパッドと配線だけ(床のリブが基板を受け、指で押す力もそこで受ける)。'
                   f'上の段(57 × 25、高さ 2.0)がフードの窓 57.5 × 25.5 を通り、下の胴(59 × 26)がフードの裏の座ぐり(深さ {VEIN_RECESS:g}、59.4 × 26.4)に当たって、'
                   f'上面はフードから {ZBT + 15.0 - (Z_IN_B + T_TOP):.1f} 出る(図の上。フードは指静脈を載せた積み上げより {HOOD_UP_B:g} 高い)。フードは指静脈の部分だけで、4 面の壁(一周の枠)と四隅の角柱を持ち、'
-                  f'壁も柱もすべて基板の上に立つ。基板の下から M2 × {SCREW_PAN_B:g} のなべ小ねじ 4 本で柱に締める(上面にねじ頭なし。頭は基板と床の間)(v0.50)。'
+                  f'壁も柱もすべて基板の上に立つ。基板の下から 2 × {SCREW_PAN_B:g} のなべタッピングねじ 4 本で柱に締める(上面にねじ頭なし。頭は基板と床の間)(v0.50)。'
                   'J3 は縦型(53398-0471)で 9P プラグのすぐ手前に立ち、ロックの窓は手前(外向き)。'
                   f'ケーブルは自作(両端のロックが同じ面でまっすぐ、9P の 3〜6 → 4P の −x から順)で、J3 に上から挿す。余り(約 7 cm)は指静脈 Unit P と同じく指静脈の両側面(フードの ±x の壁との間)に厚さ {CABLE_SIDE:g} で折り返す(底の溝も使える。巻き方は実物で合わせる)。そのために指静脈と左の部分を −x へ寄せ、+x の壁は動かしていない。フードと基板の左の部分は J3 の上まで手前へ伸ばした(右の列の手前の面は変えない)。'
                   '右の列は手前から J6(Grove、手前の縁、口は手前)→ DB9(口は右)→ VoiceS3R(奥の端、USB-C は奥の面、リセットは右の面。どちらも箱の外面にそろう)で(v0.46)、壁もふたも無く、基板と床だけ。'
@@ -837,9 +839,9 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
                            '基板は 4 か所(右の列に 2、フードの手前・奥の真ん中に 2、H5..H8)で床に留める(床の裏から皿小ねじ、基板の上にナット。左の 2 つはフードの壁の六角の逃げに入る)。指静脈の下は床のリブが受ける。'
                            f'基板の縁ぐるりに、床の上面から基板の裏まで届く受け(幅 {EDGE_W:g}、縁から {EDGE_IN:g} 内側)を入れる。床のリブと同じものを 1.0 離して避け、フードの壁が基板を挟む所・フードの柱・床の R3 の角(手前 3.0 で止める)には入れない。'
                            f'J1 / J2 の足は実測 {TAIL_HDR:g}(床の上面から {ZB - TAIL_HDR:.1f} 上で止まり、床に当たらない)。DB9 の固定の足 2 本は実測 {TAIL_DB9:g}で床に {TAIL_DB9 - ZB:.1f} 食い込むので、その真下の床に ⌀{DB9_HOLE_D:g} の丸い貫通穴を 1 つずつ開ける。信号の足 9 本は実測で 2.0 より短く床に当たらないので穴は無い(干渉チェックでは目安の {TAIL_DB9_SIG:g})(固定の足の先は机から {T_FLOOR_B + ZB - TAIL_DB9:.1f})')
-        dims[6] = ('ねじ', f'M2 × {SCREW_PAN_B:g} なべ小ねじ × 5(フード 4、VoiceS3R 1、基板の下から上へ。VoiceS3R の 1 本は ⌀{WASHER_D:g} 以下のワッシャーを入れる)、'
+        dims[6] = ('ねじ', f'2 × {SCREW_PAN_B:g} なべタッピングねじ × 4(フード、基板の下から柱の下穴へ)、M2 × {SCREW_PAN_B:g} なべ小ねじ × 1(VoiceS3R、外径 {WASHER_D:g} のワッシャーを入れる)、'
                            f'M2 × {SCREW_FLOOR_B:g} 皿小ねじ + M2 ナット × 4(床と基板。右の列に 2、左の部分のフードの手前・奥の真ん中に 2。床の裏から上へ、頭は床と面一、ナットは基板の上、左の 2 つはフードの壁の六角の逃げに入る)。'
-                           f'フードの四隅の角柱(3.6 角)は下穴 ⌀{PILOT_B:g} に PA12 をねじ切りながら締める。VoiceS3R のねじは締めすぎない。位置: '
+                           f'フードの四隅の角柱(3.6 角)の下穴 ⌀{PILOT_B:g} にタッピングねじを締める。VoiceS3R のねじは締めすぎない。位置: '
                            + ', '.join(f'({x:.1f}, {y:.1f})' for x, y in screws))
     if key == 'c':        # C: B's hood and floor, the VoiceS3R at the +y end with no walls round it
         dims[0] = ('外形', '%.1f × %.1f × %.1f(幅 × 奥行 × 高さ、VoiceS3R の上面まで。フードは %.1f)' % (size + (z_top + T_FLOOR_B,)))
@@ -852,7 +854,7 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
                            f'フードの四隅の角柱(3.6 角)は下穴 ⌀{PILOT_B:g} に PA12 をねじ切りながら締める(4 本とも基板を通す)。'
                            'VoiceS3R のねじは締めすぎない(基板は柱の肩とピンの間に挟まるだけ)。位置: '
                            + ', '.join(f'({x:.1f}, {y:.1f})' for x, y in screws))
-    bom = (f'ねじの部品表: M2 × {SCREW_PAN_B:g} なべ小ねじ × 5(フード 4、VoiceS3R 1)、ワッシャー × 1、M2 × {SCREW_FLOOR_B:g} 皿小ねじ × 4、M2 ナット × 4。'
+    bom = (f'ねじの部品表: 2 × {SCREW_PAN_B:g} なべタッピングねじ × 4(フード)、M2 × {SCREW_PAN_B:g} なべ小ねじ × 1(VoiceS3R)、ワッシャー(外径 {WASHER_D:g})× 1、M2 × {SCREW_FLOOR_B:g} 皿小ねじ × 4、M2 ナット × 4。'
            '組み立て: SW1 を 1+2 ON にして、VoiceS3R を J1 / J2 に挿し、基板の下からワッシャーを入れたねじで留める(締めすぎない)。指静脈を基板に載せてケーブルを J3 に上から挿し、余りを指静脈の両側面に折り返して、'
            '左の 2 つのナットを基板の穴(フードの手前・奥の真ん中)に置いてフードをかぶせ(ナットは壁の六角の逃げに入る)、基板の下から 4 本で締める。これを床に載せ、床の裏から皿小ねじ 4 本を通して基板の上のナットに締める(右の 2 つはナットを手で押さえる)。') if key == 'b' else \
         (f'ねじの部品表: M2 × {SCREW_B:g} 皿小ねじ × 5(フード 4、VoiceS3R 1)。組み立て: 基板を床に落とし込み(VoiceS3R の柱の肩に載る)、VoiceS3R を J1 / J2 に挿して床の裏からねじで留める。'
