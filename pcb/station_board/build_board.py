@@ -74,8 +74,8 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  PORT.A to +y on the box's back face, its reset on the box's +x face) with MAX3232, C1..C5, R1 / R2
                  and SW1 (KINGTEK DSHP04TSGET, half pitch, 2.5 high at most; set with the VoiceS3R off) under it. The
                  VoiceS3R is screwed to it from under it through a round cut-out at its centre; the board is screwed
-                 to the floor by four of its own in the right column (H5..H8: countersunk up from under the floor,
-                 nuts on the board's top, on the holes' pads). Board coords = case coords; keep the numbers together with
+                 to the floor by four of its own near its corners (H5..H8: countersunk up from under the floor,
+                 nuts on the board's top, on the holes' pads; under the left part in pockets in the hood's walls). Board coords = case coords; keep the numbers together with
                  concept_b(). Its own BOM (jlc_bom_print_b.csv: sw130's with J3 vertical and SW1 half pitch).
                  -> station_board_print_b.kicad_pcb, routed on its own (station_board_print_b.ses)
   'print_c'      the printed case C (concept_c() in station/build_station_print.py): A's one row without the DB9, so
@@ -235,16 +235,16 @@ if PRINT_B:
     # chamfered (CH); the holes have a pad (4.4) for the screw heads under the board and the nuts on it to bear on
     XO0 = HX0 - 1.8                                 # the hood's -x face
     CH = 1.5                                        # (a pad 0.9 off the edges round the hood's columns: 1.1 off it)
-    HOLE_FP = 'MountingHole_2.2mm_M2_Pad_Crt2.3'    # (vein_base.pretty: the courtyard 0.1 past the pad, so H7 / H8
-                                                    # fit between J6's courtyard and the floor's countersinks, 1.0
+    HOLE_FP = 'MountingHole_2.2mm_M2_Pad_Crt2.3'    # (vein_base.pretty: the courtyard 0.1 past the pad, so H6 fits
+                                                    # between J6's courtyard and the floor's countersinks, 1.0
                                                     # inside the floor's +x face)
     HOLES = [(HX0 + 1.3, YH + 1.8 + 1.3), (-2.5, YH + 1.8 + 1.3), (HX0 + 1.3, Y1 - 1.8 - 1.3),   # H1..H4: the hood's
              (-2.5, Y1 - 1.8 - 1.3),                                                          # columns
-             (3.1, -11.0), (3.1, 1.5), (21.8, -36.95), (21.8, -30.3)]   # H5..H8: the floor's screws (concept_b's
-    # FLOOR_SCREWS), where the board's top is free for the nuts: between the hood's +x face and the DB9 (behind J3's
-    # order on the silk, before C5), and between J6 and the +x edge (J4's courtyard takes all of x 5.6..25.4 over
-    # y -27.9..4.0, its shell's cut too)
-    HOLES += [(VX0 + 13.0, YH + 1.8 + 1.3), (VX0 + 13.0, Y1 - 1.8 - 1.3)]   # H9 / H10: the floor's screws under the
+             (3.1, 1.5), (21.8, -36.95)]   # H5 / H6: the floor's screws in the right column (concept_b's
+    # FLOOR_SCREWS), where the board's top is free for the nuts: between the hood's +x face and the DB9 (before C5),
+    # and between J6 and the +x edge (J4's courtyard takes all of x 5.6..25.4 over y -27.9..4.0, its shell's cut too).
+    # v0.50..v0.52 had four there (also (3.1, -11.0) and (21.8, -30.3)): too many (the user's, 2026-10-21)
+    HOLES += [(VX0 + 13.0, YH + 1.8 + 1.3), (VX0 + 13.0, Y1 - 1.8 - 1.3)]   # H7 / H8: the floor's screws under the
     # left part, nuts on the board in hex pockets in the middle of the hood's front and back walls (concept_b's mids,
     # v0.52; v0.51 screwed them into columns there)
     POST_CUTS = [(AX, AY, 2.4)]                     # the VoiceS3R's screw post (4.3) up to its M2 hole at its centre
