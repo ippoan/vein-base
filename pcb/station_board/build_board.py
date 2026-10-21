@@ -74,7 +74,7 @@ Two outlines of the same circuit (same parts, same routing), both r12:
                  PORT.A to +y on the box's back face, its reset on the box's +x face) with MAX3232, C1..C5, R1 / R2
                  and SW1 (KINGTEK DSHP04TSGET, half pitch, 2.5 high at most; set with the VoiceS3R off) under it. The
                  VoiceS3R is screwed to it from under it through a round cut-out at its centre; the board is screwed
-                 to the floor by four of its own near its corners (H5..H8: countersunk up from under the floor,
+                 to the floor by four of its own near its corners (H5..H8 (v0.54): countersunk up from under the floor,
                  nuts on the board's top, on the holes' pads; under the left part in pockets in the hood's walls). Board coords = case coords; keep the numbers together with
                  concept_b(). Its own BOM (jlc_bom_print_b.csv: sw130's with J3 vertical and SW1 half pitch).
                  -> station_board_print_b.kicad_pcb, routed on its own (station_board_print_b.ses)
@@ -142,6 +142,7 @@ DB9_X = None                 # print_b: its flange's x when not on X1
 # board's edge, the body 3.24 out past it. 7.70 was taken for the flange's face up to v0.46: the boards ordered or not
 # to be ordered (station r10..r12, pf, sw75, sw130, print_a) keep it; print_b has 10.94 from v0.47
 DB9_PIN_FACE = 7.70
+HOLES_NOCRT = []             # print_b: M2 holes (pad 4.4) without a courtyard, after HOLES
 POST_CUTS = []               # print_b: round cut-outs (Edge.Cuts, x, y, r) for the case's posts, no courtyard
 J3_NETS = {'1': 'G5', '2': 'G6', '3': '3V3', '4': 'GND', 'MP': 'GND'}   # print_b: from its pads' places (see there)
 PRE_ROUTE = {}               # print_b: locked tracks and vias drawn here (net: [(layer, points)], vias at the points
@@ -240,13 +241,17 @@ if PRINT_B:
                                                     # inside the floor's +x face)
     HOLES = [(HX0 + 1.3, YH + 1.8 + 1.3), (-2.5, YH + 1.8 + 1.3), (HX0 + 1.3, Y1 - 1.8 - 1.3),   # H1..H4: the hood's
              (-2.5, Y1 - 1.8 - 1.3),                                                          # columns
-             (3.1, 1.5), (21.8, -36.95)]   # H5 / H6: the floor's screws in the right column (concept_b's
-    # FLOOR_SCREWS), where the board's top is free for the nuts: between the hood's +x face and the DB9 (before C5),
-    # and between J6 and the +x edge (J4's courtyard takes all of x 5.6..25.4 over y -27.9..4.0, its shell's cut too).
-    # v0.50..v0.52 had four there (also (3.1, -11.0) and (21.8, -30.3)): too many (the user's, 2026-10-21)
+             (21.8, -36.95)]   # H5: a floor screw in the right column (concept_b's FLOOR_SCREWS) between J6 and
+    # the +x edge, where the board's top is free for the nut. v0.50..v0.52 had four in the right column (also
+    # (3.1, -11.0), (3.1, 1.5) and (21.8, -30.3)), v0.53 two: too many, and the user wanted the one behind the DB9 on
+    # its +x side (2026-10-21): HOLES_NOCRT
     HOLES += [(VX0 + 13.0, YH + 1.8 + 1.3), (VX0 + 13.0, Y1 - 1.8 - 1.3)]   # H7 / H8: the floor's screws under the
     # left part, nuts on the board in hex pockets in the middle of the hood's front and back walls (concept_b's mids,
     # v0.52; v0.51 screwed them into columns there)
+    # H8 (v0.54): the floor screw behind the DB9 on its +x side, between its shell's cut and the VoiceS3R's C1 (its nut
+    # under the VoiceS3R's front corner, clear of the DB9's flange and its plug, which stop at the +x edge): inside J4's
+    # courtyard (a box over the shell and its cut too), where nothing stands, so a hole without a courtyard
+    HOLES_NOCRT = [(21.8, 0.5)]
     POST_CUTS = [(AX, AY, 2.4)]                     # the VoiceS3R's screw post (4.3) up to its M2 hole at its centre
                                                     # (concept_b's ATOM_POST_R + 0.25)
     DB9_X = X1 - 6.0                              # its flange: the shell (6.0, shapes.DB9_SHELL_L) out to the edge
@@ -428,6 +433,8 @@ if RS232:  # print_c: none of these
 for i, (x, y) in enumerate(HOLES, 1):
     load(('vein_base.pretty' if HOLE_FP.endswith('Crt2.3') else 'MountingHole.pretty'), HOLE_FP, f'H{i}',
          'M3 spacer' if HOLE_FP.endswith('M3') else 'M2 screw', x, y, local=HOLE_FP.endswith('Crt2.3'))
+for i, (x, y) in enumerate(HOLES_NOCRT, len(HOLES) + 1):
+    load('vein_base.pretty', 'MountingHole_2.2mm_M2_Pad_NoCrt', f'H{i}', 'M2 screw', x, y, local=True)
 for i, (x, y) in enumerate(POSTS, 1):
     load('MountingHole.pretty', POST_FP, f'P{i}', 'post (vein module)', x, y)
 for x, y, r in POST_CUTS:  # keep tracks and vias 0.5 off the cut-outs (freerouting does not see an inner edge's clearance)
