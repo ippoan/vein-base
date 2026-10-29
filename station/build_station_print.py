@@ -618,7 +618,7 @@ def concept_b():
     hood = hood_over_vein(vein, (xo0, xh1, yo0, yo1), (hx0, hx1, hy0, hy1), walls, thru, thru, Z_IN, Z_TOP)
     # v0.56: the shelf over the right column's front (from the DB9's front to the board's front edge, from the hood's
     # +x wall to the box's +x face, its top at the hood top's underside: the Unit NFC on it 0.3 over the DB9), on
-    # three legs on the board, pilot-drilled for SCREW_B from under the floor as the columns; two posts on it through
+    # a wall on the board (three legs v0.56), pilot-drilled for SCREW_B from under the floor as the columns; two posts on it through
     # the Unit NFC's holes, pilot-drilled for its screws from above
     ys1 = yc1                                             # the back of the +x wall's cut, 0.58 before the DB9's front
                                                           # (out to the DB9's front: a wall under 1.0 by the cut's end)
@@ -627,8 +627,12 @@ def concept_b():
     # (into the hood's +x wall, inside the hood's R3 outline there: past it a sliver at its front corner)
     shelf = rbox(xh1 - 3.0, xo1, yo0, ys1, zs0, Z_IN, 3.0).intersect(box(xh1, xo1, yo0, ys1, zs0 - 1, Z_IN + 1)) \
         .union(box(hx1, xh1 + 0.01, yo0, ys1, zs0, Z_IN).intersect(rbox(xo0, xh1, yo0, yo1, zs0 - 1, Z_IN + 1, 3.0)))
-    for x, y in NFC_LEGS:
-        shelf = shelf.union(box(x - COL_B, x + COL_B, y - COL_B, y + COL_B, ZBT, zs0 + 0.01))
+    # its support (v0.57, the user's, 2026-10-29: "a wall rather than columns"): one wall along the box's +x face, on
+    # the board from the front edge to the shelf's back, as thick as the columns were out to the +x face (the
+    # screws' places in it as the columns'; the shelf's R3 corners)
+    wall_s = (NFC_LEGS[0][0] - COL_B, xo1, yo0, ys1)
+    shelf = shelf.union(box(*wall_s, ZBT, zs0 + 0.01).intersect(rbox(xh1 - 3.0, xo1, yo0, ys1, ZBT - 1, Z_IN, 3.0)))
+    assert all(abs(x - NFC_LEGS[0][0]) < 1e-9 and yo0 + COL_B <= y <= ys1 - COL_B for x, y in NFC_LEGS)
     nx0, ny0 = ax - NFC_W / 2, yo0                        # the Unit NFC: its Grove end on the front face
     nfc_holes = [(ax + s * NFC_HOLE_X, ny0 + NFC_HOLE_Y) for s in (-1, 1)]
     for x, y in nfc_holes:
@@ -667,7 +671,7 @@ def concept_b():
     # the way in: the board with its parts and the vein module drop in first, then the hood comes down past them and
     # the VoiceS3R: its walls and columns (which go down to the floor) keep off them in xy
     down = [(xo0, hx0, yo0, yo1), (xo0, xh1, yo0, hy0), (xo0, xh1, hy1, yo1), (hx1, xh1, yo0, yc0),
-            (hx1, xh1, yc1, yo1)] + [(x - COL_B, x + COL_B, y - COL_B, y + COL_B) for x, y in thru + NFC_LEGS]
+            (hx1, xh1, yc1, yo1), wall_s] + [(x - COL_B, x + COL_B, y - COL_B, y + COL_B) for x, y in thru]
     for name, o in parts:
         if name in ('DB9 plug', 'Grove plug', 'USB plug', 'PORT.A plug', 'cable', '9P plug', 'board', 'screw heads', 'nuts',
                     'NFC', 'NFC screws'):
@@ -698,7 +702,7 @@ def concept_b():
     print(f'b: J1 / J2\'s tails ({TAIL_HDR:g}, measured) end {tip_gap:.2f} over the floor\'s top (keep {TAIL_GAP_MIN:g}); the DB9\'s tails ({TAIL_DB9:g}, '
           f'measured) end {d9desk:.2f} over the desk (keep {TAIL_GAP_MIN:g}); holes through the floor under them: '
           + ', '.join('⌀%.1f at (%.2f, %.2f)' % (r[2], r[0], r[1]) for r in d9holes))
-    view = [('shell', f'フード(指静脈の窓と裏の座ぐり、4 面の壁(一周の枠、+x の壁は J3 へのケーブルの所を切り抜き)と柱 6 本(四隅と手前・奥の壁の真ん中、v0.57)。どれも基板の上に立ち、床の裏から M2 × {SCREW_B:g} の皿小ねじ 6 本が床のボスと基板を通って柱に入る(v0.55)。v0.56: 右の列の手前に DB9 の手前から基板の縁まで覆う棚(上面はフードの天板の裏の高さ、足 3 本は基板の上に立ち、床の裏から M2 × {SCREW_B:g} の皿小ねじで締める)と、NFC の穴に通す柱 2 本)', '#2b2f33', 0.45, 'shell', hood),
+    view = [('shell', f'フード(指静脈の窓と裏の座ぐり、4 面の壁(一周の枠、+x の壁は J3 へのケーブルの所を切り抜き)と柱 6 本(四隅と手前・奥の壁の真ん中、v0.57)。どれも基板の上に立ち、床の裏から M2 × {SCREW_B:g} の皿小ねじ 6 本が床のボスと基板を通って柱に入る(v0.55)。v0.56: 右の列の手前に DB9 の手前から基板の縁まで覆う棚(上面はフードの天板の裏の高さ、+x の面に沿った壁(v0.57、v0.56 は足 3 本)で基板の上に立ち、床の裏から M2 × {SCREW_B:g} の皿小ねじ 3 本で締める)と、NFC の穴に通す柱 2 本)', '#2b2f33', 0.45, 'shell', hood),
             ('nfc', f'Unit NFC(M5Stack U216、公式 STL の外形 48 × 24 × 8、穴 ⌀{NFC_HOLE_D:g} × 2 は Grove の端から {NFC_HOLE_Y:g}・中心から ±{NFC_HOLE_X:g})。棚に載せ、Grove の端を手前に。棚の柱を穴に通し、上から M2 × {SCREW_NFC_B:g} のなべ小ねじとワッシャー(外径 {NFC_WASHER_D:g})で留める。後ろは DB9 の上 {Z_IN - DB9_TOP:.1f}', '#e8e4da', 1, 'mods', nfc.union(nfc_scr)),
             ('atom', f'VoiceS3R(公式 CAD、右の列の奥の端。USB-C は奥 +y で箱の奥の面、リセットはポートの面の時計回りの隣 = 右 +x の面で箱の右の面にそろい、どちらも前に何も無い。基板から 3.5 浮き、下に MAX3232・SW1 など。基板の下から M2 × {SCREW_PAN_B:g} のなべ小ねじで底の中心の穴に留める)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'y+', Z_ATOM_B, Z_TOP)),
             ('hdr', 'ピンヘッダー J1 / J2(樹脂の台 2.5 とピン。VoiceS3R の底は基板から 3.5 で、ピンが底に当たる)', '#202326', 1, 'mods',
@@ -837,7 +841,7 @@ VEIN_NOTE = {'a': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフ
                   f'MAX3232・C1〜C5・R1 / R2・SW1 は VoiceS3R の真下(部品は基板から {H_MAX_B:.1f} 以下。SW1 は KINGTEK DSHP04TSGET、高さ最大 {SW1_H:g}、VoiceS3R を外して切り替える)。'
                   f'VoiceS3R は基板から 3.5 浮き(実測、ピンが底に当たる)、基板の M2 の穴 H9(ほかの M2 の穴と同じパッド付き、v0.55。v0.50〜v0.54 は ⌀4.8 の切り欠きとワッシャー)を通した M2 × {SCREW_PAN_B:g} のなべ小ねじで底の中心の M2 穴に留める'
                   f'(穴に {ZB + SCREW_PAN_B - Z_ATOM_B - ATOM_RECESS:.1f} 入る。柱は無い: v0.49 までの床からの柱は実物で長く、VoiceS3R が浮いた)。'
-                  f'NFC(v0.56): フードに右の列の手前を DB9 の手前から基板の縁まで覆う棚(厚さ {T_TOP:g}、上面はフードの天板の裏の高さで DB9 の上面から {Z_IN_B - DB9_TOP:.1f} 上)を付け、足 3 本(J6 の +x 側、基板の H10 / H5 / H11)を床の裏から M2 × {SCREW_B:g} の皿小ねじで締める。'
+                  f'NFC(v0.56): フードに右の列の手前を DB9 の手前から基板の縁まで覆う棚(厚さ {T_TOP:g}、上面はフードの天板の裏の高さで DB9 の上面から {Z_IN_B - DB9_TOP:.1f} 上)を付け、J6 の +x 側で箱の +x の面に沿った壁(x {NFC_LEGS[0][0] - COL_B:.1f} から箱の +x の面まで、v0.57。v0.56 は 3.6 角の足 3 本)で基板に立て、壁の中の 3 か所(基板の H10 / H5 / H11)を床の裏から M2 × {SCREW_B:g} の皿小ねじで締める。'
                   f'Unit NFC(48 × 24 × 8)は棚に載せて Grove の端を手前の面にそろえ、棚の柱 ⌀{NFC_POST_D:g} 2 本を NFC の穴 ⌀{NFC_HOLE_D:g} に通して、上から M2 × {SCREW_NFC_B:g} のなべ小ねじとワッシャー(外径 {NFC_WASHER_D:g} × {NFC_WASHER_T:g})で留める(柱に {SCREW_NFC_B - NFC_WASHER_T - 0.3:.1f} 入る)。後ろの 3/4 は DB9 の上に出る。NFC の上面は VoiceS3R の上面より {Z_IN_B + NFC_H - (Z_ATOM_B + 16.8):.1f} 高い'}
 VEIN_NOTE['c'] = (
     'B と同じく、指静脈は 9P の端(ケーブル)を −y に向け、基板にじかに載せてフードで押さえる(段差受け)。指静脈の下は平らで、基板にはパッドと配線だけ(床のリブが基板を受ける)。'
@@ -879,10 +883,10 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
         dims[2] = ('肉厚', f'床 {T_FLOOR_B}、フードの壁 {T_WALL}・天板 {T_TOP}(MJF PA12)')
         dims[3] = ('リブ', f'反り止め(JLC3DP の勧め)。幅 {RIB_W:g} を約 {RIB_PITCH:g} おきの格子に、床(高さ {RIB_SHOWN[key]:g}、基板の下。THT の足とボスを避ける)')
         dims[4] = ('基板', 'station 基板 print_b(箱に合わせて配置・配線済み、build_board.py print_b)。フードの下全体(フードの外面まで)と右の列。フードの 4 本のねじ(床の裏から)が基板を床のボスとの間に挟み、VoiceS3R は基板の下からねじで留め、'
-                           '棚の足 3 本(H10 / H5 / H11)も基板を床のボスとの間に挟む。基板はほかに右の列の DB9 の +x 側の 1 か所(H8)で床に留める(床の裏から皿小ねじ、基板の上にナット)。フードの手前・奥の真ん中(H6 / H7)は v0.57 からフードの柱へ通す(v0.52〜v0.56 はナットとフードの六角の逃げ)。v0.56 から基板は四角(右の列の手前の縁をフードの手前の面まで出した)。指静脈の下は床のリブが受ける。'
+                           '棚の壁の 3 本のねじ(H10 / H5 / H11)も基板を床のボスとの間に挟む。基板はほかに右の列の DB9 の +x 側の 1 か所(H8)で床に留める(床の裏から皿小ねじ、基板の上にナット)。フードの手前・奥の真ん中(H6 / H7)は v0.57 からフードの柱へ通す(v0.52〜v0.56 はナットとフードの六角の逃げ)。v0.56 から基板は四角(右の列の手前の縁をフードの手前の面まで出した)。指静脈の下は床のリブが受ける。'
                            f'基板の縁ぐるりに、床の上面から基板の裏まで届く受け(幅 {EDGE_W:g}、縁から {EDGE_IN:g} 内側)を入れる。床のリブと同じものを 1.0 離して避け、フードの壁が基板を挟む所・フードの柱・床の R3 の角(手前 3.0 で止める)には入れない。'
                            f'J1 / J2 の足は実測 {TAIL_HDR:g}(床の上面から {ZB - TAIL_HDR:.1f} 上で止まり、床に当たらない)。DB9 の固定の足 2 本は実測 {TAIL_DB9:g}で床に {TAIL_DB9 - ZB:.1f} 食い込むので、その真下の床に ⌀{DB9_HOLE_D:g} の丸い貫通穴を 1 つずつ開ける。信号の足 9 本は実測で 2.0 より短く床に当たらないので穴は無い(干渉チェックでは目安の {TAIL_DB9_SIG:g})(固定の足の先は机から {T_FLOOR_B + ZB - TAIL_DB9:.1f})')
-        dims[6] = ('ねじ', f'M2 × {SCREW_B:g} 皿小ねじ × 9(フードの柱 6・棚の足 3、床の裏から床のボスと基板を通って下穴へ)、M2 × {SCREW_PAN_B:g} なべ小ねじ × 1(VoiceS3R、基板の M2 の穴 H9 から)、'
+        dims[6] = ('ねじ', f'M2 × {SCREW_B:g} 皿小ねじ × 9(フードの柱 6・棚の壁 3、床の裏から床のボスと基板を通って下穴へ)、M2 × {SCREW_PAN_B:g} なべ小ねじ × 1(VoiceS3R、基板の M2 の穴 H9 から)、'
                            f'M2 × {SCREW_NFC_B:g} なべ小ねじ + ワッシャー(外径 {NFC_WASHER_D:g})× 2(NFC、上から棚の柱へ)、'
                            f'M2 × {SCREW_FLOOR_B:g} 皿小ねじ + M2 ナット × 1(床と基板。右の列の DB9 の +x 側。床の裏から上へ、頭は床と面一、ナットは基板の上)。'
                            f'フードの四隅の角柱(3.6 角)の下穴 ⌀{PILOT_B:g} に PA12 をねじ切りながら締める(C と同じ)。VoiceS3R のねじは締めすぎない。位置: '
@@ -900,7 +904,7 @@ for key, fn, title in (('a', concept_a, 'A 一列(薄型)'), ('b', concept_b, 'B
                            + ', '.join(f'({x:.1f}, {y:.1f})' for x, y in screws))
     bom = (f'ねじの部品表: M2 × {SCREW_B:g} 皿小ねじ × 9(フード 6、棚 3)、M2 × {SCREW_PAN_B:g} なべ小ねじ × 1(VoiceS3R)、M2 × {SCREW_FLOOR_B:g} 皿小ねじ × 1、M2 ナット × 1、M2 × {SCREW_NFC_B:g} なべ小ねじ × 2 とワッシャー(外径 {NFC_WASHER_D:g})× 2(NFC)。'
            '組み立て: SW1 を 1+2 ON にして、VoiceS3R を J1 / J2 に挿し、基板の下からねじで留める(締めすぎない)。指静脈を基板に載せてケーブルを J3 に上から挿し、余りを指静脈の両側面に折り返して、'
-           'フードをかぶせて床に載せる。床の裏から皿小ねじ 10 本を一度に締める: M2 × {SCREW_B:g} の 9 本はフードの柱と棚の足へ(基板も挟まる)、M2 × {SCREW_FLOOR_B:g} の 1 本は基板の上のナットへ(ナットは手で押さえる)。'
+           'フードをかぶせて床に載せる。床の裏から皿小ねじ 10 本を一度に締める: M2 × {SCREW_B:g} の 9 本はフードの柱と棚の壁へ(基板も挟まる)、M2 × {SCREW_FLOOR_B:g} の 1 本は基板の上のナットへ(ナットは手で押さえる)。'
            'NFC を棚に載せて(Grove の端を手前に)柱を穴に通し、上からワッシャーを入れたねじ 2 本で留め、ケーブルを手前で折り返して J6 に挿す。') if key == 'b' else \
         (f'ねじの部品表: M2 × {SCREW_B:g} 皿小ねじ × 5(フード 4、VoiceS3R 1)。組み立て: 基板を床に落とし込み(VoiceS3R の柱の肩に載る)、VoiceS3R を J1 / J2 に挿して床の裏からねじで留める。'
          '指静脈を基板に載せてケーブルを J3 に上から挿し、余りを指静脈の両側面に折り返して、フードをかぶせ、床の裏から 4 本で締める(基板も挟まる)。VoiceS3R のねじは締めすぎない。') if key == 'c' else ''
