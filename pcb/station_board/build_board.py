@@ -430,7 +430,12 @@ if RS232:  # print_c: none of these
         J6 = load(*(('vein_base.pretty', 'HY2.0_CAX_HY2.0-4P-WT_1x04-1MP_P2.00mm_Horizontal') if PRINT_B else
                     ('Connector_JST.pretty', 'JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal')), 'J6',
                   'Grove HY2.0-4P RA (NFC: G38 SDA, G39 SCL)', 0, 0, local=PRINT_B)
-        wire(J6, {'1': 'G38', '2': 'G39', '3': '5V', '4': 'GND', 'MP': 'GND'})
+        # The HY2.0's pad 1 takes the Grove cable's black wire (GND) and pad 4 the white one: an M5 cable is
+        # straight, black / red / yellow / white = GND / 5V / SDA / SCL, and on the real print_b board (2026-10-29)
+        # a stock cable put the Unit NFC's GND on G38 and its SDA on 5V with the order below reversed (1 = G38 up to
+        # v0.57). The JST PH of sw130 / print_a is not checked against a Grove cable (its plug does not go in).
+        wire(J6, {'1': 'GND', '2': '5V', '3': 'G38', '4': 'G39', 'MP': 'GND'} if PRINT_B else
+                 {'1': 'G38', '2': 'G39', '3': '5V', '4': 'GND', 'MP': 'GND'})
         for ref, n in (('R1', 'G38'), ('R2', 'G39')):
             wire(load('Resistor_SMD.pretty', 'R_0603_1608Metric', ref, '4.7k', 0, 0), {'1': '3V3', '2': n})
 
@@ -520,7 +525,7 @@ elif PRINT_B:
     SILK.append(((tx - 0.5, tx + 0.5, ty - 7.1, ty + 7.1), 'J3 order'))
     # under J6 on the bottom (17 characters at 0.8, ~10.9 long, across): beside it on +x (v0.49) the floor's screws
     # H7 / H8 have their pads from v0.50
-    text('NFC: G38 G39 5V G', AX, J6_FRONT + 5.0, layer=pcbnew.B_SilkS, size=0.8)
+    text('NFC: G 5V G38 G39', AX, J6_FRONT + 5.0, layer=pcbnew.B_SilkS, size=0.8)
     J6.Reference().SetVisible(False)                   # (the text names it; v0.56: the hood's shelf's legs beside it)
     text(f'vein-station board {REV} (print B)', -6.0, 16.0, layer=pcbnew.B_SilkS)   # (inside the left part's back edge)
 elif PRINT_C:
