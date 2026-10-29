@@ -33,6 +33,7 @@ def import_ses(b, nets, path, via_d=0.6, via_drill=0.3):
     unit, res = next(find(route, 'resolution'))[1:3]
     k = {'um': 0.001, 'mm': 1.0, 'mil': 0.0254, 'inch': 25.4}[unit] / int(res)
     n_w = n_v = 0
+    added = []
     for net in find(next(find(route, 'network_out')), 'net'):
         ni = nets[net[1]]
         for w in find(net, 'wire'):
@@ -42,9 +43,33 @@ def import_ses(b, nets, path, via_d=0.6, via_drill=0.3):
             for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
                 t = pcbnew.PCB_TRACK(b)
                 t.SetStart(pcbnew.VECTOR2I(mm(x1), mm(-y1))); t.SetEnd(pcbnew.VECTOR2I(mm(x2), mm(-y2)))
-                t.SetWidth(mm(width)); t.SetLayer(LAY[lay]); t.SetNet(ni); b.Add(t); n_w += 1
+                t.SetWidth(mm(width)); t.SetLayer(LAY[lay]); t.SetNet(ni); b.Add(t); n_w += 1; added.append(t)
         for v in find(net, 'via'):
             x, y = float(v[2]) * k, float(v[3]) * k
             via = pcbnew.PCB_VIA(b); via.SetPosition(pcbnew.VECTOR2I(mm(x), mm(-y)))
             via.SetWidth(mm(via_d)); via.SetDrill(mm(via_drill)); via.SetNet(ni); b.Add(via); n_v += 1
-    print(f'ses: {n_w} track segments, {n_v} vias')
+    n_d = prune_dangling(b, added)
+    print(f'ses: {n_w} track segments ({n_d} dangling dropped), {n_v} vias')
+
+
+def prune_dangling(b, tracks):
+    """Drop those of tracks with an end on nothing of their net (no pad, via or other track there): freerouting 2.4.1
+    sometimes leaves a short stub by a pad (DRC track_dangling). Repeated until none is left; returns how many."""
+    tracks, n = list(tracks), 0
+    while True:
+        bad = []
+        for t in tracks:
+            me = t.m_Uuid.AsString()                       # (SWIG gives each lookup its own proxy: no `is`)
+            for p in (t.GetStart(), t.GetEnd()):
+                net, lay = t.GetNetCode(), t.GetLayer()
+                if any(o.GetNetCode() == net and o.IsOnLayer(lay) and o.HitTest(p) for o in b.GetPads()):
+                    continue
+                if any(o.m_Uuid.AsString() != me and o.GetNetCode() == net and o.IsOnLayer(lay) and o.HitTest(p, 1)
+                       for o in b.GetTracks()):
+                    continue
+                bad.append(t)
+                break
+        if not bad:
+            return n
+        for t in bad:
+            b.Remove(t); tracks.remove(t); n += 1

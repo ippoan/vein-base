@@ -218,17 +218,18 @@ if PRINT_B:
     # 2026-10-18). The board is cut under the shell (from the flange to the edge), 9.0 either side (concept_b's
     # DB9_CUT_B: the shell's half width 8.5 + 0.5)
     DB9_ROT, DB9_BY, DB9_CUT = 90, AY - 12.0 - 0.3 - 15.4, 9.0
-    # J6 before the DB9, opening -y: the HY2.0's body (its front 5.4 before the origin, 9.25 deep) 2.6 off the DB9's
-    # flange (concept_b's J6_DB9_B: its pads and courtyard clear of the DB9's courtyard), its front 0.8 inside the right
-    # column's front edge YR
-    J6_FRONT = DB9_BY - 15.4 - 2.6 - 9.25
-    YR = J6_FRONT - 0.8                             # the right column's front
+    # v0.56 (the user's, 2026-10-29): the board square, the right column's front out to the hood's (YH, 6.85 past
+    # where its parts put it up to v0.55, YJ), and J6 on it, opening -y: the HY2.0's body (its front 5.4 before the
+    # origin) 0.8 inside the edge. J3 stays where it was, beside J6's place up to v0.55
+    YJ = DB9_BY - 15.4 - 2.6 - 9.25 - 0.8           # (J6_DB9_B 2.6 off the DB9's flange, 0.8 inside the edge)
+    YR = YH                                         # the right column's front
+    J6_FRONT = YR + 0.8
     # J3 (v0.48, the user's, 2026-10-18): vertical beside J6 on the right column's front, turned 270: its pads' row
     # along y, its tails and locking window to +x (J6's side), its fitting nails' pads (MP, 3.0 to -x of the origin,
     # ±5.475) 0.3 off the hood's +x face (XH) and 0.5 off the front edge (the copper-to-edge clearance, as J6's); its
     # courtyard (2.425 to +x) just meets J6's. The cable's two latches are on one face (made so): it leaves the 9P
     # latch up to -y, turns +x in front of the module's end and goes into J3 from above, J3's latch facing +x
-    J3_XY = (XH + 0.3 + 3.0, YR + 0.5 + 5.475)     # concept_b's j3x, j3y
+    J3_XY = (XH + 0.3 + 3.0, YJ + 0.5 + 5.475)     # concept_b's j3x, j3y
     # v0.50 (the user's, 2026-10-21, after the real B): the hood is screwed to the board from under it (H1..H4, its
     # four columns, M2 pan-head screws up into them), and the board to the floor by its own four (H5..H8, M2
     # countersunk screws up from under the floor through its bosses, nuts on the board's top). No screw goes from the
@@ -255,6 +256,9 @@ if PRINT_B:
     # into its M2 hole at its centre), as the others' hole and pad; v0.50..v0.54 had a 4.8 cut-out there from the
     # stepped post v0.49 had (and a washer over it)
     HOLES_NOCRT = [(21.8, 0.5), (AX, AY)]
+    # H10 / H11 (v0.56): with H5, the legs of the hood's shelf over the right column's front (the NFC Unit on it),
+    # screwed up from under the floor through the board (concept_b's NFC_LEGS)
+    HOLES_NOCRT += [(21.8, -43.5), (21.8, -30.3)]
     DB9_X = X1 - 6.0                              # its flange: the shell (6.0, shapes.DB9_SHELL_L) out to the edge
     DB9_PIN_FACE = 10.94                          # the footprint's own (v0.47; 7.70 put the DB9 3.24 out past here)
     # J3's pads from -y to +y on 3V3 / GND / G5 (RXD) / G6 (TXD): the module's 9P 3..6 (red, black, green, yellow) run
@@ -262,7 +266,7 @@ if PRINT_B:
     # to +x the -x end (red) comes to -y, and the cable keeps the order down into J3; the pad numbers follow from the
     # footprint's turn (set below from the pads' places)
     J3_NETS = None
-    EDGE = [(XO0 + CH, YH), (XH - CH, YH), (XH, YH + CH), (XH, YR), (X1, YR),
+    EDGE = [(XO0 + CH, YH), (X1 - CH, YH), (X1, YH + CH),
             (X1, DB9_BY - DB9_CUT), (DB9_X, DB9_BY - DB9_CUT),
             (DB9_X, DB9_BY + DB9_CUT), (X1, DB9_BY + DB9_CUT), (X1, Y1), (XO0 + CH, Y1), (XO0, Y1 - CH), (XO0, YH + CH)]
     # turned half a turn (USB-C / PORT.A edge, vein-base -y, to +y) as print_a / print_c: x = AX - x_vb, y = AY - y_vb
@@ -517,8 +521,7 @@ elif PRINT_B:
     # under J6 on the bottom (17 characters at 0.8, ~10.9 long, across): beside it on +x (v0.49) the floor's screws
     # H7 / H8 have their pads from v0.50
     text('NFC: G38 G39 5V G', AX, J6_FRONT + 5.0, layer=pcbnew.B_SilkS, size=0.8)
-    # past the end of that text (J3 stands beside J6 on -x from v0.48)
-    J6.Reference().SetPosition(P(AX + 9.5, J6_FRONT + 6.0 + 5.45 + 1.2)); J6.Reference().SetTextAngleDegrees(90)
+    J6.Reference().SetVisible(False)                   # (the text names it; v0.56: the hood's shelf's legs beside it)
     text(f'vein-station board {REV} (print B)', -6.0, 16.0, layer=pcbnew.B_SilkS)   # (inside the left part's back edge)
 elif PRINT_C:
     SILK = []                                          # as print_b: J3's '1', the lock mark (checked after import_ses)
