@@ -648,8 +648,9 @@ def concept_b():
     shelf = shelf.union(rbox(nx0, nx0 + NFC_W, ny0, ny0 + NFC_L, DB9_TOP + 0.3, Z_NFC, 2.0)
                         .intersect(box(nx0, nx0 + NFC_W, ys1 - 0.01, ny0 + NFC_L + 1, DB9_TOP, Z_NFC + 1)))
     # v0.60 (the user's): a column from the board up to the pad under the Unit NFC's back corner on the -x side (by
-    # the VoiceS3R; the DB9's body takes the +x half there), its faces 0.3 in from the NFC's sides
-    col_n = (nx0 + 0.3, nx0 + 0.3 + 2 * COL_B, ny0 + NFC_L - 0.3 - 2 * COL_B, ny0 + NFC_L - 0.3)
+    # the VoiceS3R; the DB9's body takes the +x half there), its faces 1.0 in from the NFC's sides: inside the pad's
+    # R2 corner (0.3 in, its corner stood out of the R2 and left a 0.22 sliver under the pad, check_thickness.py)
+    col_n = (nx0 + 1.0, nx0 + 1.0 + 2 * COL_B, ny0 + NFC_L - 1.0 - 2 * COL_B, ny0 + NFC_L - 1.0)
     shelf = shelf.union(box(*col_n, ZBT, DB9_TOP + 0.31))
     for x, y in nfc_holes:
         shelf = shelf.union(cyl_z(x, y, NFC_POST_D / 2, Z_NFC - 0.01, Z_NFC + NFC_H - 0.3))
