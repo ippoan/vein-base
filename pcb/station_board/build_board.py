@@ -251,9 +251,10 @@ if PRINT_B:
     # H8 (v0.54): the floor screw behind the DB9 on its +x side, between its shell's cut and the VoiceS3R's C1 (its nut
     # under the VoiceS3R's front corner, clear of the DB9's flange and its plug, which stop at the +x edge): inside J4's
     # courtyard (a box over the shell and its cut too), where nothing stands, so a hole without a courtyard
-    HOLES_NOCRT = [(21.8, 0.5)]
-    POST_CUTS = [(AX, AY, 2.4)]                     # the VoiceS3R's screw post (4.3) up to its M2 hole at its centre
-                                                    # (concept_b's ATOM_POST_R + 0.25)
+    # H9 (v0.55, the user's, 2026-10-29: "the same M2 hole"): the VoiceS3R's screw (M2 pan head up from under the board
+    # into its M2 hole at its centre), as the others' hole and pad; v0.50..v0.54 had a 4.8 cut-out there from the
+    # stepped post v0.49 had (and a washer over it)
+    HOLES_NOCRT = [(21.8, 0.5), (AX, AY)]
     DB9_X = X1 - 6.0                              # its flange: the shell (6.0, shapes.DB9_SHELL_L) out to the edge
     DB9_PIN_FACE = 10.94                          # the footprint's own (v0.47; 7.70 put the DB9 3.24 out past here)
     # J3's pads from -y to +y on 3V3 / GND / G5 (RXD) / G6 (TXD): the module's 9P 3..6 (red, black, green, yellow) run
