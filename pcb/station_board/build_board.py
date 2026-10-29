@@ -247,8 +247,8 @@ if PRINT_B:
     # (3.1, -11.0), (3.1, 1.5) and (21.8, -30.3)), v0.53 two: too many, and the user wanted the one behind the DB9 on
     # its +x side (2026-10-21): HOLES_NOCRT
     HOLES += [(VX0 + 13.0, YH + 1.8 + 1.3), (VX0 + 13.0, Y1 - 1.8 - 1.3)]   # H7 / H8: the floor's screws under the
-    # left part, nuts on the board in hex pockets in the middle of the hood's front and back walls (concept_b's mids,
-    # v0.52; v0.51 screwed them into columns there)
+    # left part, in the middle of the hood's front and back walls (concept_b's mids): into the hood's columns there
+    # from v0.57 (as v0.51; nuts in hex pockets in the walls v0.52..v0.56)
     # H8 (v0.54): the floor screw behind the DB9 on its +x side, between its shell's cut and the VoiceS3R's C1 (its nut
     # under the VoiceS3R's front corner, clear of the DB9's flange and its plug, which stop at the +x edge): inside J4's
     # courtyard (a box over the shell and its cut too), where nothing stands, so a hole without a courtyard
