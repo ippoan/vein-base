@@ -160,6 +160,9 @@ NFC_HOLE_Y, NFC_HOLE_X, NFC_HOLE_D = 12.0, 8.0, 4.8
 NFC_POST_D = 4.4                 # through its holes, 0.3 under its top (the washer bears on the unit)
 SCREW_NFC_B = 8.0                # M2 x 8 pan head
 NFC_WASHER_D, NFC_WASHER_T = 6.0, 0.5   # over the 4.8 holes
+NFC_OFF_DB9 = 3.0                # B: the Unit NFC's underside over the DB9's top (v0.59). Up to v0.58 it lay on the
+                                 # shelf 0.3 over the DB9 and read no card there (the shell's eddy currents, the real
+                                 # B 2026-10-29: 2.0 of floor slipped under it and it read); a pad on the shelf lifts it
 CSK_FLOOR_B = 4.0                # their countersinks (the M2 countersunk head 3.8 across at most): H7 / H8's 1.1 inside
                                  # the floor's +x face (CSK 4.2 left 0.71 under the 1.0 check)
 BOARD_CH = 1.5                   # the board's corners under the hood's -x / front-+x corners chamfered (print_b CH)
@@ -635,26 +638,31 @@ def concept_b():
     assert all(abs(x - NFC_LEGS[0][0]) < 1e-9 and yo0 + COL_B <= y <= ys1 - COL_B for x, y in NFC_LEGS)
     nx0, ny0 = ax - NFC_W / 2, yo0                        # the Unit NFC: its Grove end on the front face
     nfc_holes = [(ax + s * NFC_HOLE_X, ny0 + NFC_HOLE_Y) for s in (-1, 1)]
+    # v0.59: the pad on the shelf under the Unit NFC (its footprint over the shelf) lifts it NFC_OFF_DB9 off the DB9
+    Z_NFC = DB9_TOP + NFC_OFF_DB9
+    assert Z_NFC >= Z_IN, 'the Unit NFC under the shelf\'s top'
+    shelf = shelf.union(rbox(nx0, nx0 + NFC_W, ny0, ny0 + NFC_L, Z_IN - 0.01, Z_NFC, 2.0)
+                        .intersect(box(nx0, nx0 + NFC_W, yo0, ys1, Z_IN - 1, Z_NFC + 1)))
     for x, y in nfc_holes:
-        shelf = shelf.union(cyl_z(x, y, NFC_POST_D / 2, Z_IN - 0.01, Z_IN + NFC_H - 0.3))
+        shelf = shelf.union(cyl_z(x, y, NFC_POST_D / 2, Z_NFC - 0.01, Z_NFC + NFC_H - 0.3))
     tip = -T_FLOOR_B + SCREW_B
     assert tip - ZBT >= 6.0 and tip + 1.0 < zs0, 'the shelf\'s legs: 6.0 of thread, under the shelf'
     for x, y in NFC_LEGS:
         shelf = shelf.cut(cyl_z(x, y, PILOT_B / 2, ZBT - 1, tip + 1.0))
-    z_head = Z_IN + NFC_H + NFC_WASHER_T                  # the NFC screws' heads on the washers
-    eng_nfc = (Z_IN + NFC_H - 0.3) - (z_head - SCREW_NFC_B)
+    z_head = Z_NFC + NFC_H + NFC_WASHER_T                 # the NFC screws' heads on the washers
+    eng_nfc = (Z_NFC + NFC_H - 0.3) - (z_head - SCREW_NFC_B)
     assert eng_nfc >= 6.0 and z_head - SCREW_NFC_B > zs0 + 1.0, f'the NFC screws: {eng_nfc:.1f} into the posts'
     for x, y in nfc_holes:
-        shelf = shelf.cut(cyl_z(x, y, PILOT_B / 2, z_head - SCREW_NFC_B - 1.0, Z_IN + NFC_H))
+        shelf = shelf.cut(cyl_z(x, y, PILOT_B / 2, z_head - SCREW_NFC_B - 1.0, Z_NFC + NFC_H))
     hood = hood.union(shelf)
-    nfc = rbox(nx0, nx0 + NFC_W, ny0, ny0 + NFC_L, Z_IN, Z_IN + NFC_H, 2.0)
+    nfc = rbox(nx0, nx0 + NFC_W, ny0, ny0 + NFC_L, Z_NFC, Z_NFC + NFC_H, 2.0)
     nfc_scr = None
     for x, y in nfc_holes:
-        nfc = nfc.cut(cyl_z(x, y, NFC_HOLE_D / 2, Z_IN - 1, Z_IN + NFC_H + 1))
-        w_ = cyl_z(x, y, NFC_WASHER_D / 2, Z_IN + NFC_H, z_head).union(cyl_z(x, y, PAN_D / 2, z_head, z_head + PAN_K))
+        nfc = nfc.cut(cyl_z(x, y, NFC_HOLE_D / 2, Z_NFC - 1, Z_NFC + NFC_H + 1))
+        w_ = cyl_z(x, y, NFC_WASHER_D / 2, Z_NFC + NFC_H, z_head).union(cyl_z(x, y, PAN_D / 2, z_head, z_head + PAN_K))
         nfc_scr = w_ if nfc_scr is None else nfc_scr.union(w_)
-    nfc_gaps = (nx0 - xh1, ay - 12.0 - (ny0 + NFC_L), Z_IN - DB9_TOP, xo1 - (nx0 + NFC_W))
-    assert min(nfc_gaps[:3]) >= 0.3 - 1e-9 and nfc_gaps[3] >= -1e-9, \
+    nfc_gaps = (nx0 - xh1, ay - 12.0 - (ny0 + NFC_L), Z_NFC - DB9_TOP, xo1 - (nx0 + NFC_W))
+    assert min(nfc_gaps[:2]) >= 0.3 - 1e-9 and nfc_gaps[2] >= NFC_OFF_DB9 - 1e-9 and nfc_gaps[3] >= -1e-9, \
         'the Unit NFC is %.2f / %.2f / %.2f off the hood / the VoiceS3R / the DB9' % nfc_gaps[:3]
     for x, y, d in [(x, y, CSK) for x, y in thru + NFC_LEGS] + [(x, y, CSK_FLOOR_B) for x, y in FLOOR_SCREWS]:
         cone = cq.Workplane().add(cq.Solid.makeCone(d / 2, CLEAR / 2, (d - CLEAR) / 2,
@@ -686,7 +694,7 @@ def concept_b():
     v = body.intersect(hood).val().Volume()
     if v > 0.01:
         bad.append(f'body/hood {v:.2f}')
-    size = (xo1 - xo0, yo1 - yo0, max(Z_ATOM_B + 16.8, Z_IN + NFC_H) + T_FLOOR_B)
+    size = (xo1 - xo0, yo1 - yo0, max(Z_ATOM_B + 16.8, Z_NFC + NFC_H) + T_FLOOR_B)
     screws = thru + NFC_LEGS + [(ax, ay)] + FLOOR_SCREWS + nfc_holes
     vp = vein_parts(vein, vz0, along_y=True, step=True)                  # (the socket end at -y)
     print('b: under the VoiceS3R, the nearest part %.2f off the hood\'s +x wall' % min(gaps))
@@ -703,7 +711,7 @@ def concept_b():
           f'measured) end {d9desk:.2f} over the desk (keep {TAIL_GAP_MIN:g}); holes through the floor under them: '
           + ', '.join('⌀%.1f at (%.2f, %.2f)' % (r[2], r[0], r[1]) for r in d9holes))
     view = [('shell', f'フード(指静脈の窓と裏の座ぐり、4 面の壁(一周の枠、+x の壁は J3 へのケーブルの所を切り抜き)と柱 6 本(四隅と手前・奥の壁の真ん中、v0.57)。どれも基板の上に立ち、床の裏から M2 × {SCREW_B:g} の皿小ねじ 6 本が床のボスと基板を通って柱に入る(v0.55)。v0.56: 右の列の手前に DB9 の手前から基板の縁まで覆う棚(上面はフードの天板の裏の高さ、+x の面に沿った壁(v0.57、v0.56 は足 3 本)で基板の上に立ち、床の裏から M2 × {SCREW_B:g} の皿小ねじ 3 本で締める)と、NFC の穴に通す柱 2 本)', '#2b2f33', 0.45, 'shell', hood),
-            ('nfc', f'Unit NFC(M5Stack U216、公式 STL の外形 48 × 24 × 8、穴 ⌀{NFC_HOLE_D:g} × 2 は Grove の端から {NFC_HOLE_Y:g}・中心から ±{NFC_HOLE_X:g})。棚に載せ、Grove の端を手前に。棚の柱を穴に通し、上から M2 × {SCREW_NFC_B:g} のなべ小ねじとワッシャー(外径 {NFC_WASHER_D:g})で留める。後ろは DB9 の上 {Z_IN - DB9_TOP:.1f}', '#e8e4da', 1, 'mods', nfc.union(nfc_scr)),
+            ('nfc', f'Unit NFC(M5Stack U216、公式 STL の外形 48 × 24 × 8、穴 ⌀{NFC_HOLE_D:g} × 2 は Grove の端から {NFC_HOLE_Y:g}・中心から ±{NFC_HOLE_X:g})。棚に載せ、Grove の端を手前に。棚の柱を穴に通し、上から M2 × {SCREW_NFC_B:g} のなべ小ねじとワッシャー(外径 {NFC_WASHER_D:g})で留める。棚の上の台 (v0.59) で持ち上げ、裏は DB9 の上面から {Z_NFC - DB9_TOP:.1f}', '#e8e4da', 1, 'mods', nfc.union(nfc_scr)),
             ('atom', f'VoiceS3R(公式 CAD、右の列の奥の端。USB-C は奥 +y で箱の奥の面、リセットはポートの面の時計回りの隣 = 右 +x の面で箱の右の面にそろい、どちらも前に何も無い。基板から 3.5 浮き、下に MAX3232・SW1 など。基板の下から M2 × {SCREW_PAN_B:g} のなべ小ねじで底の中心の穴に留める)', '#1fa49a', 1, 'mods', atom_at(ax, ay, 'y+', Z_ATOM_B, Z_TOP)),
             ('hdr', 'ピンヘッダー J1 / J2(樹脂の台 2.5 とピン。VoiceS3R の底は基板から 3.5 で、ピンが底に当たる)', '#202326', 1, 'mods',
              hdr.union(pins(hdr_pts, ZB - TAIL_HDR, Z_ATOM_B)))] + vp + [
@@ -842,7 +850,7 @@ VEIN_NOTE = {'a': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフ
                   f'VoiceS3R は基板から 3.5 浮き(実測、ピンが底に当たる)、基板の M2 の穴 H9(ほかの M2 の穴と同じパッド付き、v0.55。v0.50〜v0.54 は ⌀4.8 の切り欠きとワッシャー)を通した M2 × {SCREW_PAN_B:g} のなべ小ねじで底の中心の M2 穴に留める'
                   f'(穴に {ZB + SCREW_PAN_B - Z_ATOM_B - ATOM_RECESS:.1f} 入る。柱は無い: v0.49 までの床からの柱は実物で長く、VoiceS3R が浮いた)。'
                   f'NFC(v0.56): フードに右の列の手前を DB9 の手前から基板の縁まで覆う棚(厚さ {T_TOP:g}、上面はフードの天板の裏の高さで DB9 の上面から {Z_IN_B - DB9_TOP:.1f} 上)を付け、J6 の +x 側で箱の +x の面に沿った壁(x {NFC_LEGS[0][0] - COL_B:.1f} から箱の +x の面まで、v0.57。v0.56 は 3.6 角の足 3 本)で基板に立て、壁の中の 3 か所(基板の H10 / H5 / H11)を床の裏から M2 × {SCREW_B:g} の皿小ねじで締める。'
-                  f'Unit NFC(48 × 24 × 8)は棚に載せて Grove の端を手前の面にそろえ、棚の柱 ⌀{NFC_POST_D:g} 2 本を NFC の穴 ⌀{NFC_HOLE_D:g} に通して、上から M2 × {SCREW_NFC_B:g} のなべ小ねじとワッシャー(外径 {NFC_WASHER_D:g} × {NFC_WASHER_T:g})で留める(柱に {SCREW_NFC_B - NFC_WASHER_T - 0.3:.1f} 入る)。後ろの 3/4 は DB9 の上に出る。NFC の上面は VoiceS3R の上面より {Z_IN_B + NFC_H - (Z_ATOM_B + 16.8):.1f} 高い'}
+                  f'Unit NFC(48 × 24 × 8)は棚に載せて Grove の端を手前の面にそろえ、棚の柱 ⌀{NFC_POST_D:g} 2 本を NFC の穴 ⌀{NFC_HOLE_D:g} に通して、上から M2 × {SCREW_NFC_B:g} のなべ小ねじとワッシャー(外径 {NFC_WASHER_D:g} × {NFC_WASHER_T:g})で留める(柱に {SCREW_NFC_B - NFC_WASHER_T - 0.3:.1f} 入る)。後ろの 3/4 は DB9 の上に出るので、棚の上に NFC の足元だけの台を足し、NFC の裏を DB9 の上面から {NFC_OFF_DB9:g} 離す(v0.59。v0.58 までは 0.3 で、DB9 の金属でカードを読まなかった)。NFC の上面は VoiceS3R の上面より {DB9_TOP + NFC_OFF_DB9 + NFC_H - (Z_ATOM_B + 16.8):.1f} 高い'}
 VEIN_NOTE['c'] = (
     'B と同じく、指静脈は 9P の端(ケーブル)を −y に向け、基板にじかに載せてフードで押さえる(段差受け)。指静脈の下は平らで、基板にはパッドと配線だけ(床のリブが基板を受ける)。'
     f'上面はフードから {ZBT + 15.0 - (Z_IN_B + T_TOP):.1f} 出る。フードは B と同じ作り(4 面の壁と四隅の角柱、窓 57.5 × 25.5 + 座ぐり {VEIN_RECESS:g})で、壁も柱もすべて基板の上に立ち、'
