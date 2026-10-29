@@ -647,6 +647,10 @@ def concept_b():
     # so nothing is left open between the two
     shelf = shelf.union(rbox(nx0, nx0 + NFC_W, ny0, ny0 + NFC_L, DB9_TOP + 0.3, Z_NFC, 2.0)
                         .intersect(box(nx0, nx0 + NFC_W, ys1 - 0.01, ny0 + NFC_L + 1, DB9_TOP, Z_NFC + 1)))
+    # v0.60 (the user's): a column from the board up to the pad under the Unit NFC's back corner on the -x side (by
+    # the VoiceS3R; the DB9's body takes the +x half there), its faces 0.3 in from the NFC's sides
+    col_n = (nx0 + 0.3, nx0 + 0.3 + 2 * COL_B, ny0 + NFC_L - 0.3 - 2 * COL_B, ny0 + NFC_L - 0.3)
+    shelf = shelf.union(box(*col_n, ZBT, DB9_TOP + 0.31))
     for x, y in nfc_holes:
         shelf = shelf.union(cyl_z(x, y, NFC_POST_D / 2, Z_NFC - 0.01, Z_NFC + NFC_H - 0.3))
     tip = -T_FLOOR_B + SCREW_B
@@ -683,7 +687,7 @@ def concept_b():
     # the way in: the board with its parts and the vein module drop in first, then the hood comes down past them and
     # the VoiceS3R: its walls and columns (which go down to the floor) keep off them in xy
     down = [(xo0, hx0, yo0, yo1), (xo0, xh1, yo0, hy0), (xo0, xh1, hy1, yo1), (hx1, xh1, yo0, yc0),
-            (hx1, xh1, yc1, yo1), wall_s] + [(x - COL_B, x + COL_B, y - COL_B, y + COL_B) for x, y in thru]
+            (hx1, xh1, yc1, yo1), wall_s, col_n] + [(x - COL_B, x + COL_B, y - COL_B, y + COL_B) for x, y in thru]
     for name, o in parts:
         if name in ('DB9 plug', 'Grove plug', 'USB plug', 'PORT.A plug', 'cable', '9P plug', 'board', 'screw heads', 'nuts',
                     'NFC', 'NFC screws'):
@@ -854,7 +858,7 @@ VEIN_NOTE = {'a': 'ふたは DB9 の上を切り欠いて(DB9 とプラグのフ
                   f'VoiceS3R は基板から 3.5 浮き(実測、ピンが底に当たる)、基板の M2 の穴 H9(ほかの M2 の穴と同じパッド付き、v0.55。v0.50〜v0.54 は ⌀4.8 の切り欠きとワッシャー)を通した M2 × {SCREW_PAN_B:g} のなべ小ねじで底の中心の M2 穴に留める'
                   f'(穴に {ZB + SCREW_PAN_B - Z_ATOM_B - ATOM_RECESS:.1f} 入る。柱は無い: v0.49 までの床からの柱は実物で長く、VoiceS3R が浮いた)。'
                   f'NFC(v0.56): フードに右の列の手前を DB9 の手前から基板の縁まで覆う棚(厚さ {T_TOP:g}、上面はフードの天板の裏の高さで DB9 の上面から {Z_IN_B - DB9_TOP:.1f} 上)を付け、J6 の +x 側で箱の +x の面に沿った壁(x {NFC_LEGS[0][0] - COL_B:.1f} から箱の +x の面まで、v0.57。v0.56 は 3.6 角の足 3 本)で基板に立て、壁の中の 3 か所(基板の H10 / H5 / H11)を床の裏から M2 × {SCREW_B:g} の皿小ねじで締める。'
-                  f'Unit NFC(48 × 24 × 8)は棚に載せて Grove の端を手前の面にそろえ、棚の柱 ⌀{NFC_POST_D:g} 2 本を NFC の穴 ⌀{NFC_HOLE_D:g} に通して、上から M2 × {SCREW_NFC_B:g} のなべ小ねじとワッシャー(外径 {NFC_WASHER_D:g} × {NFC_WASHER_T:g})で留める(柱に {SCREW_NFC_B - NFC_WASHER_T - 0.3:.1f} 入る)。後ろの 3/4 は DB9 の上に出るので、棚の上に NFC の足元全体の台を足し、NFC の裏を DB9 の上面から {NFC_OFF_DB9:g} 離す(v0.59。v0.58 までは 0.3 で、DB9 の金属でカードを読まなかった)。DB9 の上の部分も、DB9 の上面から 0.3 まで台で埋める(v0.60)。NFC の上面は VoiceS3R の上面より {DB9_TOP + NFC_OFF_DB9 + NFC_H - (Z_ATOM_B + 16.8):.1f} 高い'}
+                  f'Unit NFC(48 × 24 × 8)は棚に載せて Grove の端を手前の面にそろえ、棚の柱 ⌀{NFC_POST_D:g} 2 本を NFC の穴 ⌀{NFC_HOLE_D:g} に通して、上から M2 × {SCREW_NFC_B:g} のなべ小ねじとワッシャー(外径 {NFC_WASHER_D:g} × {NFC_WASHER_T:g})で留める(柱に {SCREW_NFC_B - NFC_WASHER_T - 0.3:.1f} 入る)。後ろの 3/4 は DB9 の上に出るので、棚の上に NFC の足元全体の台を足し、NFC の裏を DB9 の上面から {NFC_OFF_DB9:g} 離す(v0.59。v0.58 までは 0.3 で、DB9 の金属でカードを読まなかった)。DB9 の上の部分も、DB9 の上面から 0.3 まで台で埋め、NFC の奥の -x 側の角の下に基板から台まで柱を立てる(v0.60)。NFC の上面は VoiceS3R の上面より {DB9_TOP + NFC_OFF_DB9 + NFC_H - (Z_ATOM_B + 16.8):.1f} 高い'}
 VEIN_NOTE['c'] = (
     'B と同じく、指静脈は 9P の端(ケーブル)を −y に向け、基板にじかに載せてフードで押さえる(段差受け)。指静脈の下は平らで、基板にはパッドと配線だけ(床のリブが基板を受ける)。'
     f'上面はフードから {ZBT + 15.0 - (Z_IN_B + T_TOP):.1f} 出る。フードは B と同じ作り(4 面の壁と四隅の角柱、窓 57.5 × 25.5 + 座ぐり {VEIN_RECESS:g})で、壁も柱もすべて基板の上に立ち、'
