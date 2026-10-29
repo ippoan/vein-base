@@ -30,7 +30,8 @@ Routing is written here (a handful of tracks). Run with KiCad's python from pcb/
   - the outline notched in the corners for the lid screws' ledges, which the board passes on its way in from above
         (NOTCHES, = station/build_vein_unit_print.py)
   - J2: Grove (HY2.0-4P right angle, CAX HY2.0-4P-WT, C722729, pcb/vein_base.pretty: LCSC / EasyEDA's pads) in the
-        +x end, opening +x: 1 = TXD (-> G2, white), 2 = RXD (<- G1, yellow), 3 = 5V, 4 = GND (the nets of u3). u4 up
+        +x end, opening +x: 1 = GND (black), 2 = 5V (red), 3 = TXD (-> G2, yellow), 4 = RXD (<- G1, white): the
+        HY2.0's pad 1 takes the Grove black wire (v0.58; up to v0.57 the nets of u3, 1 = TXD .. 4 = GND, reversed). u4 up
         to v0.38 had the JST PH S4B-PH-SM4-TB (C265102), which does not take the Grove plug (the real board,
         2026-10-17); the HY2.0's pads reach 2.0 further (its tails' pads 0.3 off the module, its body's front 0.8
         inside the edge), so v0.39 ran the board 1.8 further to +x
@@ -127,7 +128,11 @@ if UNIT_P:
 else:
     J2 = load('Connector_JST.pretty', 'JST_PH_S4B-PH-SM4-TB_1x04-1MP_P2.00mm_Horizontal', 'J2', 'Grove HY2.0-4P RA', XG, 0,
               rot=90)
-wire(J2, {'1': 'TXD', '2': 'RXD', '3': '5V', '4': 'GND', 'MP': 'GND'})
+# p: the HY2.0's pad 1 takes the Grove cable's black wire (GND) and pad 4 the white one (an M5 cable is straight,
+# black / red / yellow / white = GND / 5V / G2 / G1 at the VoiceS3R's PORT.A). Up to v0.57 it had u3's order, which
+# put the module's GND and 5V on the VoiceS3R's G1 / G2 (the same footprint's J6 on station print_b, 2026-10-29)
+wire(J2, {'1': 'GND', '2': '5V', '3': 'TXD', '4': 'RXD', 'MP': 'GND'} if UNIT_P else
+         {'1': 'TXD', '2': 'RXD', '3': '5V', '4': 'GND', 'MP': 'GND'})
 
 # ---- J1 vein cable, opening -x (footprint front = its +y, turned 270°); p: vertical, plugged from above, turned 90
 if UNIT_P:
@@ -229,17 +234,18 @@ if UNIT_P:
     # J1's pads at -x in a column (3V3 at +y): RXD / TXD / GND along F.Cu under J1's housing (between its fitting
     # nails) to vias past it (+x, under the 9P plug); RXD / TXD along B.Cu under the module to vias before the Grove's pads. 3V3: along
     # F.Cu under the module, up at x = 26.5 to C2-1 -> U1-2.
-    # 5V: J2-3 out to x = 34.8 (inside the notch), up to U1-3 -> C1-1. GND is the pour on both layers.
+    # 5V: J2-2 out to x = 34.8 (inside the notch), up to U1-3 -> C1-1. GND is the pour on both layers.
+    # TXD (J1-1, the lower) goes to J2-3 and RXD to J2-4, so TXD's run up on B.Cu is the further one (x = 26.0)
     XV = xy(J1.GetPosition())[0] + 2.6 + 0.6  # the vias 0.6 past J1's housing (pitch 1.25: 0.65 between them)
     XE = j2['1'][0] - 2.95                     # the vias before the Grove's pads
-    for net, jp, xd in (('RXD', '2', 26.0), ('TXD', '1', 25.0)):
+    for net, jp, xd in (('RXD', '4', 25.0), ('TXD', '3', 26.0)):
         y0, y1 = jn[net][1], j2[jp][1]
         track([jn[net], (XV, y0)], net); via(XV, y0, net)
         track([(XV, y0), (xd, y0), (xd, y1), (XE, y1)], net, layer=pcbnew.B_Cu); via(XE, y1, net)
         track([(XE, y1), j2[jp]], net)
     track([jn['GND'], (XV, jn['GND'][1])], 'GND'); via(XV, jn['GND'][1], 'GND')
     track([jn['3V3'], (26.5, jn['3V3'][1]), (26.5, c2['1'][1]), c2['1'], (c2['1'][0], u1['2'][1]), u1['2']], '3V3')
-    track([j2['3'], (34.8, j2['3'][1]), (34.8, u1['3'][1]), u1['3'], (u1['3'][0], c1['1'][1]), c1['1']], '5V')
+    track([j2['2'], (34.8, j2['2'][1]), (34.8, u1['3'][1]), u1['3'], (u1['3'][0], c1['1'][1]), c1['1']], '5V')
     for x, y in [(-35.5, 6.5), (-35.5, -6.5), (-20.0, -8.0), (-20.0, 8.0), (0.0, -8.0), (0.0, 8.0), (20.0, -8.0),
                  (20.0, 8.0), (24.0, 12.0), (29.5, 12.5), (33.0, -10.0)]:
         via(x, y, 'GND')
@@ -248,7 +254,7 @@ if UNIT_P:
     short = {'3V3': '3V3', 'GND': 'G', 'RXD': 'RX', 'TXD': 'TX'}
     text('J1 ' + ' '.join(f'{n}:{short[J1NET[n]]}' for n in '1234'), -20.0, -5.0, size=0.8)
     # 21 characters at 0.8, turned: y -6.7..6.7 at x 27.4, in front of the Grove's pads
-    text('J2 1:TX 2:RX 3:5V 4:G', 27.4, 0.0, size=0.8, rot=90)
+    text('J2 1:G 2:5V 3:TX 4:RX', 27.4, 0.0, size=0.8, rot=90)
     J2.Reference().SetVisible(False)             # (the text names it; the HY2.0's reference sat on it)
     text(f'vein unit board {REV}', 0, 0, layer=pcbnew.B_SilkS)
     # a '1' beside pin 1 of each cable's 4P (the footprints' pin-1 mark is a short line the part hides): one pitch out
