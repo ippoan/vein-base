@@ -1,0 +1,15 @@
+Comment,Designator,Footprint,LCSC Part #,Note
+"USB-C 16P receptacle (Korean Hroparts TYPE-C-31-M-12)","J1,J2",USB_C_Receptacle_HRO_TYPE-C-31-M-12,C165948,J1 = power (charger) / J2 = data (PC); openings on the -y edge
+"CH334F USB 2.0 hub (QFN-24 4x4)",U3,QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm,C5187527,self-powered from 5V; check pin 1 and the exposed pad against JLC's footprint in the assembly preview
+"CH340C USB-UART (SOP-16, clock inside)",U4,SOIC-16_3.9x9.9mm_P1.27mm,C84681,VCC = V3 = 3V3
+"USBLC6-2SC6 USB ESD (SOT-23-6)",U2,SOT-23-6,C7519,on J2's D+ / D-
+AMS1117-3.3 (SOT-223),U1,SOT-223-3_TabPin2,C6186,Basic part
+"12MHz crystal 20pF SMD3225 (YXC X322512MSB4SI)",Y1,Crystal_SMD_3225-4Pin_3.2x2.5mm,C9002,Basic part; no load caps (inside the CH334)
+"JST SH 1.0 6P right angle (SM06B-SRSS-TB)",J3,JST_SH_SM06B-SRSS-TB_1x06-1MP_P1.00mm_Horizontal,C160405,FP001S cable; opening on the +y edge; pin 1 = 3V3 (check the module's cable before ordering)
+"Red LED 0603 (KT-0603R)",D1,LED_0603_1608Metric,C2286,Basic part; 3V3 power
+"100nF 50V X7R 0603","C3,C4,C7",C_0603_1608Metric,C14663,Basic part
+"1uF 50V X5R 0603",C1,C_0603_1608Metric,C15849,Basic part; CH334 V5
+"10uF 25V X5R 0805","C2,C5",C_0805_2012Metric,C15850,Basic part; CH334 VDD33 / 5V in
+"22uF 25V X5R 0805",C6,C_0805_2012Metric,C45783,Basic part; AMS1117 output
+"5.1k 1% 0603","R1,R2,R3,R4",R_0603_1608Metric,C23186,Basic part; CC1 / CC2 of J1 (R1 / R2) and J2 (R3 / R4)
+"1k 1% 0603",R5,R_0603_1608Metric,C21190,Basic part; LED
