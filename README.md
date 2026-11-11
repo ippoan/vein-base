@@ -107,7 +107,7 @@ Grow の顔・手のひら静脈認証モジュール FP001S を PC で試すた
 - J1(USB-C、電源専用): USB 充電器から 5 V。AMS1117-3.3 で FP001S と CH340C の 3.3 V を作る(PC の USB ポートから 400 mA を取らない)。
 - J2(USB-C、データ): PC へ。CH334F のハブ経由で、ポート 1 = FP001S の USB(UVC カメラ、MJPEG 320 × 240、PotPlayer で映る)、ポート 2 = CH340C(COM ポート、115200 8N1、Grow の Test Demo)。J2 の VBUS はどこにもつながない(PC と充電器の 5 V を混ぜない)。J1 に電源が無いとハブも動かない。
 - J3(SH 1.0 6P、SM06B-SRSS-TB): FP001S のケーブル。1 = 3V3、2 = TX(モジュールの出力)、3 = RX、4 = GND、5 = D-、6 = D+(マニュアル 1.3.2 の並び)。**発注前に付属ケーブルが 1 番 → 1 番か 1 番 → 6 番(反転)かを実物で確認し、反転なら `build_board.py` の `SH_REVERSED = True`**(逆だとモジュールの GND に 3.3 V が入る)。
-- 配線は freerouting 2.4.1 の `fp001s_test_board.ses`(`build_board.py dsn` → freerouting → `.ses`)。CI で `fab/fp001s/` にガーバー・CPL・BOM・DRC。QFN-24 / SOT-23-6 の CPL 補正は他の基板からの類推なので、JLC の実装プレビューで向きを確かめる。
+- 配線は freerouting 2.4.1 の `fp001s_test_board.ses`(`build_board.py dsn` → freerouting → `.ses`)。CI で `fab/fp001s/` にガーバー・CPL・BOM・DRC。CPL 補正は JLC の実装プレビューで確かめた(2026-11-11): QFN-24 は 270、SOT-23-6(U2)は 270(180 では本体が 90° ずれていた)。
 
 ## フォルダ構成
 
