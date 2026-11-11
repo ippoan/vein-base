@@ -108,6 +108,9 @@ PRINT_B = 'print_b' in sys.argv[1:]
 PRINT_C = 'print_c' in sys.argv[1:]
 RS232 = not PRINT_C                  # print_c: no MAX3232 / C1..C5 / SW1 / DB9 (nor J6 / R1 / R2)
 REV = 'r12'
+# the printed cases' boards (print A / B / C) change with nearly every version and REV was never bumped for them (the
+# real print B boards all said r12, 2026-11-11): their back silk carries VERSION as well, so it cannot be left behind
+VER = open(os.path.join(HERE, '..', '..', 'VERSION')).read().strip()
 NAME = ('station_board_pf' if PF else 'station_board_sw75' if SW75 else 'station_board_sw130' if SW130
         else 'station_board_print_a' if PRINT_A else 'station_board_print_b' if PRINT_B
         else 'station_board_print_c' if PRINT_C else 'station_board')
@@ -513,7 +516,7 @@ elif PRINT_A:
     text('3+4 ON = CROSS', -10.6, ROW + 14.5, size=0.8)
     text('J3 vein: 1RX 2TX 3V3 4G', 0.0, VEIN_Y0 + 2.2, size=0.8)
     text('NFC: G38 G39 5V G', 10.6, ROW + 13.9, size=0.8)
-    text(f'vein-station board {REV} (print A)', 0.0, 0.0, layer=pcbnew.B_SilkS)
+    text(f'vein-station board {REV} v{VER} (print A)', 0.0, 0.0, layer=pcbnew.B_SilkS)
 elif PRINT_B:
     SILK = []                                          # (x0, x1, y0, y1), label: checked after import_ses
     # between SW1's outline (its silk 3.4 behind it) and the back edge; short of the SW1 labels beside J1 (on -x)
@@ -536,7 +539,9 @@ elif PRINT_B:
     # H7 / H8 have their pads from v0.50
     text('NFC: G 5V G38 G39', AX, J6_FRONT + 5.0, layer=pcbnew.B_SilkS, size=0.8)
     J6.Reference().SetVisible(False)                   # (the text names it; v0.56: the hood's shelf's legs beside it)
-    text(f'vein-station board {REV} (print B)', -6.0, 16.0, layer=pcbnew.B_SilkS)   # (inside the left part's back edge)
+    # (inside the left part's back edge; v0.64: short of J1's pads at x 5.28 and the via at (-1.18, 15.7), which
+    # clipped it up to v0.63)
+    text(f'vein-station {REV} v{VER} (print B)', -15.0, 16.0, layer=pcbnew.B_SilkS)
 elif PRINT_C:
     SILK = []                                          # as print_b: J3's '1', the lock mark (checked after import_ses)
     text('VoiceS3R: USB-C / PORT.A this way', AX, Y1 - 1.2, size=0.8)
@@ -546,7 +551,7 @@ elif PRINT_C:
     J3.Reference().SetVisible(False)                   # (the text names it)
     short = {'3V3': '3V3', 'GND': 'G', 'G5': 'RX', 'G6': 'TX'}
     text('J3 ' + ' '.join(f'{n}:{short[J3_NETS[n]]}' for n in '1234'), J3_XY[0], J3_XY[1] + 4.1, size=0.8)
-    text(f'vein-station board {REV} (print C)', 0.0, 0.0, layer=pcbnew.B_SilkS)
+    text(f'vein-station board {REV} v{VER} (print C)', 0.0, 0.0, layer=pcbnew.B_SilkS)
 elif SW130:
     text('VoiceS3R: USB-C / PORT.A this way', 0.0, Y1 - 1.2, size=0.8)
     text('SW1 12=PASS 34=CROSS', 3.0, -44.3, size=0.8, rot=90)
