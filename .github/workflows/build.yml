@@ -158,9 +158,9 @@ jobs:
           ufab vein_unit_board fab/vein_unit jlc_bom.csv jlc_cpl_corrections.csv
           ufab vein_unit_board_p fab/vein_unit_p jlc_bom_p.csv jlc_cpl_corrections_p.csv
 
-      - name: Build FP001S test board (KiCad) + DRC
-        # a PC test board for the Grow FP001S face / palm vein module (pcb/fp001s_test_board -> fab/fp001s/): USB-C power
-        # + USB-C data through a CH334F hub to the module's UVC and a CH340C UART. silk_edge_clearance: the USB-C
+      - name: Build FP001S USB board (KiCad) + DRC
+        # the Grow FP001S face / palm vein module on a PC over one USB-C (pcb/fp001s_test_board -> fab/fp001s/): VBUS ->
+        # SY8089 buck -> 3V3, D+ / D- through a CH334F hub to the module's UVC and a CH340C UART. silk_edge_clearance: the USB-C
         # outline silk runs off the board edge, as on the ESP board.
         run: |
           cd pcb/fp001s_test_board && python3 build_board.py && cd ../..

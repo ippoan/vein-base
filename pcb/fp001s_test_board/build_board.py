@@ -1,24 +1,30 @@
-"""FP001S test board (t1): a small board to try the Grow FP001S face / palm vein module (Hangzhou Grow, user manual
-V1.01) from a PC, with nothing but USB cables:
-  - J1  USB-C, power only (a USB charger): VBUS -> 5V. CC1 / CC2 5.1 k (R1 / R2). Its D+ / D- are not connected.
-        The FP001S takes 400 mA (175 mA standby), so it is not powered from the PC's port.
-  - J2  USB-C, data (to the PC): D+ / D- through U2 (USBLC6-2SC6) to U3's upstream port. CC1 / CC2 5.1 k (R3 / R4).
-        Its VBUS pins are left unconnected: the PC's 5 V and the charger's 5 V must not meet. U2's VBUS pin (the
-        clamp reference) is on the board's 5V, so the board works only with J1 powered (the hub needs it anyway).
+"""FP001S USB board (t2): the Grow FP001S face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through
+one USB-C cable, like a USB camera: the PC sees the module's camera (UVC) and a COM port (its UART) at the same time,
+and the board takes its power from the same cable.
+  - J1  USB-C (to the PC): VBUS -> 5V, CC1 / CC2 5.1 k (R1 / R2, so a USB-C port or charger turns VBUS on),
+        D+ / D- through U2 (USBLC6-2SC6, clamp reference on 5V) to U3's upstream port.
   - U3  CH334F (QFN-24 4x4) USB 2.0 hub, self-powered from 5V (V5 -> internal LDO -> VDD33 = HUB33), Y1 12 MHz
-        (load caps inside the CH334). Port 1 -> the FP001S's USB (UVC / MJPEG 320x240 15 fps, e.g. PotPlayer),
+        (load caps inside the CH334). Port 1 -> the FP001S's USB (UVC / MJPEG up to 960x480 15 fps),
         port 2 -> U4. Ports 3 / 4 unused. RESET# / PSELF (self-powered) / LED / OVCUR# / PWREN# left open.
-  - U4  CH340C (SOP-16, clock inside) at 3.3 V (VCC = V3 = 3V3): TXD -> FP001S RXD, RXD <- FP001S TXD (115200 8N1,
-        Grow's Test Demo or our own code)
-  - U1  AMS1117-3.3 (SOT-223): 5V -> 3V3 for the FP001S and U4. About 0.7 W at 400 mA: its tab (= 3V3) sits in a
-        3V3 copper area on both layers (U1_HEAT, stitched by vias) that carries the heat.
+  - U4  CH340C (SOP-16, clock inside) at 3.3 V (VCC = V3 = 3V3): TXD -> FP001S RXD, RXD <- FP001S TXD (115200 8N1).
+  - U1  SY8089AAAC (SOT-23-5, 2 A, 1 MHz buck): 5V -> 3V3 for the FP001S and U4, L1 2.2 uH (SWPA4020S), FB
+        R6 100 k / R7 22 k (0.6 V x (1 + 100 / 22) = 3.33 V), EN tied to VIN. A buck, not an LDO (t1's AMS1117): the
+        FP001S's 3.3 V 400 mA then takes ~290 mA from VBUS (90 %), not 400, so the whole board (+ hub ~30 mA,
+        CH340 ~15 mA) stays inside a USB 2.0 port's 500 mA, and it keeps 3.3 V when VBUS sags to 4.4 V (an
+        AMS1117 drops out there: on the bench, 2026-11-18, the FP001S rebooted on a PC port behind an AMS1117
+        as soon as it saw a face). C5 10 uF on 5V is the only bulk on VBUS (with C1 1 uF: 11 uF, USB's 10 uF
+        inrush limit in spirit); C6 / C8 22 uF + C9 220 uF tantalum on 3V3 take the module's current peaks.
   - J3  JST SH 1.0 6P (SM06B-SRSS-TB, horizontal, opening +y) for the FP001S cable: pins as the module's
-        (manual 1.3.2): 1 VCC (3V3), 2 TXD (module out), 3 RXD (module in), 4 GND, 5 D-, 6 D+.
-        SH_REVERSED: if the module's cable is crossed (its pin 1 on the other end's pin 6, as Pimoroni / Adafruit SH
+        (manual 1.3.2): 1 VCC (3V3), 2 TXD (module out), 3 RXD (module in), 4 GND, 5 D-, 6 D+. The module's own
+        cable (SH on the module end, loose wires: red 1, black 2, yellow 3, green 4 = GND, blue 5, white 6; found
+        2026-11-18) does not fit: use an SH 1.0 6P cable with both ends (1 -> 1).
+        SH_REVERSED: if the cable is crossed (its pin 1 on the other end's pin 6, as Pimoroni / Adafruit SH
         cables are), set it True so the board's pin 6 takes VCC. CHECK THE CABLE BEFORE ORDERING: swapped, the
         module gets 3.3 V on GND.
   - D1 + R5: 3V3 power LED. H1..H4: M2 holes in the corners.
-Board coords: origin = board centre, both USB-C on the -y edge (J2 data on -x, J1 power on +x), J3 on the +y edge.
+  The module's lens must stand upright (the round lens above the square window, manual 1.1): upside down it sees
+  no face at all (2026-11-18).
+Board coords: origin = board centre, J1 (USB-C) on the -y edge at -x, the buck at +x, J3 on the +y edge.
 Routing comes from freerouting and is kept in fp001s_test_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp001s_test_board.kicad_pcb
@@ -31,7 +37,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..'))
 from kicad_ses import import_ses  # noqa: E402
 
-REV = 't1'
+REV = 't2'
 NAME = 'fp001s_test_board'
 SH_REVERSED = False            # see the docstring: True if the module's SH cable crosses 1 <-> 6
 FP = '/usr/share/kicad/footprints/'
@@ -60,16 +66,21 @@ nc.SetClearance(mm(0.15)); nc.SetTrackWidth(mm(0.2))   # 0.2 / 0.15 fits the CH3
 nc.SetViaDiameter(mm(0.6)); nc.SetViaDrill(mm(0.3))
 
 nets = {}
-for n in ['GND', '5V', '3V3', 'HUB33', 'J2VB1', 'J2VB2', 'CC1P', 'CC2P', 'CC1D', 'CC2D', 'UDP', 'UDN', 'XI', 'XO',
+for n in ['GND', '5V', '3V3', 'HUB33', 'CC1', 'CC2', 'UDP', 'UDN', 'XI', 'XO', 'LX', 'FB',
           'FPDP', 'FPDM', 'SDP', 'SDN', 'FPTX', 'FPRX', 'LEDA']:
     ni = pcbnew.NETINFO_ITEM(b, n); b.Add(ni); nets[n] = ni
 
 LIBS = {}
 
 
+LOCAL = os.path.join(HERE, '..', 'vein_base.pretty')     # the repo's own footprints (nickname vein_base)
+
+
 def load(lib, name, ref, value, x, y, rot=0):
-    fp = pcbnew.FootprintLoad(FP + lib, name)
-    nick = lib.removesuffix('.pretty'); LIBS[nick] = FP + lib
+    path = LOCAL if lib == 'vein_base.pretty' else FP + lib
+    fp = pcbnew.FootprintLoad(path, name)
+    nick = lib.removesuffix('.pretty')
+    LIBS[nick] = '${KIPRJMOD}/../vein_base.pretty' if lib == 'vein_base.pretty' else FP + lib
     fp.SetFPID(pcbnew.LIB_ID(nick, name))
     fp.SetReference(ref); fp.SetValue(value)
     b.Add(fp)
@@ -103,14 +114,12 @@ def C(ref, value, a, c, x, y, rot=0):
 
 USB_GND = {'A1': 'GND', 'A12': 'GND', 'B1': 'GND', 'B12': 'GND', 'S1': 'GND'}
 
-# ======== J2 data USB-C (-x) -> U2 ESD -> U3 hub ========
-J2 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J2', 'USB-C data (PC)', -10.0, Y0 + 3.05)
-wire(J2, {**USB_GND, 'A5': 'CC1D', 'B5': 'CC2D',
-          'A4': 'J2VB1', 'B9': 'J2VB1', 'A9': 'J2VB2', 'B4': 'J2VB2',   # VBUS left open (each stacked pair on its own
-                                                                       # net only so DRC sees one pad, not a bridge)
+# ======== J1 USB-C (the PC; power and data) -> U2 ESD -> U3 hub ========
+J1 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J1', 'USB-C (PC)', -10.0, Y0 + 3.05)
+wire(J1, {**USB_GND, 'A5': 'CC1', 'B5': 'CC2', 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V',
           'A6': 'UDP', 'B6': 'UDP', 'A7': 'UDN', 'B7': 'UDN'})
-R('R3', '5.1k', 'CC1D', 'GND', -15.5, -5.2, 90)
-R('R4', '5.1k', 'CC2D', 'GND', -4.5, -5.2, 90)
+R('R1', '5.1k', 'CC1', 'GND', -15.5, -5.2, 90)
+R('R2', '5.1k', 'CC2', 'GND', -4.5, -5.2, 90)
 U2 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U2', 'USBLC6-2SC6', -10.0, -5.4, 90)
 wire(U2, {'1': 'UDP', '6': 'UDP', '3': 'UDN', '4': 'UDN', '2': 'GND', '5': '5V'})
 
@@ -128,19 +137,19 @@ U4 = load('Package_SO.pretty', 'SOIC-16_3.9x9.9mm_P1.27mm', 'U4', 'CH340C', 6.0,
 wire(U4, {'1': 'GND', '2': 'FPRX', '3': 'FPTX', '4': '3V3', '5': 'SDP', '6': 'SDN', '16': '3V3'})
 C('C4', '100nF', '3V3', 'GND', 6.0, 8.4, 0)
 
-# ======== J1 power USB-C (+x) -> U1 AMS1117 ========
-J1 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J1', 'USB-C power (charger)', 10.0, Y0 + 3.05)
-wire(J1, {**USB_GND, 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V', 'A5': 'CC1P', 'B5': 'CC2P'})
-R('R1', '5.1k', 'CC1P', 'GND', 4.5, -5.2, 90)
-R('R2', '5.1k', 'CC2P', 'GND', 15.5, -5.2, 90)
-C('C5', '10uF', '5V', 'GND', 10.0, -5.6, 90)
-U1 = load('Package_TO_SOT_SMD.pretty', 'SOT-223-3_TabPin2', 'U1', 'AMS1117-3.3', 15.5, 1.0, 90)
-wire(U1, {'1': 'GND', '2': '3V3', '3': '5V'})
-U1_HEAT = (12.0, 19.8, -0.6, 5.7)        # x0, x1, y0, y1 of the 3V3 heat area (tab at the +y side after the turn)
-_tab = xy(max((p for p in U1.Pads() if p.GetNumber() == '2'), key=lambda p: p.GetSize().x * p.GetSize().y).GetPosition())
-HEAT_VIAS = [(_tab[0] + dx, _tab[1] + dy) for dx in (-2.9, 2.9) for dy in (-1.2, 0.0, 1.2)]
-C('C6', '22uF', '3V3', 'GND', 15.5, 7.2, 0)
-C('C7', '100nF', '3V3', 'GND', 18.6, 7.2, 90)
+# ======== U1 SY8089 buck: 5V -> 3V3 ========
+U1 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-5', 'U1', 'SY8089AAAC', 12.0, -3.5, 0)
+wire(U1, {'1': '5V', '2': 'GND', '3': 'LX', '4': '5V', '5': 'FB'})        # 1 EN (tied to IN), 2 GND, 3 LX, 4 IN, 5 FB
+C('C5', '10uF', '5V', 'GND', 12.0, -7.0, 0)                                # VIN, beside pin 4
+L1 = load('vein_base.pretty', 'L_Sunlord_SWPA4020S', 'L1', '2.2uH', 17.0, -3.0, 90)
+wire(L1, {'1': 'LX', '2': '3V3'})
+R('R6', '100k', '3V3', 'FB', 7.5, -4.0, 0)
+R('R7', '22k', 'FB', 'GND', 7.5, -6.0, 0)
+C('C6', '22uF', '3V3', 'GND', 17.5, 2.0, 0)
+C('C8', '22uF', '3V3', 'GND', 13.5, 2.0, 0)
+C9 = load('Capacitor_Tantalum_SMD.pretty', 'CP_EIA-3528-21_Kemet-B', 'C9', '220uF 6.3V', 15.5, 6.0, 0)
+wire(C9, {'1': '3V3', '2': 'GND'})                                          # 1 = + (the band)
+C('C7', '100nF', '3V3', 'GND', 19.0, 9.5, 90)
 two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', 12.0, 12.2, 0)   # 1 = K, 2 = A
 R('R5', '1k', '3V3', 'LEDA', 8.8, 12.2, 0)
 
@@ -175,14 +184,15 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 # silk: 1 character ~ 0.8 x size wide, centred: keep both ends inside the outline
 short = {'3V3': '3V3', 'FPTX': 'TX', 'FPRX': 'RX', 'GND': 'G', 'FPDM': 'D-', 'FPDP': 'D+'}
-SILK = [('PC (DATA)', -10.0, -11.2, 0.8), ('5V POWER', 10.0, -11.2, 0.8),
+SILK = [('USB-C (PC)', -10.0, -11.2, 0.8), ('LENS UP', 10.0, -11.2, 0.8),
         ('FP001S (SH1.0)', -12.0, 11.3, 0.8),
         ('J3 ' + ' '.join(f'{n}:{short[jn[n]]}' for n in '123'), -12.0, 10.0, 0.8),
         ('   ' + ' '.join(f'{n}:{short[jn[n]]}' for n in '456'), -12.0, 8.7, 0.8)]
 for t, x, y, sz in SILK:
     assert X0 + 0.3 <= x - len(t) * 0.4 * sz and x + len(t) * 0.4 * sz <= X1 - 0.3, t
     text(t, x, y, size=sz)
-text(f'FP001S test board {REV}', 0, 0, layer=pcbnew.B_SilkS)
+VERSION = open(os.path.join(HERE, '..', '..', 'VERSION')).read().strip()
+text(f'FP001S USB {REV} v{VERSION}', 0, 0, layer=pcbnew.B_SilkS)
 text('CHECK THE SH CABLE: PIN 1 = 3V3', 0, -2.0, layer=pcbnew.B_SilkS, size=0.8)
 
 
@@ -199,7 +209,6 @@ def stitch(b, pitch=2.5, clr=0.25):
         while x < X1 - 1.0:
             q = P(x, y)
             ok = (all((x - hx) ** 2 + (y - hy) ** 2 > 3.0 ** 2 for hx, hy in HOLES)
-                  and not (U1_HEAT[0] - 0.6 <= x <= U1_HEAT[1] + 0.6 and U1_HEAT[2] - 0.6 <= y <= U1_HEAT[3] + 0.6)
                   and not any(c.OutlineCount() and c.Contains(q) for c in crt)
                   and not any(s.Collide(q, mm(r)) for s in items))
             if ok:
@@ -259,13 +268,13 @@ if 'dsn' in sys.argv[1:]:
     b.Save(f'{NAME}.kicad_pcb')
     b = pcbnew.LoadBoard(f'{NAME}.kicad_pcb')
     print('dsn', pcbnew.ExportSpecctraDSN(b, f'{NAME}.dsn'))
-    # 5V / 3V3 routed 0.5 wide (the FP001S's 400 mA): a net class written into the DSN for freerouting
+    # 5V / 3V3 / LX routed 0.5 wide (the FP001S's 400 mA): a net class written into the DSN for freerouting
     d = open(f'{NAME}.dsn').read()
     i = d.index('    (class kicad_default'); j = d.index('(circuit', i)
     body = d[i:j]
-    for n in ('5V', '3V3'):
+    for n in ('5V', '3V3', 'LX'):
         body = re.sub(rf'(?<=\s){n}(?=\s)', '', body)
-    d = (d[:i] + '    (class PWR 5V 3V3\n      (circuit (use_via Via[0-1]_600:300_um))\n'
+    d = (d[:i] + '    (class PWR 5V 3V3 LX\n      (circuit (use_via Via[0-1]_600:300_um))\n'
          '      (rule (width 500) (clearance 150))\n    )\n' + body + d[j:])
     open(f'{NAME}.dsn', 'w').write(d)
 else:
@@ -283,19 +292,6 @@ else:
         z.SetLocalClearance(mm(0.25)); z.SetMinThickness(mm(0.25)); z.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL)
         z.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_NEVER)    # islands get a via first (below)
         b.Add(z)
-    # U1's heat: a 3V3 area on both layers around its tab, over the GND pours, tied by vias beside the tab
-    hx0, hx1, hy0, hy1 = U1_HEAT
-    for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
-        z = pcbnew.ZONE(b); z.SetLayer(layer); z.SetNet(b.FindNet('3V3')); z.SetAssignedPriority(1)
-        ol = z.Outline(); ol.NewOutline()
-        for x, y in ((hx0, hy0), (hx1, hy0), (hx1, hy1), (hx0, hy1)):
-            ol.Append(mm(OX + x), mm(OY - y))
-        z.SetLocalClearance(mm(0.25)); z.SetMinThickness(mm(0.25)); z.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL)
-        z.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_ALWAYS)
-        b.Add(z)
-    for x, y in HEAT_VIAS:
-        v = pcbnew.PCB_VIA(b); v.SetPosition(P(x, y)); v.SetWidth(mm(0.6)); v.SetDrill(mm(0.3))
-        v.SetNet(b.FindNet('3V3')); b.Add(v)
     pcbnew.ZONE_FILLER(b).Fill(b.Zones())
     for _ in range(3):                                   # tie every pour piece left without a via to the other layer
         if not tie_islands(b):
