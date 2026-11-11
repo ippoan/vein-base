@@ -26,12 +26,21 @@ jobs:
       - name: Read version
         run: echo "VER=$(cat VERSION)" >> "$GITHUB_ENV"
 
-      # KiCad 7 from apt, kept by cache-apt-pkgs-action (bump version to refetch the packages)
+      # The runner's apt lists go stale: on a cache miss the action installed from them and got 404s
+      # (python3-pil, 2026-11-11), then saved an empty cache under the key. Refresh the lists first.
+      - name: apt-get update
+        run: sudo apt-get update -qq
+
+      # KiCad 7 from apt, kept by cache-apt-pkgs-action (bump version to refetch the packages; version 1's
+      # cache holds no packages since the 2026-11-11 failure)
       - name: Install KiCad 7
         uses: awalsh128/cache-apt-pkgs-action@v1.6.3
         with:
           packages: kicad kicad-footprints fonts-ipaexfont-gothic
-          version: 1
+          version: 2
+
+      - name: Check KiCad is installed
+        run: kicad-cli version && python3 -c "import pcbnew; print(pcbnew.Version())"
 
       - name: Cache pip downloads
         uses: actions/cache@v4
@@ -149,6 +158,23 @@ jobs:
           ufab vein_unit_board fab/vein_unit jlc_bom.csv jlc_cpl_corrections.csv
           ufab vein_unit_board_p fab/vein_unit_p jlc_bom_p.csv jlc_cpl_corrections_p.csv
 
+      - name: Build FP001S test board (KiCad) + DRC
+        # a PC test board for the Grow FP001S face / palm vein module (pcb/fp001s_test_board -> fab/fp001s/): USB-C power
+        # + USB-C data through a CH334F hub to the module's UVC and a CH340C UART. silk_edge_clearance: the USB-C
+        # outline silk runs off the board edge, as on the ESP board.
+        run: |
+          cd pcb/fp001s_test_board && python3 build_board.py && cd ../..
+          B=pcb/fp001s_test_board/fp001s_test_board.kicad_pcb D=fab/fp001s
+          mkdir -p $D/gerber
+          kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o $D/gerber/ $B
+          kicad-cli pcb export drill --format excellon --excellon-separate-th -o $D/gerber/ $B
+          kicad-cli pcb export pos --format csv --units mm --side both -o $D/pos.csv $B
+          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o $D/fp001s_test_board_v${VER}_fitcheck_1to1.pdf $B
+          (cd $D/gerber && zip -q ../fp001s_test_board_v${VER}_gerbers.zip *)
+          python3 tools/make_jlc_cpl.py --pos $D/pos.csv --bom pcb/fp001s_test_board/jlc_bom.csv --prefix fp001s_test_board_v \
+            --outdir $D --corrections pcb/fp001s_test_board/jlc_cpl_corrections.csv
+          python3 tools/check_drc.py --board $B --report $D/drc.rpt --ignore silk_edge_clearance
+
       - name: Vein cable order (9P 3..6 -> 4P 1..4 straight, no twist) on print_b's / print_c's J3 and Vein Unit P's J1
         run: python3 tools/check_cable_order.py
 
@@ -227,6 +253,7 @@ jobs:
             site/vein-unit-print/*
             fab/vein_unit/*
             fab/vein_unit_p/*
+            fab/fp001s/*
 
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'

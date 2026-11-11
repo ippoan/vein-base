@@ -26,7 +26,8 @@ edit shared parts there.
 - 生成物(STL / STEP / PDF / gerber zip / CPL)は git に入れない(`.gitignore` 済み)。古い生成物を発注しかけた事故があったため。取得は常に CI の Artifacts から。
 - 3D 印刷の STL は `vein_station_print_<a|b|unit>_v<版>_<body|lid>.stl`(版は `VERSION`。JLC3DP のカートで見分けるため。Unit P の REV(vp6)はページ表示用で、ファイル名には使わない)。
 - Grove のソケット: HY2.0 の実寸のフットプリントにしてあるのは Unit P(J2)と 3D 印刷 B(print_b の J6)だけ。ほかの Grove のある基板(station 基板の sw130 / print_a の J6、station_esp_board の J6 / J7、vein_unit_board u3 の J2)は KiCad の JST PH のフットプリントのままで、PH(C265102)では Grove のプラグが挿さらず(2026-10-17 実物)、HY2.0(C722729)はパッドが合わない。発注するときに直す。`station/shapes.py` の `GROVE_*` は PH の寸法のまま(sw130 の発注済みの加工図が使う)で、HY2.0 は `HY20_*`。 **HY2.0(C722729)の 1 番パッドには Grove ケーブルの黒(GND)が来る**(M5 のケーブルはストレートで 黒・赤・黄・白 = GND・5V・SDA(G2)・SCL(G1))。v0.57 までの print_b の J6 / Unit P の J2 は 1 番を信号にしていて電源ごと逆だった(2026-10-29 実機)。v0.58 で J6 = 1:GND 2:5V 3:G38 4:G39、J2 = 1:GND 2:5V 3:TX 4:RX。PH のまま残る基板を HY2.0 に替えるときも同じ並びにする。
-- BOM の元データは vein-base が `pcb/jlc_bom.csv`、station 基板が `pcb/station_board/jlc_bom.csv`、指静脈 Unit の基板が `pcb/vein_unit_board/jlc_bom.csv`(どれも LCSC 品番入り)。`fab/` は CI の出力先。
+- BOM の元データは vein-base が `pcb/jlc_bom.csv`、station 基板が `pcb/station_board/jlc_bom.csv`、指静脈 Unit の基板が `pcb/vein_unit_board/jlc_bom.csv`、FP001S テスト基板が `pcb/fp001s_test_board/jlc_bom.csv`(どれも LCSC 品番入り)。`fab/` は CI の出力先。
+- FP001S テスト基板(`pcb/fp001s_test_board/build_board.py`、t1、CI で `fab/fp001s/`): Grow FP001S を PC で評価するための基板。USB-C 2 口(J1 = 電源のみ、J2 = データで VBUS は未接続)、CH334F ハブ → FP001S の UVC と CH340C の UART、AMS1117 で 3.3 V、J3 = SH1.0 6P。J3 のピン順はモジュール側の 1..6 で、ケーブルが反転なら `SH_REVERSED`(発注前に実物で確認)。U1 のタブ(3V3)の周りに両面の 3V3 の放熱エリア(`U1_HEAT`)。freerouting 2.4.1 は Java 25 が要る(class file 69)。
 - フットプリントは lib nickname 付きで置き、`build_pcb.py` がプロジェクトローカルの `fp-lib-table` を書き出す(DRC の lib_footprint_* 警告対策)。標準から変えたフットプリントは `pcb/vein_base.pretty/` に置く(例: 2.4 mm の M2 穴)。
 - `pcb/vein_base.kicad_pcb` は `build_pcb.py` の出力。手で編集せず、スクリプトを直す。
 
@@ -35,7 +36,7 @@ edit shared parts there.
 ローカルに KiCad が無い前提。検証は PR の CI(`build` ジョブ)で行う。手元でできるのは構文チェックだけ:
 
 ```sh
-python -c "import ast; [ast.parse(open(f, encoding='utf-8').read()) for f in ['pcb/build_pcb.py','pcb/station_board/build_board.py','pcb/station_esp_board/build_board.py','pcb/kicad_ses.py','case/build_case.py','tools/build_viewer.py','tools/make_jlc_cpl.py','station/build_station.py','station/build_station_sw.py','station/build_station_sw75.py','station/build_station_sw130.py','station/build_station_print.py','station/build_vein_unit_print.py','station/shapes.py','pcb/vein_unit_board/build_board.py','tools/check_cable_order.py']]"
+python -c "import ast; [ast.parse(open(f, encoding='utf-8').read()) for f in ['pcb/build_pcb.py','pcb/station_board/build_board.py','pcb/station_esp_board/build_board.py','pcb/kicad_ses.py','case/build_case.py','tools/build_viewer.py','tools/make_jlc_cpl.py','station/build_station.py','station/build_station_sw.py','station/build_station_sw75.py','station/build_station_sw130.py','station/build_station_print.py','station/build_vein_unit_print.py','station/shapes.py','pcb/vein_unit_board/build_board.py','pcb/fp001s_test_board/build_board.py','tools/check_cable_order.py']]"
 ```
 
 CI(`.github/workflows/build.yml`)の中身: `build_pcb.py` → kicad-cli で gerber / drill / pos / 原寸 PDF / STEP → `check_drc.py`(違反があれば fail)→ 同様に `pcb/station_board/build_board.py` から station 基板の gerber / drill / pos / CPL / DRC(`silk_edge_clearance` はこの基板だけ無視)→ `build_case.py` → `build_viewer.py`(ケースと部品・VoiceS3R の干渉が 0.01 mm³ を超えたら fail)→ `station/build_station.py`(筐体とモジュール・プラグ・ケーブルの干渉で fail)。DRC の違反と干渉チェックの失敗は設計の問題なので、スクリプト側で握りつぶさない。
