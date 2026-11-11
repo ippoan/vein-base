@@ -64,7 +64,11 @@ def prune_dangling(b, tracks):
                 net, lay = t.GetNetCode(), t.GetLayer()
                 if any(o.GetNetCode() == net and o.IsOnLayer(lay) and o.HitTest(p) for o in b.GetPads()):
                     continue
-                if any(o.m_Uuid.AsString() != me and o.GetNetCode() == net and o.IsOnLayer(lay) and o.HitTest(p, 1)
+                # a via under it, or another track's end on it: an end that only lies inside another track's copper
+                # is not connected for DRC (track_dangling; print_b v0.63 had a 0.08 stub ending inside a 0.3 track)
+                if any(o.m_Uuid.AsString() != me and o.GetNetCode() == net and o.IsOnLayer(lay) and
+                       (o.HitTest(p, 1) if isinstance(o, pcbnew.PCB_VIA) else
+                        any((q - p).EuclideanNorm() <= 1000 for q in (o.GetStart(), o.GetEnd())))
                        for o in b.GetTracks()):
                     continue
                 bad.append(t)

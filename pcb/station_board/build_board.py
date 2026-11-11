@@ -255,11 +255,17 @@ if PRINT_B:
     # H9 (v0.55, the user's, 2026-10-29: "the same M2 hole"): the VoiceS3R's screw (M2 pan head up from under the board
     # into its M2 hole at its centre), as the others' hole and pad; v0.50..v0.54 had a 4.8 cut-out there from the
     # stepped post v0.49 had (and a washer over it)
-    HOLES_NOCRT = [(21.8, 0.5), (AX, AY)]
+    # v0.63 (the user's, 2026-11-11): no H8. The DB9 goes 1.0 further out (DB9_OUT) and its flange would sit on H8's
+    # nut, which cannot go further +x (the floor's countersink). The number stays free so H9..H11 keep theirs
+    HOLES_NOCRT = [None, (AX, AY)]
     # H10 / H11 (v0.56): with H5, the legs of the hood's shelf over the right column's front (the NFC Unit on it),
     # screwed up from under the floor through the board (concept_b's NFC_LEGS)
     HOLES_NOCRT += [(21.8, -43.5), (21.8, -30.3)]
-    DB9_X = X1 - 6.0                              # its flange: the shell (6.0, shapes.DB9_SHELL_L) out to the edge
+    # its flange: the shell (6.0, shapes.DB9_SHELL_L) out to the edge and DB9_OUT past it (v0.63, the user's,
+    # 2026-11-11: the real B took a hard push to plug the serial cable in, its plug's face flush with the edge, the
+    # hood's shelf and NFC pad and the VoiceS3R's face; concept_b's DB9_OUT_B)
+    DB9_OUT = 1.0
+    DB9_X = X1 - 6.0 + DB9_OUT
     DB9_PIN_FACE = 10.94                          # the footprint's own (v0.47; 7.70 put the DB9 3.24 out past here)
     # J3's pads from -y to +y on 3V3 / GND / G5 (RXD) / G6 (TXD): the module's 9P 3..6 (red, black, green, yellow) run
     # -x to +x along its end face (seen from the front, window up, pin 1 on the left = -x); going -y and turning left
@@ -443,7 +449,10 @@ if RS232:  # print_c: none of these
 for i, (x, y) in enumerate(HOLES, 1):
     load(('vein_base.pretty' if HOLE_FP.endswith('Crt2.3') else 'MountingHole.pretty'), HOLE_FP, f'H{i}',
          'M3 spacer' if HOLE_FP.endswith('M3') else 'M2 screw', x, y, local=HOLE_FP.endswith('Crt2.3'))
-for i, (x, y) in enumerate(HOLES_NOCRT, len(HOLES) + 1):
+for i, h in enumerate(HOLES_NOCRT, len(HOLES) + 1):
+    if h is None:          # (a number left free: print_b's H8 from v0.63)
+        continue
+    x, y = h
     load('vein_base.pretty', 'MountingHole_2.2mm_M2_Pad_NoCrt', f'H{i}', 'M2 screw', x, y, local=True)
 for i, (x, y) in enumerate(POSTS, 1):
     load('MountingHole.pretty', POST_FP, f'P{i}', 'post (vein module)', x, y)
