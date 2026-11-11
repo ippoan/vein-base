@@ -26,12 +26,21 @@ jobs:
       - name: Read version
         run: echo "VER=$(cat VERSION)" >> "$GITHUB_ENV"
 
-      # KiCad 7 from apt, kept by cache-apt-pkgs-action (bump version to refetch the packages)
+      # The runner's apt lists go stale: on a cache miss the action installed from them and got 404s
+      # (python3-pil, 2026-11-11), then saved an empty cache under the key. Refresh the lists first.
+      - name: apt-get update
+        run: sudo apt-get update -qq
+
+      # KiCad 7 from apt, kept by cache-apt-pkgs-action (bump version to refetch the packages; version 1's
+      # cache holds no packages since the 2026-11-11 failure)
       - name: Install KiCad 7
         uses: awalsh128/cache-apt-pkgs-action@v1.6.3
         with:
           packages: kicad kicad-footprints fonts-ipaexfont-gothic
-          version: 1
+          version: 2
+
+      - name: Check KiCad is installed
+        run: kicad-cli version && python3 -c "import pcbnew; print(pcbnew.Version())"
 
       - name: Cache pip downloads
         uses: actions/cache@v4
