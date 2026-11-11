@@ -100,6 +100,15 @@ NFC Unit を箱の外に置き(Grove ケーブルで J6 へ)、SW-75B(50 × 30 �
 
 本体を CoreS3 SE に替え、RS232M Module 13.2(アルコールチェッカー FC-1200 用)・NFC・指静脈を収める版。LAN は使わず、USB 1 本で Windows PC につなぐ。`station/build_station_se.py` が筐体と 3D プレビュー(https://ippoan.github.io/vein-base/station-se/)を作る。CoreS3 SE には PORT.B のコネクタが無いので、指静脈の UART(G8/G9)は RS232M の下に挿す M-Bus 分岐基板から取り出す。CoreS3 SE と Unit NFC は M5Stack 公式 STL([m5stack/M5_Hardware](https://github.com/m5stack/M5_Hardware)、MIT)を commit 固定で取得して表示とポート位置に使う(`station/cad/`、git 管理外)。CoreS3 SE の PWR・USB-C・PORT.A はすべて左側面にある。指静脈モジュールの外形は公式値(コネクタ位置は未確定)。RS232M・分岐基板は仮の箱。計画は #14。
 
+## FP001S テスト基板(`pcb/fp001s_test_board`、t1)
+
+Grow の顔・手のひら静脈認証モジュール FP001S を PC で試すための 42 × 32 mm の基板。指静脈の置き換えではなく、FP001S の評価用(電源が 400 mA 要り、手をかざす位置合わせが要るので Vein Station には採らない判断、2026-11-11)。
+
+- J1(USB-C、電源専用): USB 充電器から 5 V。AMS1117-3.3 で FP001S と CH340C の 3.3 V を作る(PC の USB ポートから 400 mA を取らない)。
+- J2(USB-C、データ): PC へ。CH334F のハブ経由で、ポート 1 = FP001S の USB(UVC カメラ、MJPEG 320 × 240、PotPlayer で映る)、ポート 2 = CH340C(COM ポート、115200 8N1、Grow の Test Demo)。J2 の VBUS はどこにもつながない(PC と充電器の 5 V を混ぜない)。J1 に電源が無いとハブも動かない。
+- J3(SH 1.0 6P、SM06B-SRSS-TB): FP001S のケーブル。1 = 3V3、2 = TX(モジュールの出力)、3 = RX、4 = GND、5 = D-、6 = D+(マニュアル 1.3.2 の並び)。**発注前に付属ケーブルが 1 番 → 1 番か 1 番 → 6 番(反転)かを実物で確認し、反転なら `build_board.py` の `SH_REVERSED = True`**(逆だとモジュールの GND に 3.3 V が入る)。
+- 配線は freerouting 2.4.1 の `fp001s_test_board.ses`(`build_board.py dsn` → freerouting → `.ses`)。CI で `fab/fp001s/` にガーバー・CPL・BOM・DRC。QFN-24 / SOT-23-6 の CPL 補正は他の基板からの類推なので、JLC の実装プレビューで向きを確かめる。
+
 ## フォルダ構成
 
 | パス | 内容 |
@@ -111,6 +120,7 @@ NFC Unit を箱の外に置き(Grove ケーブルで J6 へ)、SW-75B(50 × 30 �
 | `pcb/station_board/jlc_bom.csv` | station 基板の JLCPCB 用 BOM の元データ |
 | `pcb/station_esp_board/jlc_bom.csv` | station ESP 基板(VoiceS3R の回路を載せた版、PF 用・SW 用で共通)の JLCPCB 用 BOM の元データ |
 | `pcb/station_esp_board/jlc_bom_sw75.csv` | 同じく SW-75B 用(0402 部品)の BOM |
+| `pcb/fp001s_test_board/jlc_bom.csv` | FP001S テスト基板の JLCPCB 用 BOM の元データ |
 | `fab/` | CI の出力先(git 管理外)。JLCPCB 発注用(ガーバー zip、BOM、CPL)、原寸の確認用 PDF、基板の STEP |
 | `tools/` | CI 用スクリプト(DRC チェック、JLC 用 CPL 変換、3D プレビュー生成と干渉チェック) |
 

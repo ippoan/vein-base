@@ -24,3 +24,7 @@ pcb/station_esp_board/fp-lib-table
 
 # 見積書・受信メールなど個人情報を含む手元の書類 (git に入れない)
 private/
+pcb/fp001s_test_board/*.kicad_pcb
+pcb/fp001s_test_board/*.kicad_pro
+pcb/fp001s_test_board/*.dsn
+pcb/fp001s_test_board/fp-lib-table
