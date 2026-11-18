@@ -170,6 +170,7 @@ jobs:
           kicad-cli pcb export drill --format excellon --excellon-separate-th -o $D/gerber/ $B
           kicad-cli pcb export pos --format csv --units mm --side both -o $D/pos.csv $B
           kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o $D/fp001s_test_board_v${VER}_fitcheck_1to1.pdf $B
+          kicad-cli pcb export step --subst-models -o $D/fp001s_test_board_v${VER}_pcb.step $B
           (cd $D/gerber && zip -q ../fp001s_test_board_v${VER}_gerbers.zip *)
           python3 tools/make_jlc_cpl.py --pos $D/pos.csv --bom pcb/fp001s_test_board/jlc_bom.csv --prefix fp001s_test_board_v \
             --outdir $D --corrections pcb/fp001s_test_board/jlc_cpl_corrections.csv
@@ -211,6 +212,9 @@ jobs:
       - name: Build Vein Unit P (finger vein module alone in a printed box, MJF PA12) 3D preview + interference check
         run: python3 station/build_vein_unit_print.py
 
+      - name: Build FP001S USB box (the FP001S + its USB board in a printed box, MJF PA12) 3D preview + interference check
+        run: python3 station/build_fp001s_print.py
+
       # parts that passed are remembered by the sha256 of their bytes (and of the checker and the limit): an unchanged
       # STL is skipped, everything else is checked in parallel (tools/check_thickness.py --cache)
       - name: Restore the wall thickness results
@@ -251,6 +255,7 @@ jobs:
             site/station-print-b/*
             site/station-print-c/*
             site/vein-unit-print/*
+            site/fp001s-print/*
             fab/vein_unit/*
             fab/vein_unit_p/*
             fab/fp001s/*
