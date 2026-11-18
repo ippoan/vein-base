@@ -21,15 +21,15 @@ import cadquery as cq
 from shapes import (ROOT, VER, box, rbox, cyl_z, union, write_page, shell_and_lid, check, T_WALL, T_FLOOR, T_TOP,
                     LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH, RIB_LID)
 
-REV = 'fp2'
-# ---- shared with pcb/fp001s_test_board/build_board.py (t2): outline, holes, part places. Keep the two together -------
-BRD = (-21.0, 21.0, -16.0, 16.0)
-HOLES = [(sx * 18.5, sy * 13.5) for sx in (-1, 1) for sy in (-1, 1)]
-J1 = (-10.0, -12.95)                     # USB-C (HRO TYPE-C-31-M-12), footprint origin
-J3 = (0.0, 12.6)                         # SH 1.0 6P horizontal (SM06B-SRSS-TB), turned 180, opening +y
-U4 = (6.0, 3.5)                          # CH340C SOIC-16, turned 90 (long side along x)
-U3, Y1 = (-8.0, 1.0), (-3.5, 1.0)        # CH334F QFN-24 4x4, 12 MHz 3225
-U1, L1, C9 = (12.0, -3.5), (17.0, -3.0), (15.5, 6.0)   # SY8089 SOT-23-5, SWPA4020 4x4, 220 uF 3528
+REV = 'fp3'
+# ---- shared with pcb/fp001s_test_board/build_board.py (t3): outline, holes, part places. Keep the two together -------
+BRD = (-27.0, 27.0, -17.0, 17.0)
+HOLES = [(sx * 24.5, sy * 14.5) for sx in (-1, 1) for sy in (-1, 1)]
+J1 = (-16.5, -13.95)                     # USB-C (HRO TYPE-C-31-M-12), footprint origin
+J3 = (-16.0, 13.6)                       # SH 1.0 6P horizontal (SM06B-SRSS-TB), turned 180, opening +y
+U6, Y106 = (2.0, 3.0), (2.0, -9.4)       # RP2354A QFN-60 7x7 (RP) and its 12 MHz 3225 (the minimal design's X1)
+U3, Y1 = (-15.0, 0.0), (-10.5, 0.0)      # CH334F QFN-24 4x4, 12 MHz 3225
+U1, L1, C9 = (18.5, -3.5), (23.5, -3.0), (22.0, 6.0)   # SY8089 SOT-23-5 (U5), SWPA4020 4x4 (L2), 220 uF 3528
 # ----------------------------------------------------------------------------------------------------------------------
 GAP = 0.3
 BOSS_D, BOSS_H, PILOT = 5.0, 2.5, 1.6    # M2 x 4 tapping: 1.6 board + 2.4 into the boss (2.5); the pilot from z -0.4, 1.2 of floor left
@@ -39,11 +39,11 @@ ZBT = ZB + 1.6
 FP_FRONT, FP_FLANGE, FP_REAR = (18.9, 1.8), (20.9, 1.0), (18.8, 3.4)
 FIT = 0.2                                # the holes / U's over the module's diameters (radius + FIT)
 # J1's receptacle overhangs the board's -y edge (courtyard to -17.1): the back wall's inside 0.3 past its front
-J1_FRONT = -16.85
+J1_FRONT = J1[1] - 3.9                   # the receptacle's front (t2: -16.85 at J1 y -12.95)
 USB_PLUG = (13.0, 7.4)                   # the plug's overmould through the back wall (w x h, rounded), from J1's face
 # J3's mated plug and wires: out of the receptacle's front (+y) at the board's edge to PLUG_END, then on under the
 # module to its socket on its back (the module's underside; the cable is laid by hand, only the room is kept)
-PLUG_END = 20.5
+PLUG_END = BRD[3] + 4.5                  # the mated plug and the wires' first bend past the board's edge
 CABLE_ROOM = 2.0                         # over the plug for the wires' bend, under the module
 xi0, xi1, yi0 = BRD[0] - GAP, BRD[1] + GAP, J1_FRONT - GAP
 # the module lies in the lid looking straight up (parallel to the desk, the user's choice 2026-11-18), in front of the
@@ -88,11 +88,14 @@ plug = box(J3[0] - 3.6, J3[0] + 3.6, BRD[3] - 0.1, PLUG_END, ZBT, ZBT + 2.9)
 # of the module where the rest is folded (each ~7 wide, 13 deep, 10 high: a 6-wire ribbon on edge, two turns;
 # clear of the lid's locating rim along the walls)
 run = box(J3[0] - 4.0, J3[0] + 4.0, PLUG_END, FP_C[1] + 3.0, ZBT, ZBT + 2.0)
-band = box(-11.0, 11.0, BRD[3] + 1.0, BRD[3] + 6.0, ZBT + 2.9, Z_REAR)
+band = box(J3[0] - 4.0, 11.0, BRD[3] + 1.0, BRD[3] + 6.0, ZBT + 2.9, Z_REAR)      # J3 (at -x) over to both sides
 POCKET = (11.0, xi1 - 3.0, BRD[3] + 1.0, BRD[3] + 14.0, ZB + 0.1, Z_IN - 0.5)   # x0, x1 (mirrored), y0, y1, z0, z1
-pockets = union(*[box(*sorted((sx * POCKET[0], sx * POCKET[1])), *POCKET[2:]) for sx in (-1, 1)])
+# t3: J3 sits at -x, under the left pocket: that one starts over the plug and the run (the ribbon laid flat there)
+pockets = union(box(POCKET[0], POCKET[1], *POCKET[2:]),
+                box(-POCKET[1], -POCKET[0], POCKET[2], POCKET[3], ZBT + 2.9, POCKET[5]))
 rise = union(run, band, pockets)
-ics = union(box(U4[0] - 4.95, U4[0] + 4.95, U4[1] - 3.0, U4[1] + 3.0, ZBT, ZBT + 1.75),       # SOIC-16 with its leads
+ics = union(box(U6[0] - 3.5, U6[0] + 3.5, U6[1] - 3.5, U6[1] + 3.5, ZBT, ZBT + 0.9),         # RP2354A QFN-60
+            box(Y106[0] - 1.6, Y106[0] + 1.6, Y106[1] - 1.25, Y106[1] + 1.25, ZBT, ZBT + 0.8),
             box(U3[0] - 2.0, U3[0] + 2.0, U3[1] - 2.0, U3[1] + 2.0, ZBT, ZBT + 0.9),
             box(Y1[0] - 1.25, Y1[0] + 1.25, Y1[1] - 1.6, Y1[1] + 1.6, ZBT, ZBT + 0.8),
             box(U1[0] - 1.5, U1[0] + 1.5, U1[1] - 1.4, U1[1] + 1.4, ZBT, ZBT + 1.1))
