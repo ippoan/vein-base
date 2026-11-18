@@ -100,6 +100,16 @@ NFC Unit を箱の外に置き(Grove ケーブルで J6 へ)、SW-75B(50 × 30 �
 
 本体を CoreS3 SE に替え、RS232M Module 13.2(アルコールチェッカー FC-1200 用)・NFC・指静脈を収める版。LAN は使わず、USB 1 本で Windows PC につなぐ。`station/build_station_se.py` が筐体と 3D プレビュー(https://ippoan.github.io/vein-base/station-se/)を作る。CoreS3 SE には PORT.B のコネクタが無いので、指静脈の UART(G8/G9)は RS232M の下に挿す M-Bus 分岐基板から取り出す。CoreS3 SE と Unit NFC は M5Stack 公式 STL([m5stack/M5_Hardware](https://github.com/m5stack/M5_Hardware)、MIT)を commit 固定で取得して表示とポート位置に使う(`station/cad/`、git 管理外)。CoreS3 SE の PWR・USB-C・PORT.A はすべて左側面にある。指静脈モジュールの外形は公式値(コネクタ位置は未確定)。RS232M・分岐基板は仮の箱。計画は #14。
 
+## FP001S の USB 基板(`pcb/fp001s_test_board`、t2)
+
+Grow の顔・手のひら静脈認証モジュール FP001S を、**USB-C 1 本**で PC につなぐ 42 × 32 mm の基板。USB カメラのように挿すだけで、PC からは FP001S のカメラ(UVC)と COM ポート(UART、登録・照合のコマンド)の両方が同時に見え、電源も同じケーブルから取る。t1(USB-C 2 口、電源は充電器から別に)を、2026-11-18 の実機の結果から 1 本にした。
+
+- J1(USB-C): PC へ。VBUS → 5 V、CC は 5.1 kΩ × 2(USB-C のポート・充電器が 5 V を出す)。D+ / D- は USBLC6 → CH334F ハブ。ポート 1 = FP001S の USB(UVC カメラ、MJPEG 最大 960 × 480 15 fps)、ポート 2 = CH340C(COM ポート、115200 8N1)。
+- U1(SY8089、降圧 DC-DC)で 3.3 V。t1 の AMS1117(LDO)をやめた理由: FP001S の 3.3 V 400 mA を LDO で作ると VBUS から 400 mA 取り、USB の 5 V が下がると 3.3 V を保てない。実機で、PC の USB から AMS1117 経由で給電すると、顔を見つけたところで FP001S が再起動した(2026-11-18)。降圧なら VBUS 側は約 290 mA で、ハブと CH340 を足しても約 350 mA と USB 2.0 の 500 mA に収まる見込み(FP001S の 400 mA はマニュアルの値で、未実測)。3.3 V 側に 22 µF × 2 + 220 µF(タンタル)。
+- J3(SH 1.0 6P、SM06B-SRSS-TB): FP001S のケーブル。1 = 3V3、2 = TX(モジュールの出力)、3 = RX、4 = GND、5 = D-、6 = D+(マニュアル 1.3.2 の並び)。モジュールに付属のケーブルは片側がバラ線(赤 1・黒 2・黄 3・緑 4 = GND・青 5・白 6、2026-11-18 に実物で確認)なので、両端 SH の 6P ケーブル(1 → 1)を使う。**発注前にケーブルが 1 番 → 1 番か 1 番 → 6 番(反転)かを実物で確認し、反転なら `build_board.py` の `SH_REVERSED = True`**(逆だとモジュールの GND に 3.3 V が入る)。
+- FP001S は**丸いレンズを上、四角い窓を下**に立てる(マニュアル 1.1)。逆さだと顔も手のひらも検出しない(2026-11-18)。
+- 配線は freerouting 2.4.1 の `fp001s_test_board.ses`(`build_board.py dsn` → freerouting → `.ses`)。CI で `fab/fp001s/` にガーバー・CPL・BOM・DRC。CPL 補正は t1 で JLC の実装プレビューで確かめた分(QFN-24 は 270、SOT-23-6 は 270)。t2 で増えた SY8089(SOT-23-5、270 は SOT-23-6 からの類推)・タンタル C9 の極性・L1 は、発注時のプレビューで確かめる。
+
 ## フォルダ構成
 
 | パス | 内容 |
@@ -111,6 +121,7 @@ NFC Unit を箱の外に置き(Grove ケーブルで J6 へ)、SW-75B(50 × 30 �
 | `pcb/station_board/jlc_bom.csv` | station 基板の JLCPCB 用 BOM の元データ |
 | `pcb/station_esp_board/jlc_bom.csv` | station ESP 基板(VoiceS3R の回路を載せた版、PF 用・SW 用で共通)の JLCPCB 用 BOM の元データ |
 | `pcb/station_esp_board/jlc_bom_sw75.csv` | 同じく SW-75B 用(0402 部品)の BOM |
+| `pcb/fp001s_test_board/jlc_bom.csv` | FP001S の USB 基板の JLCPCB 用 BOM の元データ |
 | `fab/` | CI の出力先(git 管理外)。JLCPCB 発注用(ガーバー zip、BOM、CPL)、原寸の確認用 PDF、基板の STEP |
 | `tools/` | CI 用スクリプト(DRC チェック、JLC 用 CPL 変換、3D プレビュー生成と干渉チェック) |
 
