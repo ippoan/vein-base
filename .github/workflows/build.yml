@@ -189,6 +189,9 @@ jobs:
           kicad-cli pcb export pos --format csv --units mm --side both -o $D/pos.csv $B
           kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o $D/fp008_board_v${VER}_fitcheck_1to1.pdf $B
           kicad-cli pcb export step --subst-models -o $D/fp008_board_v${VER}_pcb.step $B
+          # the same with the parts: KiCad library models fetched for this board (the CI has no model package)
+          python3 tools/kicad_3d_models.py $B $RUNNER_TEMP/fp008-3d
+          kicad-cli pcb export step -f -o $D/fp008_board_v${VER}_full.step $RUNNER_TEMP/fp008-3d/fp008_board_3d.kicad_pcb
           (cd $D/gerber && zip -q ../fp008_board_v${VER}_gerbers.zip *)
           python3 tools/make_jlc_cpl.py --pos $D/pos.csv --bom pcb/fp008_board/jlc_bom.csv --prefix fp008_board_v \
             --outdir $D --corrections pcb/fp008_board/jlc_cpl_corrections.csv
@@ -233,6 +236,9 @@ jobs:
       - name: Build FP001S USB box (the FP001S + its USB board in a printed box, MJF PA12) 3D preview + interference check
         run: python3 station/build_fp001s_print.py
 
+      - name: Build FP008 USB board 3D preview (from the STEP with parts)
+        run: python3 pcb/fp008_board/build_3d.py
+
       # parts that passed are remembered by the sha256 of their bytes (and of the checker and the limit): an unchanged
       # STL is skipped, everything else is checked in parallel (tools/check_thickness.py --cache)
       - name: Restore the wall thickness results
@@ -274,6 +280,7 @@ jobs:
             site/station-print-c/*
             site/vein-unit-print/*
             site/fp001s-print/*
+            site/fp008-board/*
             fab/vein_unit/*
             fab/vein_unit_p/*
             fab/fp001s/*
