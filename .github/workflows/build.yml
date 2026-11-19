@@ -176,6 +176,24 @@ jobs:
             --outdir $D --corrections pcb/fp001s_test_board/jlc_cpl_corrections.csv
           python3 tools/check_drc.py --board $B --report $D/drc.rpt --ignore silk_edge_clearance
 
+      - name: Build FP008 USB board (KiCad) + DRC
+        # the Grow FP008 face / palm vein module on a PC over one USB-C, no MCU (pcb/fp008_board -> fab/fp008/): a CH334F
+        # hub to the module's UVC, a CH340C UART (CTS = the module's IRQ) and a PCM2704C USB speaker (NS4150B + SMD
+        # speaker). silk_edge_clearance: the USB-C outline silk runs off the board edge, as on the FP001S board.
+        run: |
+          cd pcb/fp008_board && python3 build_board.py && cd ../..
+          B=pcb/fp008_board/fp008_board.kicad_pcb D=fab/fp008
+          mkdir -p $D/gerber
+          kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o $D/gerber/ $B
+          kicad-cli pcb export drill --format excellon --excellon-separate-th -o $D/gerber/ $B
+          kicad-cli pcb export pos --format csv --units mm --side both -o $D/pos.csv $B
+          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o $D/fp008_board_v${VER}_fitcheck_1to1.pdf $B
+          kicad-cli pcb export step --subst-models -o $D/fp008_board_v${VER}_pcb.step $B
+          (cd $D/gerber && zip -q ../fp008_board_v${VER}_gerbers.zip *)
+          python3 tools/make_jlc_cpl.py --pos $D/pos.csv --bom pcb/fp008_board/jlc_bom.csv --prefix fp008_board_v \
+            --outdir $D --corrections pcb/fp008_board/jlc_cpl_corrections.csv
+          python3 tools/check_drc.py --board $B --report $D/drc.rpt --ignore silk_edge_clearance
+
       - name: Vein cable order (9P 3..6 -> 4P 1..4 straight, no twist) on print_b's / print_c's J3 and Vein Unit P's J1
         run: python3 tools/check_cable_order.py
 
@@ -259,6 +277,7 @@ jobs:
             fab/vein_unit/*
             fab/vein_unit_p/*
             fab/fp001s/*
+            fab/fp008/*
 
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
