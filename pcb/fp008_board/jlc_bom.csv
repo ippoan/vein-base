@@ -5,7 +5,7 @@ Comment,Designator,Footprint,LCSC Part #,Note
 "CH340C USB-UART (SOP-16, clock inside)",U4,SOIC-16_3.9x9.9mm_P1.27mm,C84681,VCC = V3 = 3V3; CTS# = the FP008's IRQ
 "XC6206P332MR 3.3V 200mA LDO (SOT-23)",U1,SOT-23,C5446,Basic part; 5V -> 3V3 for U4 and the FP008's sensor; check pin 1 (VSS) in the assembly preview
 "12MHz crystal 20pF SMD3225 (YXC X322512MSB4SI)",Y1,Crystal_SMD_3225-4Pin_3.2x2.5mm,C9002,Basic part; no load caps (inside the CH334)
-"Molex PicoBlade 53261-0871 8P 1.25mm right angle",J3,Molex_PicoBlade_53261-0871_1x08-1MP_P1.25mm_Horizontal,C293349,FP008 cable; opening on the +y edge; pin 1 = 5V (check the cable before ordering)
+"Molex PicoBlade 53261-0871 8P 1.25mm right angle",J3,Molex_PicoBlade_53261-0871_1x08-1MP_P1.25mm_Horizontal,C293349,FP008 cable; top centre, opening toward the cable slot; pin 1 = 5V (check the cable before ordering)
 "Red LED 0603 (KT-0603R)",D1,LED_0603_1608Metric,C2286,Basic part; 3V3 power
 "100nF 50V X7R 0603","C3,C4",C_0603_1608Metric,C14663,Basic part
 "1uF 50V X5R 0603","C1,C6,C7",C_0603_1608Metric,C15849,Basic part
