@@ -16,11 +16,15 @@ audio on the board). (2026-11-19, user decisions.)
   - J3  Molex PicoBlade 53261-0871 (MX1.25 8P, horizontal, opening +y) for the FP008 cable, the module's pins
         (manual 1.3.2): 1 VCC 4.5-15 V (5V), 2 GND, 3 TXD (module out), 4 RXD (module in), 5 IRQ, 6 sensor VCC (3V3),
         7 D+, 8 D-. CHECK THE CABLE BEFORE ORDERING (pin 1 on pin 1).
-  - D1 + R5: 3V3 power LED. H1..H4: M2 holes in the corners (placeholders: the board is to sit behind the FP008 on the
-        module's own screws once their spacing is measured).
+  - D1 + R5: 3V3 power LED.
+  f3 (2026-11-19, user): the board is the FP008's back lid. Its outline is the module's rear body (manual 1.3.1:
+  55.45 x 34.45, drawn as a rounded rectangle, corners R12 -- the real corner shape is to be checked), screwed to the
+  module's four rear screw holes H1..H4 at (+-18.35, +-11.95) (read off the manual's rear drawing, ~36.7 x 23.9 apart;
+  measure before ordering). All parts on the outside (F, facing away from the module); J3's cable goes in through the
+  slot SLOT just past J3's opening to the module's own 8P socket (top centre of its board, opening up).
   5V load: FP008 200 mA + hub / CH340 ~45 mA + whatever is on J2.
-Board coords: origin = the f1 44 x 28 board's centre (the board runs to x 29 for J2), J1 (USB-C, PC) and J2 (USB-C,
-device) on the -y edge, J3 on the +y edge at -x, U4 at +x.
+Board coords: origin = the FP008's centre (seen from behind, its UP up), J1 (USB-C, PC) and J2 (USB-C, device) on the
+-y edge, J3 at the top centre with the cable slot above it, U4 at +x.
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
@@ -33,14 +37,34 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..'))
 from kicad_ses import import_ses  # noqa: E402
 
-REV = 'f2'
+REV = 'f3'
 NAME = 'fp008_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
 mm = pcbnew.FromMM
 
-X0, X1, Y0, Y1 = -22.0, 29.0, -14.0, 14.0          # 51 x 28
-HOLES = [(x, sy * 11.5) for x in (X0 + 2.5, X1 - 2.5) for sy in (-1, 1)]
+X0, X1, Y0, Y1 = -27.5, 27.5, -17.0, 17.0          # the FP008's rear body 55.45 x 34.45, a hair inside
+RC = 12.0                                           # corner radius (guess from the drawing)
+HOLES = [(sx * 18.35, sy * 11.95) for sx in (-1, 1) for sy in (-1, 1)]   # the module's rear screw holes (manual 1.3.1)
+SLOT = (-6.0, 6.0, 13.6, 15.4)                      # cable slot (x0, x1, y0, y1), R0.9 ends: J3's cable into the module
+
+
+def outline(n=10):
+    """The rounded rectangle as a closed list of points (anticlockwise)."""
+    pts = []
+    for cx, cy, a0 in ((X1 - RC, Y0 + RC, -90), (X1 - RC, Y1 - RC, 0), (X0 + RC, Y1 - RC, 90), (X0 + RC, Y0 + RC, 180)):
+        for k in range(n + 1):
+            a = math.radians(a0 + 90 * k / n)
+            pts.append((cx + RC * math.cos(a), cy + RC * math.sin(a)))
+    return pts
+
+
+def inside(x, y, m=0.0):
+    """(x, y) at least m inside the outline and outside the slot."""
+    cx = min(max(x, X0 + RC), X1 - RC); cy = min(max(y, Y0 + RC), Y1 - RC)
+    if (x - cx) ** 2 + (y - cy) ** 2 > (RC - m) ** 2 or not (X0 + m <= x <= X1 - m and Y0 + m <= y <= Y1 - m):
+        return False
+    return not (SLOT[0] - m <= x <= SLOT[1] + m and SLOT[2] - m <= y <= SLOT[3] + m)
 POS = {}                                            # ref -> (x, y, rot), overriding the places below
 
 
@@ -108,64 +132,82 @@ def C(ref, value, a, c, x, y, rot=0):
 USB_GND = {'A1': 'GND', 'A12': 'GND', 'B1': 'GND', 'B12': 'GND', 'S1': 'GND'}
 
 # ======== J1 USB-C (the PC; power and data) -> U2 ESD -> U3 hub ========
-J1 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J1', 'USB-C (PC)', -10.0, Y0 + 3.05)
+J1 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J1', 'USB-C (PC)', -7.5, Y0 + 3.05)
 wire(J1, {**USB_GND, 'A5': 'CC1', 'B5': 'CC2', 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V',
           'A6': 'UDP', 'B6': 'UDP', 'A7': 'UDN', 'B7': 'UDN'})
-R('R1', '5.1k', 'CC1', 'GND', -15.5, -3.2, 90)
-R('R2', '5.1k', 'CC2', 'GND', -4.5, -3.2, 90)
-U2 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U2', 'USBLC6-2SC6', -10.0, -3.4, 90)
+R('R1', '5.1k', 'CC1', 'GND', -13.0, -6.2, 90)
+R('R2', '5.1k', 'CC2', 'GND', -4.0, -6.2, 90)
+U2 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U2', 'USBLC6-2SC6', -7.5, -6.4, 90)
 wire(U2, {'1': 'UDP', '6': 'UDP', '3': 'UDN', '4': 'UDN', '2': 'GND', '5': '5V'})
-C('C5', '10uF', '5V', 'GND', -1.5, -9.0, 90)              # VBUS bulk at J1
+C('C5', '10uF', '5V', 'GND', -14.6, -9.6, 90)              # VBUS bulk at J1
 
-U3 = load('Package_DFN_QFN.pretty', 'QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm', 'U3', 'CH334F', -8.0, 4.0, 180)
+U3 = load('Package_DFN_QFN.pretty', 'QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm', 'U3', 'CH334F', -12.0, 2.0, 180)
 wire(U3, {'25': 'GND', '3': 'XO', '4': 'XI', '9': 'SDN', '10': 'SDP', '11': 'FPDM', '12': 'FPDP',
           '7': 'D3N', '8': 'D3P', '14': 'UDN', '15': 'UDP', '19': '5V', '20': 'HUB33'})
-XT = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y1', '12MHz', -3.5, 4.0, 270)
+XT = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y1', '12MHz', -7.5, 2.0, 270)
 wire(XT, {'1': 'XI', '3': 'XO', '2': 'GND', '4': 'GND'})
-C('C1', '1uF', '5V', 'GND', -10.0, 0.5, 0)                # V5 (pins 19 / 20 face -y)
-C('C2', '10uF', 'HUB33', 'GND', -6.5, 0.3, 0)            # VDD33
-C('C3', '100nF', 'HUB33', 'GND', -2.6, 0.4, 90)
+C('C1', '1uF', '5V', 'GND', -14.0, -1.5, 0)                # V5 (pins 19 / 20 face -y)
+C('C2', '10uF', 'HUB33', 'GND', -10.5, -1.7, 0)            # VDD33
+C('C3', '100nF', 'HUB33', 'GND', -6.6, -1.6, 90)
 
 # ======== U4 CH340C (USB-UART) on hub port 2, U1 3.3 V LDO ========
-U4 = load('Package_SO.pretty', 'SOIC-16_3.9x9.9mm_P1.27mm', 'U4', 'CH340C', 9.5, 5.0, 90)
+U4 = load('Package_SO.pretty', 'SOIC-16_3.9x9.9mm_P1.27mm', 'U4', 'CH340C', 8.0, 1.5, 90)
 wire(U4, {'1': 'GND', '2': 'FPRX', '3': 'FPTX', '4': '3V3', '5': 'SDP', '6': 'SDN', '9': 'IRQ', '16': '3V3'})
-C('C4', '100nF', '3V3', 'GND', 9.5, 10.2, 0)
-U1 = load('Package_TO_SOT_SMD.pretty', 'SOT-23', 'U1', 'XC6206P332MR', 9.0, -5.0, 0)
+C('C4', '100nF', '3V3', 'GND', 14.0, 3.5, 90)
+U1 = load('Package_TO_SOT_SMD.pretty', 'SOT-23', 'U1', 'XC6206P332MR', 18.5, -1.0, 0)
 wire(U1, {'1': 'GND', '2': '3V3', '3': '5V'})                              # 1 VSS, 2 VOUT, 3 VIN
-C('C6', '1uF', '5V', 'GND', 6.0, -5.0, 90)
-C('C7', '1uF', '3V3', 'GND', 12.0, 0.0, 0)
-two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', 20.5, 10.0, 0)   # 1 = K, 2 = A
-R('R5', '1k', '3V3', 'LEDA', 17.3, 10.0, 0)
+C('C6', '1uF', '5V', 'GND', 15.6, -1.5, 90)
+C('C7', '1uF', '3V3', 'GND', 21.5, -1.0, 90)
+two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', 21.0, 5.5, 0)   # 1 = K, 2 = A
+R('R5', '1k', '3V3', 'LEDA', 17.5, 5.5, 0)
 
 # ======== J2 USB-C (a device on hub port 3; opening -y beside J1) ========
-J2 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J2', 'USB-C (device)', 18.0, Y0 + 3.05)
+J2 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J2', 'USB-C (device)', 7.5, Y0 + 3.05)
 wire(J2, {**USB_GND, 'A5': 'DCC1', 'B5': 'DCC2', 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V',
           'A6': 'J2P', 'B6': 'J2P', 'A7': 'J2N', 'B7': 'J2N'})
 assert J2.GetOrientationDegrees() == J1.GetOrientationDegrees(), 'J1 / J2 not on the same edge'
-R('R3', '56k', '5V', 'DCC1', 12.5, -3.2, 90)
-R('R4', '56k', '5V', 'DCC2', 23.5, -3.2, 90)
-U5 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U5', 'USBLC6-2SC6', 18.0, -2.8, 0)
+R('R3', '56k', '5V', 'DCC1', 4.0, -6.2, 90)
+R('R4', '56k', '5V', 'DCC2', 13.0, -6.2, 90)
+U5 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U5', 'USBLC6-2SC6', 7.5, -6.4, 90)
 wire(U5, {'1': 'D3P', '6': 'J2P', '3': 'D3N', '4': 'J2N', '2': 'GND', '5': '5V'})
-C('C9', '10uF', '5V', 'GND', 26.5, -3.5, 90)                # VBUS at J2
+C('C9', '10uF', '5V', 'GND', 14.6, -9.6, 90)                # VBUS at J2
 
 # ======== J3 FP008 (PicoBlade 8P, opening +y) ========
 J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53261-0871_1x08-1MP_P1.25mm_Horizontal', 'J3', 'FP008 (MX1.25 8P)',
-          -8.0, Y1 - 3.0, 180)
+          0.0, 9.0, 180)
 FP_PINS = ['5V', 'GND', 'FPTX', 'FPRX', 'IRQ', '3V3', 'FPDP', 'FPDM']    # the module's pins 1..8
 wire(J3, {**{str(i + 1): n for i, n in enumerate(FP_PINS)}, 'MP': 'GND'})
-C('C8', '10uF', '5V', 'GND', 2.0, 11.0, 90)               # at J3: the module's 200 mA
+C('C8', '10uF', '5V', 'GND', 11.5, 9.5, 90)               # at J3: the module's 200 mA
 sig = [xy(p.GetPosition())[1] for p in J3.Pads() if p.GetNumber() != 'MP']
 mp = [xy(p.GetPosition())[1] for p in J3.Pads() if p.GetNumber() == 'MP']
 assert max(sig) < min(mp), 'J3 opening is not +y'
 
 for i, (x, y) in enumerate(HOLES, 1):
+    assert inside(x, y, 2.4), ('hole too near the edge', x, y)
     load('MountingHole.pretty', 'MountingHole_2.2mm_M2', f'H{i}', 'M2', x, y)
 
 # ---- outline
-EDGE = [(X0, Y0), (X1, Y0), (X1, Y1), (X0, Y1)]
-for (a, c), (d, e) in zip(EDGE, EDGE[1:] + EDGE[:1]):
-    s = pcbnew.PCB_SHAPE(b); s.SetShape(pcbnew.SHAPE_T_SEGMENT)
-    s.SetStart(P(a, c)); s.SetEnd(P(d, e)); s.SetLayer(pcbnew.Edge_Cuts); s.SetWidth(mm(0.1)); b.Add(s)
+def edge_loop(pts):
+    for (a, c), (d, e) in zip(pts, pts[1:] + pts[:1]):
+        sh = pcbnew.PCB_SHAPE(b); sh.SetShape(pcbnew.SHAPE_T_SEGMENT)
+        sh.SetStart(P(a, c)); sh.SetEnd(P(d, e)); sh.SetLayer(pcbnew.Edge_Cuts); sh.SetWidth(mm(0.1)); b.Add(sh)
+
+
+edge_loop(outline())
+r = (SLOT[3] - SLOT[2]) / 2                         # the slot: a stadium
+yc = (SLOT[2] + SLOT[3]) / 2
+slot = [(SLOT[1] - r + r * math.cos(math.radians(a)), yc + r * math.sin(math.radians(a))) for a in range(-90, 91, 15)]
+slot += [(SLOT[0] + r + r * math.cos(math.radians(a)), yc + r * math.sin(math.radians(a))) for a in range(90, 271, 15)]
+edge_loop(slot)
+for fp in b.GetFootprints():                        # every part inside the outline (courtyard corners)
+    cy_ = fp.GetCourtyard(pcbnew.F_CrtYd)
+    if cy_.OutlineCount() and not fp.GetReference().startswith(('J1', 'J2', 'H')):
+        bb_ = cy_.BBox()
+        for q in (bb_.GetOrigin(), bb_.GetEnd()):
+            for qx in (bb_.GetLeft(), bb_.GetRight()):
+                for qy in (bb_.GetTop(), bb_.GetBottom()):
+                    x_, y_ = xy(pcbnew.VECTOR2I(qx, qy))
+                    assert inside(x_, y_, 0.2), (fp.GetReference(), x_, y_)
 
 
 def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
@@ -177,14 +219,14 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 
 # silk: 1 character ~ 0.8 x size wide, centred: keep both ends inside the outline
-SILK = [('< PC   USB-C   DEVICE >', 4.0, -12.6, 0.8), ('J3 FP008 MX1.25 8P', 4.0, -7.6, 0.7),
-        ('1:5V 2:G 3:TX 4:RX', 4.0, -8.7, 0.7), ('5:IRQ 6:3V3 7:D+ 8:D-', 4.0, -9.8, 0.7)]
+SILK = [('PC  USB-C  DEVICE', 0.0, -3.5, 0.6)]
 for t, x, y, sz in SILK:
-    assert X0 + 0.3 <= x - len(t) * 0.4 * sz and x + len(t) * 0.4 * sz <= X1 - 0.3, t
+    assert inside(x - len(t) * 0.4 * sz, y, 0.3) and inside(x + len(t) * 0.4 * sz, y, 0.3), t
     text(t, x, y, size=sz)
 VERSION = open(os.path.join(HERE, '..', '..', 'VERSION')).read().strip()
-text(f'FP008 USB {REV} v{VERSION}', 0, 0, layer=pcbnew.B_SilkS)
-text('CHECK THE CABLE: PIN 1 = 5V', 0, -2.0, layer=pcbnew.B_SilkS, size=0.8)
+text(f'FP008 USB {REV} v{VERSION}', 0, 2.0, layer=pcbnew.B_SilkS)
+text('CHECK THE CABLE: PIN 1 = 5V', 0, 0.0, layer=pcbnew.B_SilkS, size=0.8)
+text('J3 1:5V 2:G 3:TX 4:RX 5:IRQ 6:3V3 7:D+ 8:D-', 0, -1.6, layer=pcbnew.B_SilkS, size=0.7)
 
 
 def stitch(b, pitch=2.5, clr=0.25):
@@ -199,7 +241,7 @@ def stitch(b, pitch=2.5, clr=0.25):
         x = X0 + 1.5
         while x < X1 - 1.0:
             q = P(x, y)
-            ok = (all((x - hx) ** 2 + (y - hy) ** 2 > 3.0 ** 2 for hx, hy in HOLES)
+            ok = (inside(x, y, 1.0) and all((x - hx) ** 2 + (y - hy) ** 2 > 3.0 ** 2 for hx, hy in HOLES)
                   and not any(c.OutlineCount() and c.Contains(q) for c in crt)
                   and not any(s.Collide(q, mm(r)) for s in items))
             if ok:
@@ -279,7 +321,7 @@ else:
     for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
         z = pcbnew.ZONE(b); z.SetLayer(layer); z.SetNet(b.FindNet('GND'))
         ol = z.Outline(); ol.NewOutline()
-        for x, y in ((X0 + 0.3, Y0 + 0.3), (X1 - 0.3, Y0 + 0.3), (X1 - 0.3, Y1 - 0.3), (X0 + 0.3, Y1 - 0.3)):
+        for x, y in outline():
             ol.Append(mm(OX + x), mm(OY - y))
         z.SetLocalClearance(mm(0.25)); z.SetMinThickness(mm(0.25)); z.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL)
         z.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_NEVER)    # islands get a via first (below)
