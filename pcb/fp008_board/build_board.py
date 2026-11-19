@@ -6,7 +6,7 @@ audio on the board). (2026-11-19, user decisions.)
   - U3  CH334F (QFN-24 4x4) USB 2.0 hub, self-powered from 5V (V5 -> internal LDO -> VDD33 = HUB33), Y1 12 MHz (load
         caps inside the CH334). Pins (WCH CH334/CH335 datasheet V2.4, table 1-3, column 4F): DMU 14 / DPU 15,
         DM1 11 / DP1 12 -> the FP008's USB (camera), DM2 9 / DP2 10 -> U4, DM3 7 / DP3 8 -> J2, port 4 unused.
-  - J2  USB-C receptacle (a device, e.g. a USB speaker; opening +x) on hub port 3: VBUS = 5V straight (no switch,
+  - J2  USB-C receptacle (a device, e.g. a USB speaker; opening -y, next to J1: both USB on one edge, f2) on hub port 3: VBUS = 5V straight (no switch,
         no fuse), CC1 / CC2 56 k to 5V (R3 / R4, Rp: default USB power), D+ / D- through U5 (USBLC6-2SC6).
         The PC port feeds everything: on a 500 mA USB 2.0 port leave the device ~250 mA.
   - U4  CH340C (SOP-16, clock inside) at 3.3 V: TXD -> FP008 RXD, RXD <- FP008 TXD (115200 8N1), CTS# <- the FP008's
@@ -19,8 +19,8 @@ audio on the board). (2026-11-19, user decisions.)
   - D1 + R5: 3V3 power LED. H1..H4: M2 holes in the corners (placeholders: the board is to sit behind the FP008 on the
         module's own screws once their spacing is measured).
   5V load: FP008 200 mA + hub / CH340 ~45 mA + whatever is on J2.
-Board coords: origin = the f1 44 x 28 board's centre (the board now runs to x 30 for J2), J1 (USB-C, PC) on the -y
-edge at -x, J3 on the +y edge at -x, U4 at +x, J2 (USB-C, device) on the +x edge.
+Board coords: origin = the f1 44 x 28 board's centre (the board runs to x 29 for J2), J1 (USB-C, PC) and J2 (USB-C,
+device) on the -y edge, J3 on the +y edge at -x, U4 at +x.
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
@@ -33,13 +33,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..'))
 from kicad_ses import import_ses  # noqa: E402
 
-REV = 'f1'
+REV = 'f2'
 NAME = 'fp008_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
 mm = pcbnew.FromMM
 
-X0, X1, Y0, Y1 = -22.0, 31.0, -14.0, 14.0          # 53 x 28
+X0, X1, Y0, Y1 = -22.0, 29.0, -14.0, 14.0          # 51 x 28
 HOLES = [(x, sy * 11.5) for x in (X0 + 2.5, X1 - 2.5) for sy in (-1, 1)]
 POS = {}                                            # ref -> (x, y, rot), overriding the places below
 
@@ -133,22 +133,20 @@ C('C4', '100nF', '3V3', 'GND', 9.5, 10.2, 0)
 U1 = load('Package_TO_SOT_SMD.pretty', 'SOT-23', 'U1', 'XC6206P332MR', 9.0, -5.0, 0)
 wire(U1, {'1': 'GND', '2': '3V3', '3': '5V'})                              # 1 VSS, 2 VOUT, 3 VIN
 C('C6', '1uF', '5V', 'GND', 6.0, -5.0, 90)
-C('C7', '1uF', '3V3', 'GND', 12.0, -5.0, 90)
-two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', 14.0, -10.0, 0)   # 1 = K, 2 = A
-R('R5', '1k', '3V3', 'LEDA', 10.8, -10.0, 0)
+C('C7', '1uF', '3V3', 'GND', 12.0, 0.0, 0)
+two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', 20.5, 10.0, 0)   # 1 = K, 2 = A
+R('R5', '1k', '3V3', 'LEDA', 17.3, 10.0, 0)
 
-# ======== J2 USB-C (a device on hub port 3; opening +x) ========
-J2 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J2', 'USB-C (device)', X1 - 3.05, 0.0, 90)
+# ======== J2 USB-C (a device on hub port 3; opening -y beside J1) ========
+J2 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J2', 'USB-C (device)', 18.0, Y0 + 3.05)
 wire(J2, {**USB_GND, 'A5': 'DCC1', 'B5': 'DCC2', 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V',
           'A6': 'J2P', 'B6': 'J2P', 'A7': 'J2N', 'B7': 'J2N'})
-sh = [xy(p.GetPosition())[0] for p in J2.Pads() if p.GetNumber() == 'S1']
-sg = [xy(p.GetPosition())[0] for p in J2.Pads() if p.GetNumber() == 'A5']
-assert min(sh) > sg[0] - 5 and max(sh) > sg[0], 'J2 opening is not +x'
-R('R3', '56k', '5V', 'DCC1', 21.0, -7.0, 90)
-R('R4', '56k', '5V', 'DCC2', 21.0, 7.0, 90)
-U5 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U5', 'USBLC6-2SC6', 19.5, 0.0, 0)
+assert J2.GetOrientationDegrees() == J1.GetOrientationDegrees(), 'J1 / J2 not on the same edge'
+R('R3', '56k', '5V', 'DCC1', 12.5, -3.2, 90)
+R('R4', '56k', '5V', 'DCC2', 23.5, -3.2, 90)
+U5 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U5', 'USBLC6-2SC6', 18.0, -2.8, 0)
 wire(U5, {'1': 'D3P', '6': 'J2P', '3': 'D3N', '4': 'J2N', '2': 'GND', '5': '5V'})
-C('C9', '10uF', '5V', 'GND', 24.0, -9.5, 0)                # VBUS at J2
+C('C9', '10uF', '5V', 'GND', 26.5, -3.5, 90)                # VBUS at J2
 
 # ======== J3 FP008 (PicoBlade 8P, opening +y) ========
 J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53261-0871_1x08-1MP_P1.25mm_Horizontal', 'J3', 'FP008 (MX1.25 8P)',
@@ -179,7 +177,7 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 
 # silk: 1 character ~ 0.8 x size wide, centred: keep both ends inside the outline
-SILK = [('USB-C (PC)', 4.5, -12.6, 0.8), ('J3 FP008 MX1.25 8P', 4.0, -7.6, 0.7),
+SILK = [('< PC   USB-C   DEVICE >', 4.0, -12.6, 0.8), ('J3 FP008 MX1.25 8P', 4.0, -7.6, 0.7),
         ('1:5V 2:G 3:TX 4:RX', 4.0, -8.7, 0.7), ('5:IRQ 6:3V3 7:D+ 8:D-', 4.0, -9.8, 0.7)]
 for t, x, y, sz in SILK:
     assert X0 + 0.3 <= x - len(t) * 0.4 * sz and x + len(t) * 0.4 * sz <= X1 - 0.3, t
