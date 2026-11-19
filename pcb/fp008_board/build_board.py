@@ -1,27 +1,22 @@
 """FP008 USB board (f1): the Grow FP008 face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through one
-USB-C cable, with no MCU and no firmware: the PC sees the module's camera (UVC), a COM port (its UART, commands) and a
-USB speaker, all three behind one hub. Keys stay on the PC (its TPM); the board holds none (2026-11-19, user decision).
+USB-C cable, with no MCU and no firmware: the PC sees the module's camera (UVC) and a COM port (its UART, commands),
+both behind one hub. Keys stay on the PC (its TPM); the board holds none. Sound comes from the PC's own speakers (no
+audio on the board). (2026-11-19, user decisions.)
   - J1  USB-C (to the PC): VBUS -> 5V, CC1 / CC2 5.1 k (R1 / R2), D+ / D- through U2 (USBLC6-2SC6) to U3's upstream.
   - U3  CH334F (QFN-24 4x4) USB 2.0 hub, self-powered from 5V (V5 -> internal LDO -> VDD33 = HUB33), Y1 12 MHz (load
         caps inside the CH334). Pins (WCH CH334/CH335 datasheet V2.4, table 1-3, column 4F): DMU 14 / DPU 15,
-        DM1 11 / DP1 12 -> the FP008's USB (camera), DM2 9 / DP2 10 -> U4, DM3 7 / DP3 8 -> U5, port 4 (5 / 6) unused.
+        DM1 11 / DP1 12 -> the FP008's USB (camera), DM2 9 / DP2 10 -> U4, ports 3 / 4 unused.
   - U4  CH340C (SOP-16, clock inside) at 3.3 V: TXD -> FP008 RXD, RXD <- FP008 TXD (115200 8N1), CTS# <- the FP008's
         IRQ (its infrared presence sensor; high = someone is there), read on the PC as the CTS modem line
         (Web Serial getSignals().clearToSend, inverted: CTS asserted = IRQ low).
   - U1  XC6206P332MR (SOT-23, 3.3 V LDO, 200 mA) 5V -> 3V3 for U4 and the FP008's sensor supply (pin 6, 60 uA).
-  - U5  PCM2704C (SSOP-28) USB audio DAC, bus-powered from 5V (PSEL / HOST / TEST0 / TEST1 high on its own VDD; its
-        VDD / VCCP / VCCL / VCCR are its internal regulators' outputs, each with its own 1 uF, nothing else powered
-        from them), D+ / D- through 22 R (R8 / R9), 1.5 k pull-up on D+ (R10), DT pulled up (R7, no descriptor ROM),
-        Y2 12 MHz with 22 pF + 1 M (TI SBFS036B fig. 35). VOUTL only (mono), VOUTR open. SSPND (high = running)
-        drives the amp's CTRL, so the amp is off while the PC suspends the device.
-  - U6  NS4150B class-D amp on 5V, VOUTL -> 100 nF + 150 k -> INP, INN -> 150 k + 100 nF -> GND, SP1 13 x 13 SMD
-        speaker (GSPK1304S 8 R 0.5 W), the same amp / speaker as the station ESP board.
   - J3  Molex PicoBlade 53261-0871 (MX1.25 8P, horizontal, opening +y) for the FP008 cable, the module's pins
         (manual 1.3.2): 1 VCC 4.5-15 V (5V), 2 GND, 3 TXD (module out), 4 RXD (module in), 5 IRQ, 6 sensor VCC (3V3),
         7 D+, 8 D-. CHECK THE CABLE BEFORE ORDERING (pin 1 on pin 1).
-  - D1 + R5: 3V3 power LED. H1..H4: M2 holes in the corners.
-  5V load: FP008 200 mA + amp (peaks at full volume) + hub / CH340 / PCM2704C ~80 mA: use a USB-C / USB 3 port.
-Board coords: origin = board centre, J1 (USB-C) on the -y edge at -x, J3 on the +y edge at -x, the audio at +x.
+  - D1 + R5: 3V3 power LED. H1..H4: M2 holes in the corners (placeholders: the board is to sit behind the FP008 on the
+        module's own screws once their spacing is measured).
+  5V load: FP008 200 mA + hub / CH340 ~45 mA.
+Board coords: origin = board centre, J1 (USB-C) on the -y edge at -x, J3 on the +y edge at -x, U4 at +x.
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
@@ -40,8 +35,8 @@ FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
 mm = pcbnew.FromMM
 
-X0, X1, Y0, Y1 = -30.0, 30.0, -19.0, 19.0          # 60 x 38
-HOLES = [(sx * 27.5, sy * 16.5) for sx in (-1, 1) for sy in (-1, 1)]
+X0, X1, Y0, Y1 = -22.0, 22.0, -14.0, 14.0          # 44 x 28
+HOLES = [(sx * 19.5, sy * 11.5) for sx in (-1, 1) for sy in (-1, 1)]
 POS = {}                                            # ref -> (x, y, rot), overriding the places below
 
 
@@ -63,8 +58,7 @@ nc.SetViaDiameter(mm(0.6)); nc.SetViaDrill(mm(0.3))
 
 nets = {}
 for n in ['GND', '5V', '3V3', 'HUB33', 'CC1', 'CC2', 'UDP', 'UDN', 'XI', 'XO', 'FPDP', 'FPDM', 'SDP', 'SDN',
-          'FPTX', 'FPRX', 'IRQ', 'LEDA', 'ADP', 'ADN', 'PDP', 'PDN', 'PVDD', 'PVCCL', 'PVCCR', 'PVCCP', 'VCOM',
-          'PXI', 'PXO', 'PDT', 'VOUTL', 'AIP', 'AIN', 'INP', 'INN', 'BYP', 'SSPND', 'SPKP', 'SPKN']:
+          'FPTX', 'FPRX', 'IRQ', 'LEDA']:
     ni = pcbnew.NETINFO_ITEM(b, n); b.Add(ni); nets[n] = ni
 
 LIBS = {}
@@ -110,79 +104,44 @@ def C(ref, value, a, c, x, y, rot=0):
 USB_GND = {'A1': 'GND', 'A12': 'GND', 'B1': 'GND', 'B12': 'GND', 'S1': 'GND'}
 
 # ======== J1 USB-C (the PC; power and data) -> U2 ESD -> U3 hub ========
-J1 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J1', 'USB-C (PC)', -19.0, Y0 + 3.05)
+J1 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J1', 'USB-C (PC)', -10.0, Y0 + 3.05)
 wire(J1, {**USB_GND, 'A5': 'CC1', 'B5': 'CC2', 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V',
           'A6': 'UDP', 'B6': 'UDP', 'A7': 'UDN', 'B7': 'UDN'})
-R('R1', '5.1k', 'CC1', 'GND', -24.5, -8.2, 90)
-R('R2', '5.1k', 'CC2', 'GND', -13.5, -8.2, 90)
-U2 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U2', 'USBLC6-2SC6', -19.0, -8.4, 90)
+R('R1', '5.1k', 'CC1', 'GND', -15.5, -3.2, 90)
+R('R2', '5.1k', 'CC2', 'GND', -4.5, -3.2, 90)
+U2 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U2', 'USBLC6-2SC6', -10.0, -3.4, 90)
 wire(U2, {'1': 'UDP', '6': 'UDP', '3': 'UDN', '4': 'UDN', '2': 'GND', '5': '5V'})
-C('C5', '10uF', '5V', 'GND', -12.0, -12.0, 90)            # VBUS bulk at J1
+C('C5', '10uF', '5V', 'GND', -1.5, -9.0, 90)              # VBUS bulk at J1
 
-U3 = load('Package_DFN_QFN.pretty', 'QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm', 'U3', 'CH334F', -19.0, 0.0, 180)
-wire(U3, {'25': 'GND', '3': 'XO', '4': 'XI', '7': 'ADN', '8': 'ADP', '9': 'SDN', '10': 'SDP', '11': 'FPDM',
-          '12': 'FPDP', '14': 'UDN', '15': 'UDP', '19': '5V', '20': 'HUB33'})
-XT = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y1', '12MHz', -14.5, 0.0, 270)
+U3 = load('Package_DFN_QFN.pretty', 'QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm', 'U3', 'CH334F', -8.0, 4.0, 180)
+wire(U3, {'25': 'GND', '3': 'XO', '4': 'XI', '9': 'SDN', '10': 'SDP', '11': 'FPDM', '12': 'FPDP',
+          '14': 'UDN', '15': 'UDP', '19': '5V', '20': 'HUB33'})
+XT = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y1', '12MHz', -3.5, 4.0, 270)
 wire(XT, {'1': 'XI', '3': 'XO', '2': 'GND', '4': 'GND'})
-C('C1', '1uF', '5V', 'GND', -21.0, -4.5, 0)               # V5 (pins 19 / 20 face -y)
-C('C2', '10uF', 'HUB33', 'GND', -17.5, -4.7, 0)          # VDD33
-C('C3', '100nF', 'HUB33', 'GND', -13.6, -4.6, 90)
+C('C1', '1uF', '5V', 'GND', -10.0, 0.5, 0)                # V5 (pins 19 / 20 face -y)
+C('C2', '10uF', 'HUB33', 'GND', -6.5, 0.3, 0)            # VDD33
+C('C3', '100nF', 'HUB33', 'GND', -2.6, 0.4, 90)
 
 # ======== U4 CH340C (USB-UART) on hub port 2, U1 3.3 V LDO ========
-U4 = load('Package_SO.pretty', 'SOIC-16_3.9x9.9mm_P1.27mm', 'U4', 'CH340C', -7.5, 5.5, 90)
+U4 = load('Package_SO.pretty', 'SOIC-16_3.9x9.9mm_P1.27mm', 'U4', 'CH340C', 9.5, 5.0, 90)
 wire(U4, {'1': 'GND', '2': 'FPRX', '3': 'FPTX', '4': '3V3', '5': 'SDP', '6': 'SDN', '9': 'IRQ', '16': '3V3'})
-C('C4', '100nF', '3V3', 'GND', -7.5, 10.2, 0)
-U1 = load('Package_TO_SOT_SMD.pretty', 'SOT-23', 'U1', 'XC6206P332MR', -6.0, -6.0, 0)
+C('C4', '100nF', '3V3', 'GND', 9.5, 10.2, 0)
+U1 = load('Package_TO_SOT_SMD.pretty', 'SOT-23', 'U1', 'XC6206P332MR', 9.0, -5.0, 0)
 wire(U1, {'1': 'GND', '2': '3V3', '3': '5V'})                              # 1 VSS, 2 VOUT, 3 VIN
-C('C6', '1uF', '5V', 'GND', -9.0, -6.0, 90)
-C('C7', '1uF', '3V3', 'GND', -3.0, -6.0, 90)
-two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', -6.0, -15.5, 0)   # 1 = K, 2 = A
-R('R5', '1k', '3V3', 'LEDA', -9.2, -15.5, 0)
+C('C6', '1uF', '5V', 'GND', 6.0, -5.0, 90)
+C('C7', '1uF', '3V3', 'GND', 12.0, -5.0, 90)
+two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', 14.0, -10.0, 0)   # 1 = K, 2 = A
+R('R5', '1k', '3V3', 'LEDA', 10.8, -10.0, 0)
 
 # ======== J3 FP008 (PicoBlade 8P, opening +y) ========
 J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53261-0871_1x08-1MP_P1.25mm_Horizontal', 'J3', 'FP008 (MX1.25 8P)',
-          -16.0, Y1 - 3.0, 180)
+          -8.0, Y1 - 3.0, 180)
 FP_PINS = ['5V', 'GND', 'FPTX', 'FPRX', 'IRQ', '3V3', 'FPDP', 'FPDM']    # the module's pins 1..8
 wire(J3, {**{str(i + 1): n for i, n in enumerate(FP_PINS)}, 'MP': 'GND'})
-C('C8', '10uF', '5V', 'GND', -4.5, 13.0, 90)             # at J3: the module's 200 mA
+C('C8', '10uF', '5V', 'GND', 2.0, 11.0, 90)               # at J3: the module's 200 mA
 sig = [xy(p.GetPosition())[1] for p in J3.Pads() if p.GetNumber() != 'MP']
 mp = [xy(p.GetPosition())[1] for p in J3.Pads() if p.GetNumber() == 'MP']
 assert max(sig) < min(mp), 'J3 opening is not +y'
-
-# ======== U5 PCM2704C USB audio on hub port 3 ========
-U5 = load('Package_SO.pretty', 'SSOP-28_5.3x10.2mm_P0.65mm', 'U5', 'PCM2704C', 6.0, 1.0, 0)   # pin 1 top-left
-wire(U5, {'1': 'PXO', '3': 'PDT', '4': 'PVDD', '6': 'GND', '7': 'PVDD', '8': 'PDN', '9': 'PDP', '10': '5V',
-          '11': 'GND', '12': 'GND', '13': 'PVCCL', '14': 'VOUTL', '16': 'PVCCR', '17': 'GND', '18': 'VCOM',
-          '19': 'GND', '20': 'PVCCP', '21': 'PVDD', '25': 'PVDD', '26': 'PVDD', '27': 'SSPND', '28': 'PXI'})
-X2 = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y2', '12MHz', 6.0, 9.5, 0)
-wire(X2, {'1': 'PXI', '3': 'PXO', '2': 'GND', '4': 'GND'})
-C('C9', '22pF', 'PXI', 'GND', 10.2, 9.5, 90)
-C('C10', '22pF', 'PXO', 'GND', 1.8, 9.5, 90)
-R('R6', '1M', 'PXI', 'PXO', 6.0, 12.3, 0)
-R('R7', '1.5k', 'PVDD', 'PDT', -0.7, 6.6, 0)              # DT pull-up (no descriptor ROM)
-R('R8', '22', 'ADN', 'PDN', -2.5, 1.0, 0)
-R('R9', '22', 'ADP', 'PDP', -2.5, -0.6, 0)
-R('R10', '1.5k', 'PVDD', 'PDP', -0.2, -2.3, 90)             # D+ pull-up (full speed)
-C('C11', '1uF', 'PVDD', 'GND', -0.2, 3.0, 90)
-C('C12', '1uF', '5V', 'GND', 2.0, -6.0, 0)                # VBUS
-C('C13', '1uF', 'PVCCL', 'GND', 2.0, -7.8, 0)
-C('C14', '1uF', 'PVCCR', 'GND', 10.0, -6.0, 0)
-C('C15', '10uF', 'VCOM', 'GND', 12.6, -2.6, 90)
-C('C16', '1uF', 'PVCCP', 'GND', 12.2, 1.2, 90)
-
-# ======== U6 NS4150B amp + SP1 speaker ========
-U6 = load('Package_SO.pretty', 'MSOP-8_3x3mm_P0.65mm', 'U6', 'NS4150B', 13.0, -12.5, 0)
-wire(U6, {'1': 'SSPND', '2': 'BYP', '3': 'INP', '4': 'INN', '5': 'SPKN', '6': '5V', '7': 'GND', '8': 'SPKP'})
-C('C17', '100nF', 'VOUTL', 'AIP', 4.5, -11.0, 0)
-R('R11', '150k', 'AIP', 'INP', 4.5, -13.0, 0)
-R('R12', '150k', 'AIN', 'INN', 8.5, -15.2, 0)
-C('C18', '100nF', 'AIN', 'GND', 4.5, -15.2, 0)
-C('C19', '1uF', 'BYP', 'GND', 8.0, -9.5, 0)
-R('R13', '10k', 'SSPND', 'GND', 8.0, -7.7, 0)           # amp off while U5 is unpowered
-C('C20', '10uF', '5V', 'GND', 18.5, -15.5, 0)
-C('C21', '100nF', '5V', 'GND', 17.5, -12.5, 90)
-SP1 = load('vein_base.pretty', 'Speaker_SMD_GSPK1304S_13x13mm', 'SP1', 'GSPK1304S-8R0.5W', 21.0, 3.0)
-wire(SP1, {'1': 'SPKN', '2': 'SPKP'})
 
 for i, (x, y) in enumerate(HOLES, 1):
     load('MountingHole.pretty', 'MountingHole_2.2mm_M2', f'H{i}', 'M2', x, y)
@@ -203,8 +162,8 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 
 # silk: 1 character ~ 0.8 x size wide, centred: keep both ends inside the outline
-SILK = [('USB-C (PC)', -8.0, -17.6, 0.8), ('J3 FP008 MX1.25 8P', 4.0, 17.6, 0.8),
-        ('1:5V 2:G 3:TX 4:RX', 4.0, 16.3, 0.7), ('5:IRQ 6:3V3 7:D+ 8:D-', 4.0, 15.2, 0.7)]
+SILK = [('USB-C (PC)', 4.5, -12.6, 0.8), ('J3 FP008 MX1.25 8P', 4.0, -7.6, 0.7),
+        ('1:5V 2:G 3:TX 4:RX', 4.0, -8.7, 0.7), ('5:IRQ 6:3V3 7:D+ 8:D-', 4.0, -9.8, 0.7)]
 for t, x, y, sz in SILK:
     assert X0 + 0.3 <= x - len(t) * 0.4 * sz and x + len(t) * 0.4 * sz <= X1 - 0.3, t
     text(t, x, y, size=sz)
@@ -286,13 +245,13 @@ if 'dsn' in sys.argv[1:]:
     b.Save(f'{NAME}.kicad_pcb')
     b = pcbnew.LoadBoard(f'{NAME}.kicad_pcb')
     print('dsn', pcbnew.ExportSpecctraDSN(b, f'{NAME}.dsn'))
-    # 5V / 3V3 / speaker routed 0.5 wide (the FP008's 200 mA, the amp's peaks): a net class written into the DSN
+    # 5V / 3V3 routed 0.5 wide (the FP008's 200 mA): a net class written into the DSN for freerouting
     d = open(f'{NAME}.dsn').read()
     i = d.index('    (class kicad_default'); j = d.index('(circuit', i)
     body = d[i:j]
-    for n in ('5V', '3V3', 'SPKP', 'SPKN'):
+    for n in ('5V', '3V3'):
         body = re.sub(rf'(?<=\s){n}(?=\s)', '', body)
-    d = (d[:i] + '    (class PWR 5V 3V3 SPKP SPKN\n      (circuit (use_via Via[0-1]_600:300_um))\n'
+    d = (d[:i] + '    (class PWR 5V 3V3\n      (circuit (use_via Via[0-1]_600:300_um))\n'
          '      (rule (width 500) (clearance 150))\n    )\n' + body + d[j:])
     open(f'{NAME}.dsn', 'w').write(d)
 else:

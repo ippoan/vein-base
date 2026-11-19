@@ -178,8 +178,8 @@ jobs:
 
       - name: Build FP008 USB board (KiCad) + DRC
         # the Grow FP008 face / palm vein module on a PC over one USB-C, no MCU (pcb/fp008_board -> fab/fp008/): a CH334F
-        # hub to the module's UVC, a CH340C UART (CTS = the module's IRQ) and a PCM2704C USB speaker (NS4150B + SMD
-        # speaker). silk_edge_clearance: the USB-C outline silk runs off the board edge, as on the FP001S board.
+        # hub to the module's UVC and a CH340C UART (CTS = the module's IRQ); sound comes from the PC. silk_edge_clearance:
+        # the USB-C outline silk runs off the board edge, as on the FP001S board.
         run: |
           cd pcb/fp008_board && python3 build_board.py && cd ../..
           B=pcb/fp008_board/fp008_board.kicad_pcb D=fab/fp008
