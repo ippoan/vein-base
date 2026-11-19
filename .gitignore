@@ -28,3 +28,7 @@ pcb/fp001s_test_board/*.kicad_pcb
 pcb/fp001s_test_board/*.kicad_pro
 pcb/fp001s_test_board/*.dsn
 pcb/fp001s_test_board/fp-lib-table
+pcb/fp008_board/*.kicad_pcb
+pcb/fp008_board/*.kicad_pro
+pcb/fp008_board/*.dsn
+pcb/fp008_board/fp-lib-table
