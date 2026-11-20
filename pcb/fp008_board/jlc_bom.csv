@@ -1,5 +1,5 @@
 Comment,Designator,Footprint,LCSC Part #,Note
-"USB-C 16P receptacle (Korean Hroparts TYPE-C-31-M-12)","J1,J2",USB_C_Receptacle_HRO_TYPE-C-31-M-12,C165948,J1 = the PC (power and data); J2 = a device on hub port 3; side by side on the -x tongue, openings -x
+"USB-C 16P receptacle (Korean Hroparts TYPE-C-31-M-12)","J1,J2",USB_C_Receptacle_HRO_TYPE-C-31-M-12,C165948,J1 = the PC (power and data); J2 = a device on hub port 3; side by side on the -x tongue, openings -x into the notches for the L adapters
 "USBLC6-2SC6 USB ESD (SOT-23-6)","U2,U5",SOT-23-6,C7519,U2 on J1's D+ / D-; U5 on J2's
 "CH334F USB 2.0 hub (QFN-24 4x4)",U3,QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm,C5187527,self-powered from 5V; ports 1 FP008 camera / 2 CH340C / 3 J2
 "CH340C USB-UART (SOP-16, clock inside)",U4,SOIC-16_3.9x9.9mm_P1.27mm,C84681,VCC = V3 = 3V3; CTS# = the FP008's IRQ

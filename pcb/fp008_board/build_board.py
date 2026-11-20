@@ -21,6 +21,8 @@ audio on the board). (2026-11-19, user decisions.)
   55.45 x 34.45, drawn as a rounded rectangle, corners R12 -- the real corner shape is to be checked), screwed to the
   module's four rear screw holes H1..H4 at (+-18.35, +-11.95) (read off the manual's rear drawing, ~36.7 x 23.9 apart;
   measure before ordering).
+  f5 (2026-11-20, user): the L adapters sit in notches in the tongue (NW x ND from the receptacles' faces, open on
+  -x), inside the outline; J1 / J2 15.4 apart for the rib between the notches.
   f4 (2026-11-20, user): the parts face the module (F = inside; one side, so still JLC Economic), only the cables come
   out. The outline gets a tongue on -x (to XT, |y| <= TY) past the module's rear body; J1 / J2 sit side by side under
   it (13.5 apart for two plugs), openings -x, wholly outside the body (asserted), and the cables take an L-shaped
@@ -42,7 +44,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..'))
 from kicad_ses import import_ses  # noqa: E402
 
-REV = 'f4'
+REV = 'f5'
 NAME = 'fp008_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
@@ -51,7 +53,17 @@ mm = pcbnew.FromMM
 X0, X1, Y0, Y1 = -27.5, 27.5, -17.0, 17.0          # the FP008's rear body 55.45 x 34.45, a hair inside
 RC = 12.0                                           # corner radius (guess from the drawing)
 HOLES = [(sx * 18.35, sy * 11.95) for sx in (-1, 1) for sy in (-1, 1)]   # the module's rear screw holes (manual 1.3.1)
-XT, TY = -37.0, 12.5                                 # the tongue past the body's -x end (x down to XT, |y| <= TY)
+XT = -37.0                                          # J1 / J2's openings (the board edge under them) past the body's -x end
+# f5 (2026-11-20, user): the L adapters (USB-C plug -> female turned 90 deg, ~AD_W x AD_D across, the female end up)
+# sit in notches in the tongue, inside the outline: one notch per USB-C from XT out to the tongue's end XE, rails
+# RAIL wide on the outside and a rib RIB wide between the two (adapter sizes from a product photo; check the real one)
+AD_W, AD_D = 12.4, 7.5                              # adapter across (y) and deep (x, from the receptacle's face)
+NW, ND = AD_W + 1.0, AD_D + 1.0 + 0.3               # notch width, depth from XT (the receptacle's face is 0.3 past XT)
+RIB, RAIL = 2.0, 2.5
+JY = (NW + RIB) / 2                                 # J1 at -JY, J2 at +JY
+XE = XT - ND                                        # the tongue's end
+TY = JY + NW / 2 + RAIL                             # the tongue's half height (|y| <= TY)
+assert TY < Y1, 'tongue taller than the board'
 KEEP = 3.5                                          # clear of each screw boss (parts face the module, f4)
 
 
@@ -65,7 +77,10 @@ def outline(n=10):
             t = math.radians(a0 + (a1 - a0) * k / n)
             pts.append((cx + RC * math.cos(t), cy + RC * math.sin(t)))
         if a0 == 90:
-            pts += [(XT, TY), (XT, -TY)]
+            pts.append((XE, TY))
+            for jy in (JY, -JY):                    # the notches, open on -x
+                pts += [(XE, jy + NW / 2), (XT, jy + NW / 2), (XT, jy - NW / 2), (XE, jy - NW / 2)]
+            pts.append((XE, -TY))
     return pts
 
 
@@ -153,7 +168,6 @@ def C(ref, value, a, c, x, y, rot=0):
 USB_GND = {'A1': 'GND', 'A12': 'GND', 'B1': 'GND', 'B12': 'GND', 'S1': 'GND'}
 
 # ======== J1 USB-C (the PC; power and data) -> U2 ESD -> U3 hub ========
-JY = 6.75                                          # J1 at -JY, J2 at +JY: 13.5 apart for two plugs (overmold ~12.4)
 J1 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J1', 'USB-C (PC)', XT + 3.05, -JY, 270)
 wire(J1, {**USB_GND, 'A5': 'CC1', 'B5': 'CC2', 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V',
           'A6': 'UDP', 'B6': 'UDP', 'A7': 'UDN', 'B7': 'UDN'})
@@ -266,7 +280,7 @@ def stitch(b, pitch=2.5, clr=0.25):
     n = 0
     y = Y0 + 1.5
     while y < Y1 - 1.0:
-        x = XT + 1.5
+        x = XE + 1.5
         while x < X1 - 1.0:
             q = P(x, y)
             ok = (inside(x, y, 1.0) and all((x - hx) ** 2 + (y - hy) ** 2 > 3.0 ** 2 for hx, hy in HOLES)
