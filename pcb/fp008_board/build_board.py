@@ -6,7 +6,7 @@ audio on the board). (2026-11-19, user decisions.)
   - U3  CH334F (QFN-24 4x4) USB 2.0 hub, self-powered from 5V (V5 -> internal LDO -> VDD33 = HUB33), Y1 12 MHz (load
         caps inside the CH334). Pins (WCH CH334/CH335 datasheet V2.4, table 1-3, column 4F): DMU 14 / DPU 15,
         DM1 11 / DP1 12 -> the FP008's USB (camera), DM2 9 / DP2 10 -> U4, DM3 7 / DP3 8 -> J2, port 4 unused.
-  - J2  USB-C receptacle (a device, e.g. a USB speaker; beside J1 on the tongue, f4) on hub port 3: VBUS = 5V straight (no switch,
+  - J2  USB-C receptacle (a device, e.g. a USB speaker; at the +x end, f5) on hub port 3: VBUS = 5V straight (no switch,
         no fuse), CC1 / CC2 56 k to 5V (R3 / R4, Rp: default USB power), D+ / D- through U5 (USBLC6-2SC6).
         The PC port feeds everything: on a 500 mA USB 2.0 port leave the device ~250 mA.
   - U4  CH340C (SOP-16, clock inside) at 3.3 V: TXD -> FP008 RXD, RXD <- FP008 TXD (115200 8N1), CTS# <- the FP008's
@@ -21,6 +21,9 @@ audio on the board). (2026-11-19, user decisions.)
   55.45 x 34.45, drawn as a rounded rectangle, corners R12 -- the real corner shape is to be checked), screwed to the
   module's four rear screw holes H1..H4 at (+-18.35, +-11.95) (read off the manual's rear drawing, ~36.7 x 23.9 apart;
   measure before ordering).
+  f5 (2026-11-20, user: no tongue): the outline is the rear body only. J1 (-x end) and J2 (+x end) face a window
+  each (WIN), the L adapters' bodies go up through them and their elbows sit in the module's rear recess (~5.1 deep
+  needed). The parts moved around the two (U4 at the bottom, J3 at the top centre); U3's exposed pad has vias.
   f4 (2026-11-20, user): the parts face the module (F = inside; one side, so still JLC Economic), only the cables come
   out. The outline gets a tongue on -x (to XT, |y| <= TY) past the module's rear body; J1 / J2 sit side by side under
   it (13.5 apart for two plugs), openings -x, wholly outside the body (asserted), and the cables take an L-shaped
@@ -29,7 +32,7 @@ audio on the board). (2026-11-19, user decisions.)
   parts (up to 3.3): measure it before ordering.
   5V load: FP008 200 mA + hub / CH340 ~45 mA + whatever is on J2.
 Board coords (KiCad's, seen from the F side = from inside the module, so mirrored from behind): origin = the FP008's
-centre, its UP up, J1 (USB-C, PC, -y) and J2 (USB-C, device, +y) on the -x tongue, J3 at the top centre, U4 at +x.
+centre, its UP up, J1 (USB-C, PC) at the -x end and J2 (USB-C, device) at the +x end, J3 at the top centre, U4 at the bottom.
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
@@ -42,7 +45,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..'))
 from kicad_ses import import_ses  # noqa: E402
 
-REV = 'f4'
+REV = 'f5'
 NAME = 'fp008_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
@@ -51,29 +54,41 @@ mm = pcbnew.FromMM
 X0, X1, Y0, Y1 = -27.5, 27.5, -17.0, 17.0          # the FP008's rear body 55.45 x 34.45, a hair inside
 RC = 12.0                                           # corner radius (guess from the drawing)
 HOLES = [(sx * 18.35, sy * 11.95) for sx in (-1, 1) for sy in (-1, 1)]   # the module's rear screw holes (manual 1.3.1)
-XT, TY = -37.0, 12.5                                 # the tongue past the body's -x end (x down to XT, |y| <= TY)
+# f5 (2026-11-20, user: no tongue, the cables' plugs inside): J1 / J2 sit inside the rear body's outline, J1 opening -x
+# and J2 opening +x, each facing a window WIN through the board between it and the edge. An L adapter (USB-C plug ->
+# female turned 90 deg, ~AD_W x AD_D across, the female end up, sizes from a product photo: check the real one) goes in
+# the window and its elbow under the board sits in the module's rear recess (needs ~5 deep: measure it). The windows
+# keep EDGE of board to the outline and keep clear of the screw holes; the plugs go in with the board off the module.
+AD_W, AD_D = 12.4, 7.5                              # adapter across (y) and deep (x, from the receptacle's face)
+NW, ND = AD_W + 1.0, AD_D + 1.0 + 0.3               # window across, deep from XF (the receptacle's face is 0.3 past XF)
+EDGE = 1.5                                          # board left between a window and the outline
+XF = -X0 - EDGE - ND                                # J1's opening at x = -XF, J2's at +XF (|x| of the window's inner side)
+WIN = [(-XF - ND, -XF, -NW / 2, NW / 2), (XF, XF + ND, -NW / 2, NW / 2)]   # (x0, x1, y0, y1)
 KEEP = 3.5                                          # clear of each screw boss (parts face the module, f4)
 
 
 def outline(n=10):
-    """The rear body's rounded rectangle with the tongue on -x, as a closed list of points (anticlockwise)."""
-    a = math.degrees(math.asin((TY - (Y1 - RC)) / RC))    # where |y| = TY meets the -x corner arcs
+    """The rear body's rounded rectangle, as a closed list of points (anticlockwise)."""
     pts = []
-    for cx, cy, a0, a1 in ((X1 - RC, Y0 + RC, -90, 0), (X1 - RC, Y1 - RC, 0, 90), (X0 + RC, Y1 - RC, 90, 180 - a),
-                           (X0 + RC, Y0 + RC, 180 + a, 270)):
+    for cx, cy, a0 in ((X1 - RC, Y0 + RC, -90), (X1 - RC, Y1 - RC, 0), (X0 + RC, Y1 - RC, 90), (X0 + RC, Y0 + RC, 180)):
         for k in range(n + 1):
-            t = math.radians(a0 + (a1 - a0) * k / n)
+            t = math.radians(a0 + 90 * k / n)
             pts.append((cx + RC * math.cos(t), cy + RC * math.sin(t)))
-        if a0 == 90:
-            pts += [(XT, TY), (XT, -TY)]
     return pts
 
 
 OUTLINE = outline()
 
 
+def in_win(x, y, m=0.0):
+    """(x, y) within m of a window."""
+    return any(x0 - m < x < x1 + m and y0 - m < y < y1 + m for x0, x1, y0, y1 in WIN)
+
+
 def inside(x, y, m=0.0):
-    """(x, y) inside the outline and at least m from its edges."""
+    """(x, y) on the board (inside the outline, out of the windows) and at least m from its edges."""
+    if in_win(x, y, m):
+        return False
     pts = OUTLINE
     c = False
     for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]):
@@ -84,6 +99,11 @@ def inside(x, y, m=0.0):
         if math.hypot(x - x0 - t * dx, y - y0 - t * dy) < m:
             return False
     return c
+
+
+for x0, x1, y0, y1 in WIN:                          # the windows clear of the screw holes (M2, boss ~2.5)
+    for hx, hy in HOLES:
+        assert math.hypot(max(x0 - hx, 0, hx - x1), max(y0 - hy, 0, hy - y1)) >= 3.0, ('window on a hole', hx, hy)
 
 
 POS = {}                                            # ref -> (x, y, rot), overriding the places below
@@ -153,53 +173,56 @@ def C(ref, value, a, c, x, y, rot=0):
 USB_GND = {'A1': 'GND', 'A12': 'GND', 'B1': 'GND', 'B12': 'GND', 'S1': 'GND'}
 
 # ======== J1 USB-C (the PC; power and data) -> U2 ESD -> U3 hub ========
-JY = 6.75                                          # J1 at -JY, J2 at +JY: 13.5 apart for two plugs (overmold ~12.4)
-J1 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J1', 'USB-C (PC)', XT + 3.05, -JY, 270)
+J1 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J1', 'USB-C (PC)', -XF + 3.05, 0.0, 270)
 wire(J1, {**USB_GND, 'A5': 'CC1', 'B5': 'CC2', 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V',
           'A6': 'UDP', 'B6': 'UDP', 'A7': 'UDN', 'B7': 'UDN'})
-R('R1', '5.1k', 'CC1', 'GND', -23.5, -7.0, 0)
-R('R2', '5.1k', 'CC2', 'GND', -23.5, -8.6, 0)
-U2 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U2', 'USBLC6-2SC6', -23.5, -4.0, 0)
+R('R1', '5.1k', 'CC1', 'GND', -11.6, 11.0, 0)
+R('R2', '5.1k', 'CC2', 'GND', -11.6, 12.6, 0)
+U2 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U2', 'USBLC6-2SC6', -11.6, 8.0, 0)
 wire(U2, {'1': 'UDP', '6': 'UDP', '3': 'UDN', '4': 'UDN', '2': 'GND', '5': '5V'})
-C('C5', '10uF', '5V', 'GND', -19.6, -6.0, 0)              # VBUS bulk at J1
+C('C5', '10uF', '5V', 'GND', -11.6, 14.6, 0)              # VBUS bulk at J1
 
-U3 = load('Package_DFN_QFN.pretty', 'QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm', 'U3', 'CH334F', -14.0, 0.0, 180)
+U3 = load('Package_DFN_QFN.pretty', 'QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm', 'U3', 'CH334F', -3.5, -0.5, 180)
 wire(U3, {'25': 'GND', '3': 'XO', '4': 'XI', '9': 'SDN', '10': 'SDP', '11': 'FPDM', '12': 'FPDP',
           '7': 'D3N', '8': 'D3P', '14': 'UDN', '15': 'UDP', '19': '5V', '20': 'HUB33'})
-XTAL = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y1', '12MHz', -8.5, 2.0, 270)
+ux, uy = xy(U3.GetPosition())
+for dx in ((-0.7, 0.7) if 'dsn' in sys.argv[1:] else ()):   # U3's exposed pad (its only GND) to the B.Cu pour:
+    for dy in (-0.7, 0.7):                                   # vias in the pad, kept in the .ses with the routing
+        v = pcbnew.PCB_VIA(b); v.SetPosition(P(ux + dx, uy + dy)); v.SetWidth(mm(0.6)); v.SetDrill(mm(0.3))
+        v.SetNet(nets['GND']); b.Add(v)
+XTAL = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y1', '12MHz', 2.0, 1.5, 270)
 wire(XTAL, {'1': 'XI', '3': 'XO', '2': 'GND', '4': 'GND'})
-C('C1', '1uF', '5V', 'GND', -16.2, -4.0, 0)                # V5 (pins 19 / 20 face -y)
-C('C2', '10uF', 'HUB33', 'GND', -12.0, -4.2, 0)            # VDD33
-C('C3', '100nF', 'HUB33', 'GND', -9.0, -3.0, 90)
+C('C1', '1uF', '5V', 'GND', -5.7, -4.5, 0)                # V5 (pins 19 / 20 face -y)
+C('C2', '10uF', 'HUB33', 'GND', -1.5, -4.7, 0)            # VDD33
+C('C3', '100nF', 'HUB33', 'GND', 1.5, -3.5, 90)
 
 # ======== U4 CH340C (USB-UART) on hub port 2, U1 3.3 V LDO ========
-U4 = load('Package_SO.pretty', 'SOIC-16_3.9x9.9mm_P1.27mm', 'U4', 'CH340C', 8.0, 1.5, 90)
+U4 = load('Package_SO.pretty', 'SOIC-16_3.9x9.9mm_P1.27mm', 'U4', 'CH340C', 0.0, -11.0, 90)
 wire(U4, {'1': 'GND', '2': 'FPRX', '3': 'FPTX', '4': '3V3', '5': 'SDP', '6': 'SDN', '9': 'IRQ', '16': '3V3'})
-C('C4', '100nF', '3V3', 'GND', 14.0, 3.5, 90)
-U1 = load('Package_TO_SOT_SMD.pretty', 'SOT-23', 'U1', 'XC6206P332MR', 18.5, -1.0, 0)
+C('C4', '100nF', '3V3', 'GND', 6.5, -11.0, 90)
+U1 = load('Package_TO_SOT_SMD.pretty', 'SOT-23', 'U1', 'XC6206P332MR', 10.5, -9.0, 0)
 wire(U1, {'1': 'GND', '2': '3V3', '3': '5V'})                              # 1 VSS, 2 VOUT, 3 VIN
-C('C6', '1uF', '5V', 'GND', 15.6, -1.5, 90)
-C('C7', '1uF', '3V3', 'GND', 21.5, -1.0, 90)
-two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', 21.0, 5.5, 0)   # 1 = K, 2 = A
-R('R5', '1k', '3V3', 'LEDA', 17.5, 5.5, 0)
+C('C6', '1uF', '5V', 'GND', 10.5, -12.5, 0)
+C('C7', '1uF', '3V3', 'GND', 13.5, -9.0, 90)
+two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', -10.0, -13.0, 0)   # 1 = K, 2 = A
+R('R5', '1k', '3V3', 'LEDA', -10.0, -11.0, 0)
 
 # ======== J2 USB-C (a device on hub port 3; opening -y beside J1) ========
-J2 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J2', 'USB-C (device)', XT + 3.05, JY, 270)
+J2 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J2', 'USB-C (device)', XF - 3.05, 0.0, 90)
 wire(J2, {**USB_GND, 'A5': 'DCC1', 'B5': 'DCC2', 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V',
           'A6': 'J2P', 'B6': 'J2P', 'A7': 'J2N', 'B7': 'J2N'})
-assert J2.GetOrientationDegrees() == J1.GetOrientationDegrees(), 'J1 / J2 not on the same edge'
-R('R3', '56k', '5V', 'DCC1', -23.5, 7.0, 0)
-R('R4', '56k', '5V', 'DCC2', -23.5, 8.6, 0)
-U5 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U5', 'USBLC6-2SC6', -23.5, 4.0, 0)
+R('R3', '56k', '5V', 'DCC1', 11.6, 11.0, 0)
+R('R4', '56k', '5V', 'DCC2', 11.6, 12.6, 0)
+U5 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U5', 'USBLC6-2SC6', 11.6, 8.0, 0)
 wire(U5, {'1': 'D3P', '6': 'J2P', '3': 'D3N', '4': 'J2N', '2': 'GND', '5': '5V'})
-C('C9', '10uF', '5V', 'GND', -19.6, 6.0, 0)                # VBUS at J2
+C('C9', '10uF', '5V', 'GND', 11.6, 14.6, 0)                # VBUS at J2
 
 # ======== J3 FP008 (PicoBlade 8P, opening +y) ========
 J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53261-0871_1x08-1MP_P1.25mm_Horizontal', 'J3', 'FP008 (MX1.25 8P)',
-          0.0, 9.0, 180)
+          0.0, 11.5, 180)
 FP_PINS = ['5V', 'GND', 'FPTX', 'FPRX', 'IRQ', '3V3', 'FPDP', 'FPDM']    # the module's pins 1..8
 wire(J3, {**{str(i + 1): n for i, n in enumerate(FP_PINS)}, 'MP': 'GND'})
-C('C8', '10uF', '5V', 'GND', 11.5, 9.5, 90)               # at J3: the module's 200 mA
+C('C8', '10uF', '5V', 'GND', -10.0, -8.0, 0)               # at J3: the module's 200 mA
 sig = [xy(p.GetPosition())[1] for p in J3.Pads() if p.GetNumber() != 'MP']
 mp = [xy(p.GetPosition())[1] for p in J3.Pads() if p.GetNumber() == 'MP']
 assert max(sig) < min(mp), 'J3 opening is not +y'
@@ -216,25 +239,28 @@ def edge_loop(pts):
 
 
 edge_loop(OUTLINE)
-BODY_X = -55.45 / 2                                 # the module's rear body ends here on -x: J1 / J2 wholly past it
+for x0, x1, y0, y1 in WIN:
+    edge_loop([(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
 for fp in b.GetFootprints():                        # every part inside the outline (courtyard corners)
     cy_ = fp.GetCourtyard(pcbnew.F_CrtYd)
-    if cy_.OutlineCount() and not fp.GetReference().startswith(('J1', 'J2', 'H')):
+    if cy_.OutlineCount() and not fp.GetReference().startswith('H'):
         bb_ = cy_.BBox()
         for q in (bb_.GetOrigin(), bb_.GetEnd()):
             for qx in (bb_.GetLeft(), bb_.GetRight()):
                 for qy in (bb_.GetTop(), bb_.GetBottom()):
                     x_, y_ = xy(pcbnew.VECTOR2I(qx, qy))
+                    if fp.GetReference() in ('J1', 'J2'):   # its front over the window, as over an edge: check the rest
+                        x_ = math.copysign(min(abs(x_), XF - 0.3), x_)
                     assert inside(x_, y_, 0.2), (fp.GetReference(), x_, y_)
         L, Rr = pcbnew.ToMM(bb_.GetLeft()) - OX, pcbnew.ToMM(bb_.GetRight()) - OX
         T_, B_ = OY - pcbnew.ToMM(bb_.GetBottom()), OY - pcbnew.ToMM(bb_.GetTop())
         for hx, hy in HOLES:                        # clear of the screw bosses (the parts face the module)
             dx = max(L - hx, 0, hx - Rr); dy = max(T_ - hy, 0, hy - B_)
             assert math.hypot(dx, dy) >= KEEP, (fp.GetReference(), 'on the boss at', hx, hy)
-for j in (J1, J2):                                  # the USB-C wholly outside the module's body, opening -x
+for j, sx in ((J1, -1), (J2, 1)):                   # each USB-C's opening at its window (J1 -x, J2 +x)
     bb_ = j.GetCourtyard(pcbnew.F_CrtYd).BBox()
-    assert pcbnew.ToMM(bb_.GetRight()) - OX < BODY_X - 0.3, (j.GetReference(), 'reaches into the module body')
-    assert pcbnew.ToMM(bb_.GetLeft()) - OX < XT, (j.GetReference(), 'opening not at the -x edge')
+    front = pcbnew.ToMM(bb_.GetLeft() if sx < 0 else bb_.GetRight()) - OX
+    assert sx * front > XF, (j.GetReference(), 'opening not at its window')
 
 
 def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
@@ -247,7 +273,7 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 # silk: 1 character ~ 0.8 x size wide, centred: keep both ends inside the outline
 # the outside is B (the parts face the module, f4): labels on B.SilkS, beside each USB-C on the board's inner side
-SILK = [('PC', -21.0, -JY, 1.0), ('DEVICE', -19.5, JY, 1.0)]
+SILK = [('PC', -XF - ND / 2, NW / 2 + 1.5, 1.0), ('DEVICE', XF + ND / 2, NW / 2 + 1.5, 1.0)]
 for t, x, y, sz in SILK:
     assert inside(x - len(t) * 0.4 * sz, y, 0.3) and inside(x + len(t) * 0.4 * sz, y, 0.3), t
     text(t, x, y, layer=pcbnew.B_SilkS, size=sz)
@@ -266,7 +292,7 @@ def stitch(b, pitch=2.5, clr=0.25):
     n = 0
     y = Y0 + 1.5
     while y < Y1 - 1.0:
-        x = XT + 1.5
+        x = X0 + 1.5
         while x < X1 - 1.0:
             q = P(x, y)
             ok = (inside(x, y, 1.0) and all((x - hx) ** 2 + (y - hy) ** 2 > 3.0 ** 2 for hx, hy in HOLES)
@@ -372,6 +398,36 @@ else:
         b.Remove(v)
     print(f'removed {len(loose)} loose vias')
     pcbnew.ZONE_FILLER(b).Fill(b.Zones())
+    # a via joining two pour pieces that hold no GND pad or track end only ties floating copper together: drop it
+    # (its pieces then go as islands)
+    def anchored(poly, i):
+        piece = pcbnew.SHAPE_POLY_SET(); piece.AddOutline(poly.Outline(i))
+        for h in range(poly.HoleCount(i)):
+            piece.AddHole(poly.Hole(i, h))
+        pads = [p_.GetPosition() for fp in b.GetFootprints() for p_ in fp.Pads() if p_.GetNetname() == 'GND']
+        ends = [q for t in b.GetTracks() if t.GetClass() != 'PCB_VIA' and t.GetNetname() == 'GND'
+                for q in (t.GetStart(), t.GetEnd())]
+        return any(piece.Contains(q) for q in pads + ends)
+    for _ in range(3):
+        fl = {z.GetLayer(): z.GetFilledPolysList(z.GetLayer()) for z in b.Zones() if z.GetNetname() == 'GND'}
+        idle = []
+        for v in [t for t in b.GetTracks() if t.GetClass() == 'PCB_VIA' and t.GetNetname() == 'GND']:
+            q = v.GetPosition()
+            ok = False
+            for f in fl.values():
+                for i in range(f.OutlineCount()):
+                    pc = pcbnew.SHAPE_POLY_SET(); pc.AddOutline(f.Outline(i))
+                    if pc.Contains(q) and anchored(f, i):
+                        ok = True
+            if not ok and not any(t.GetClass() != 'PCB_VIA' and t.GetNetname() == 'GND' and t.HitTest(q)
+                                  for t in b.GetTracks()):
+                idle.append(v)
+        for v in idle:
+            b.Remove(v)
+        print(f'removed {len(idle)} vias between floating pieces')
+        if not idle:
+            break
+        pcbnew.ZONE_FILLER(b).Fill(b.Zones())
     b.Save(f'{NAME}.kicad_pcb')
 LIBS['MountingHole'] = FP + 'MountingHole.pretty'
 with open('fp-lib-table', 'w') as f:
