@@ -1,4 +1,4 @@
-"""3D preview of the FP008 USB board (f5: the parts face the module, notches for the L adapters) (site/fp008-board/) from the STEP with parts that the CI writes
+"""3D preview of the FP008 USB board (f5: the parts face the module, windows for the L adapters) (site/fp008-board/) from the STEP with parts that the CI writes
 (fab/fp008/fp008_board_v<VER>_full.step, KiCad library models fetched by tools/kicad_3d_models.py) and the CI's
 pos.csv. The two USB-C (HRO TYPE-C-31-M-12) have no model in the KiCad library and are drawn as plain boxes.
     python3 pcb/fp008_board/build_3d.py      # from the repo root, with CadQuery (after the board's CI step)
@@ -102,26 +102,30 @@ for a, b_ in zip(path, path[1:]):
     cable = sgm if cable is None else cable.union(sgm)
 
 # the L adapters on the two USB-C (f5: USB-C plug -> female turned 90 deg, the female end up; size from a product
-# photo, = build_board.py's AD_W / AD_D): the elbow sits against the receptacle's face and the body rises through the
-# notch in the tongue (asserted clear of the board)
+# photo, = build_board.py's AD_W / AD_D): the elbow sits against the receptacle's face under the board, in the module's
+# rear recess, and the body rises through the board's window (asserted clear of the board; the recess is a guess, so
+# its overlap with the elbow is only reported)
 AD_W, AD_D, AD_DOWN, AD_UP = 12.4, 7.5, 3.5, 19.0   # across, deep, below / above the plug's centre line
-xo = max(usb(r).val().BoundingBox().xmax for r in ('J1', 'J2'))
 zc = -USB_H / 2
 adapters = None
 for r in ('J1', 'J2'):
+    ub = usb(r).val().BoundingBox()
+    x0 = ub.xmax if ub.center.x > 0 else ub.xmin - AD_D        # out of each receptacle's opening (outward)
     a_ = cq.Workplane().box(AD_D, AD_W, AD_DOWN + AD_UP, centered=(False, True, False)).translate(
-        (xo, pos[r][1], zc - AD_DOWN))
+        (x0, pos[r][1], zc - AD_DOWN))
     adapters = a_ if adapters is None else adapters.union(a_)
 lid = cq.Workplane().add(flip(board))
 clash = adapters.intersect(lid).val().Volume()
-assert clash < 0.01, f'the adapters hit the board ({clash:.3f} mm3): the notches are too small'
+assert clash < 0.01, f'the adapters hit the board ({clash:.3f} mm3): the windows are too small'
+AD_BOTTOM = zc - AD_DOWN
+print(f'adapter elbows reach {-AD_BOTTOM:.1f} under the board; the guessed recess is {CAV:g} deep')
 
 parts = [('lid', f'FP008(マニュアル 1.3.1: つば 59.5 × 38.5、後ろの本体 55.5 × 34.5 × 15.4。後ろのくぼみ {CAV:g}・壁 {WALL:g}・ねじのボスは仮)',
           '#30343a', 0.55, 'lid', fp),
          ('cable', 'J3 → FP008 のケーブル(MX1.25 8P、1 → 1)。中のソケットの位置は未確認', '#d9775c', 1, 'mods', cable),
-         ('adapter', f'USB-C の L 字の変換(オス → 90° のメス、参考の外形 {AD_W:g} × {AD_D:g} × {AD_DOWN + AD_UP:g}、写真から)。基板の舌の切り欠きに入る', '#8a8f96', 0.6, 'mods', adapters),
+         ('adapter', f'USB-C の L 字の変換(オス → 90° のメス、参考の外形 {AD_W:g} × {AD_D:g} × {AD_DOWN + AD_UP:g}、写真から)。根元は FP008 の後ろのくぼみ(基板から {-AD_BOTTOM:.1f} 下まで)、胴は基板の窓を通る', '#8a8f96', 0.6, 'mods', adapters),
          ('screw', 'M2 ねじ × 4(ふたの上から FP008 の後ろのねじ穴へ。穴の位置は図からの読み取りで、実物で確かめる)', '#6b6f75', 1, 'mods', screws),
-         ('shell', 'USB-C J1(PC へ)・J2(USB スピーカーなどの機器、ハブのポート 3)。基板の舌の内側に並べ、口は外。KiCad に 3D モデルが無いので外形だけの箱',
+         ('shell', 'USB-C J1(PC へ)・J2(USB スピーカーなどの機器、ハブのポート 3)。基板の内側の左右の端の近くで、口は外の窓に向く。KiCad に 3D モデルが無いので外形だけの箱',
           '#b8bcc2', 1, 'shell', usb('J1').union(usb('J2'))),
          ('conn', 'J3 PicoBlade 53261-0871(MX1.25 8P、FP008 のケーブル)', '#f1efe8', 1, 'shell', comp(groups['conn'])),
          ('ics', 'CH334F(ハブ)・CH340C(UART)・USBLC6 × 2・XC6206(3.3 V)・水晶 12 MHz', '#202326', 1, 'shell',
@@ -129,11 +133,11 @@ parts = [('lid', f'FP008(マニュアル 1.3.1: つば 59.5 × 38.5、後ろの�
          ('pass', 'C・R', '#b08850', 1, 'shell', comp(groups['pass'])),
          ('led', 'D1(電源 LED、内側)', '#d23c3c', 1, 'shell', comp(groups['led'])),
          ('board', f'基板 f5(FP008 の裏のふた、{size[0]:.0f} × {size[1]:.0f} × {T:g})。部品は内側', '#2f6b45', 1, 'shell', lid)]
-dims = [('基板', f'{size[0]:.0f} × {size[1]:.0f} × {T:g}。FP008 の後ろの本体の形(角 R12)+ 片側に舌(本体の外へ約 18)。舌に L 字の変換が入る切り欠き 2 つ(13.4 × 8.8)。部品は内側(FP008 の中、高さ 3.3 まで)'),
+dims = [('基板', f'{size[0]:.0f} × {size[1]:.0f} × {T:g}。FP008 の後ろの本体の形(角 R12、外にはみ出さない)。左右の端の近くに L 字の変換が通る窓 2 つ(8.8 × 13.4)。部品は内側(FP008 の中、高さ 3.3 まで)'),
         ('固定', 'FP008 の後ろの 4 つのねじ穴(中心から ±18.35, ±11.95。マニュアルの図からの読み取り)に M2 ねじで。部品はねじのボスから 3.5 離す'),
-        ('J1 / J2', 'USB-C を舌の内側に 2 つ並べる(15.4 間隔)、口は横向きで切り欠きに向く。J1 = PC へ、J2 = USB スピーカーなどの機器(ハブのポート 3)。L 字の変換(オス → 90° のメス)を挿すと切り欠きの中で上を向き、ケーブルは後ろへ'),
+        ('J1 / J2', 'USB-C を左右の端の近くに 1 つずつ、口は外の窓に向く。J1 = PC へ、J2 = USB スピーカーなどの機器(ハブのポート 3)。L 字の変換(オス → 90° のメス)は基板を FP008 から外して挿し、胴が窓を通って上を向く。ケーブルは後ろへ'),
         ('J3', 'MX1.25 8P、内側の上の真ん中。FP008 の中のソケットへ'),
-        ('未確認', 'L 字の変換の寸法(切り欠き 13.4 × 8.8 に入るか)、ねじ穴の位置と太さ、本体の角の形、後ろのくぼみの深さ(部品 3.3 が入るか)、中のソケットの位置、ケーブルの長さ')]
+        ('未確認', 'L 字の変換の寸法(窓 8.8 × 13.4 に入るか)、根元が FP008 の後ろのくぼみに入るか(約 5.1 の深さが要る)、ねじ穴の位置と太さ、本体の角の形、後ろのくぼみの深さ(部品 3.3 が入るか)、中のソケットの位置、ケーブルの長さ')]
 write_page('fp008-board', 'FP008 USB 基板 f5', [(k, l, c, o, g, s) for k, l, c, o, g, s in parts],
            'Grow FP008(顔・手のひら静脈)の裏にふたとしてねじで留め、USB-C 1 本で PC につなぐ基板(マイコンなし)。部品は FP008 の内側。'
            'ドラッグで回転、ホイール/ピンチで拡大。分解表示で基板と FP008 が離れる。', dims,
