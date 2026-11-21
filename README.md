@@ -22,6 +22,8 @@ M5Stack **Atom VoiceS3R** の下に積むベースです。**指静脈モジュ�
 | Vein Station 3D 印刷の案 C(一列・DB9 なし・指静脈と VoiceS3R だけ) | https://ippoan.github.io/vein-base/station-print-c/ |
 | 指静脈 Unit(CS75N-B) | https://ippoan.github.io/vein-base/vein-unit-cs/ |
 | 指静脈 Unit(SIC5-9-2B) | https://ippoan.github.io/vein-base/vein-unit-sic/ |
+| FP001S USB ボックス(FP001S の USB 基板 t5 を入れた 3D 印刷の箱) | https://ippoan.github.io/vein-base/fp001s-print/ |
+| FP008 の USB 基板(FP008 の裏のふた f6、RP2354A 入り) | https://ippoan.github.io/vein-base/fp008-board/ |
 
 ## 構成
 
