@@ -1,9 +1,8 @@
-"""The RP2350A core of Raspberry Pi's "RP2350A Minimal" design (MIT, pcb/fp001s_test_board/rp2350_core_LICENSE.txt)
+"""The RP2350A core of Raspberry Pi's "RP2350A Minimal" design (MIT, rp2350_core_LICENSE.txt here)
 put on one of our boards around an RP2354A: the chip, its regulator, crystal, decoupling and USB series resistors with
 their footprints, tracks, vias and zones as Raspberry Pi laid them out ("Hardware design with RP2350" 2.1: use this
-layout). The data is pcb/fp001s_test_board/rp2350_core.json (from rp_core_extract.py there); this module is how a
-board script takes it in, written so that any board can import it (pcb/fp008_board f6 does; pcb/fp001s_test_board
-t3..t5 still carries its own copy of the same code: switching it over is a later change). Run with KiCad's python.
+layout). The data is rp2350_core.json here (from rp_core_extract.py here); this module is how a board script takes it in,
+written so that any board can import it (pcb/fp008_board f6 does). Run with KiCad's python.
 
     core = Core(b, nets, at, net_map, ref_map, rot=0)   # at(x, y) -> VECTOR2I: our board's coordinates (mm, y up)
     core.place()            # footprints + the locked tracks / vias; returns the chip's footprint
@@ -18,7 +17,7 @@ import pcbnew
 
 mm = pcbnew.FromMM
 HERE = os.path.dirname(os.path.abspath(__file__))
-JSON = os.path.join(HERE, '..', 'fp001s_test_board', 'rp2350_core.json')
+JSON = os.path.join(HERE, 'rp2350_core.json')
 BOX = (-7.6, 8.2, -8.6, 14.8)            # rp_core_extract.py's BOX (U1-relative x0, x1, y0, y1, y down)
 SHAPE = {'rect': pcbnew.PAD_SHAPE_RECT, 'circle': pcbnew.PAD_SHAPE_CIRCLE, 'oval': pcbnew.PAD_SHAPE_OVAL}
 DRILL = 0.3                              # their 0.25 drills -> 0.3 (JLC's standard)
@@ -98,7 +97,7 @@ class Core:
         """The minimal design's zones (priorities one up, over the board's GND pours) and a 3V3 area on F.Cu over the
         core (the minimal design's F.Cu is a 3V3 pour, which several of its decoupling caps reach their supply
         through). Pads join solid, as in the minimal design's own 3V3 zones (connect_pads yes): with thermals, a pad
-        hemmed in by the tracks into the core kept one spoke only (FP001S t5: DRC starved_thermal at U6 pin 1)."""
+        hemmed in by the tracks into the core kept one spoke only (DRC starved_thermal at U6 pin 1)."""
         b = self.b
 
         def zone(net, layer, pts, prio, clr, mint, solid, gap=0.5, width=0.5):

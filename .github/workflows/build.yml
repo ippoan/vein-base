@@ -158,30 +158,11 @@ jobs:
           ufab vein_unit_board fab/vein_unit jlc_bom.csv jlc_cpl_corrections.csv
           ufab vein_unit_board_p fab/vein_unit_p jlc_bom_p.csv jlc_cpl_corrections_p.csv
 
-      - name: Build FP001S USB board (KiCad) + DRC
-        # the Grow FP001S face / palm vein module on a PC over one USB-C (pcb/fp001s_test_board -> fab/fp001s/): VBUS ->
-        # SY8089 buck -> 3V3, D+ / D- through a CH334F hub to the module's UVC and an RP2354A (USB CDC, the module's UART;
-        # its core is Raspberry Pi's RP2350A Minimal layout from rp2350_core.json). silk_edge_clearance: the USB-C
-        # outline silk runs off the board edge, as on the ESP board.
-        run: |
-          cd pcb/fp001s_test_board && python3 build_board.py && cd ../..
-          B=pcb/fp001s_test_board/fp001s_test_board.kicad_pcb D=fab/fp001s
-          mkdir -p $D/gerber
-          kicad-cli pcb export gerbers -l F.Cu,B.Cu,F.SilkS,B.SilkS,F.Mask,B.Mask,F.Paste,B.Paste,Edge.Cuts --subtract-soldermask -o $D/gerber/ $B
-          kicad-cli pcb export drill --format excellon --excellon-separate-th -o $D/gerber/ $B
-          kicad-cli pcb export pos --format csv --units mm --side both -o $D/pos.csv $B
-          kicad-cli pcb export pdf -l F.Cu,B.Cu,F.SilkS,Edge.Cuts -o $D/fp001s_test_board_v${VER}_fitcheck_1to1.pdf $B
-          kicad-cli pcb export step --subst-models -o $D/fp001s_test_board_v${VER}_pcb.step $B
-          (cd $D/gerber && zip -q ../fp001s_test_board_v${VER}_gerbers.zip *)
-          python3 tools/make_jlc_cpl.py --pos $D/pos.csv --bom pcb/fp001s_test_board/jlc_bom.csv --prefix fp001s_test_board_v \
-            --outdir $D --corrections pcb/fp001s_test_board/jlc_cpl_corrections.csv
-          python3 tools/check_drc.py --board $B --report $D/drc.rpt --ignore silk_edge_clearance
-
       - name: Build FP008 USB board (KiCad) + DRC
         # the Grow FP008 face / palm vein module on a PC over one USB-C (pcb/fp008_board -> fab/fp008/): a CH334F hub to
         # the module's UVC and an RP2354A (f6: USB CDC, the module's UART on GP0 / GP1, its IRQ on GP2; its core is
         # Raspberry Pi's RP2350A Minimal layout through pcb/fp008_board/rp_core.py); sound comes from the PC (J2, a USB-C on hub port 3, takes e.g. a USB speaker). silk_edge_clearance:
-        # the USB-C outline silk runs off the board edge, as on the FP001S board.
+        # the USB-C outline silk runs off the board edge, as on the ESP board.
         run: |
           cd pcb/fp008_board && python3 build_board.py && cd ../..
           B=pcb/fp008_board/fp008_board.kicad_pcb D=fab/fp008
@@ -235,9 +216,6 @@ jobs:
       - name: Build Vein Unit P (finger vein module alone in a printed box, MJF PA12) 3D preview + interference check
         run: python3 station/build_vein_unit_print.py
 
-      - name: Build FP001S USB box (the FP001S + its USB board in a printed box, MJF PA12) 3D preview + interference check
-        run: python3 station/build_fp001s_print.py
-
       - name: Build FP008 USB board 3D preview (from the STEP with parts)
         run: python3 pcb/fp008_board/build_3d.py
 
@@ -281,11 +259,9 @@ jobs:
             site/station-print-b/*
             site/station-print-c/*
             site/vein-unit-print/*
-            site/fp001s-print/*
             site/fp008-board/*
             fab/vein_unit/*
             fab/vein_unit_p/*
-            fab/fp001s/*
             fab/fp008/*
 
       - uses: actions/upload-pages-artifact@v3
