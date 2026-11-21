@@ -160,8 +160,8 @@ jobs:
 
       - name: Build FP001S USB board (KiCad) + DRC
         # the Grow FP001S face / palm vein module on a PC over one USB-C (pcb/fp001s_test_board -> fab/fp001s/): VBUS ->
-        # SY8089 buck -> 3V3, D+ / D- through a CH334F hub to the module's UVC and an RP2354A (USB CDC, the module's UART;
-        # its core is Raspberry Pi's RP2350A Minimal layout from rp2350_core.json). silk_edge_clearance: the USB-C
+        # SY8089 buck -> 3V3, D+ / D- through a CH334F hub to the module's UVC, a CH340C (the module's UART) and a
+        # CH32V203 (the keys, its own USB device). silk_edge_clearance: the USB-C
         # outline silk runs off the board edge, as on the ESP board.
         run: |
           cd pcb/fp001s_test_board && python3 build_board.py && cd ../..

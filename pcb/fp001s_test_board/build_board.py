@@ -1,63 +1,65 @@
-"""FP001S USB board (t3): the Grow FP001S face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through
-one USB-C cable, like a USB camera: the PC sees the module's camera (UVC) and the RP2354A (a USB CDC device that talks
-to the module's UART and holds the keys), and the board takes its power from the same cable. 54 x 34.
+"""FP001S USB board (t4): the Grow FP001S face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through
+one USB-C cable, like a USB camera: the PC sees the module's camera (UVC), a CH340C (the module's UART, as on t2) and a
+CH32V203 that only holds the keys (a USB device of its own; its firmware is ippoan/alc-app-s3's), and the board takes its
+power from the same cable. 54 x 34 (t3's outline, holes and J1 / J3 / U3 / U5 places: station/build_fp001s_print.py).
+t3's RP2354A (UART pass-through + keys) came to $77 for 5 at JLC (Economic), mostly the Extended parts' fee (11 kinds):
+t4 (the user's choice 2026-11-21) puts the UART back on t2's CH340C and the keys on a small USB MCU.
   - J1  USB-C (to the PC): VBUS -> 5V, CC1 / CC2 5.1 k (R1 / R2, so a USB-C port or charger turns VBUS on),
         D+ / D- through U2 (USBLC6-2SC6, clamp reference on 5V) to U3's upstream port.
   - U3  CH334F (QFN-24 4x4) USB 2.0 hub, self-powered from 5V (V5 -> internal LDO -> VDD33 = HUB33), Y1 12 MHz
         (load caps inside the CH334). Port 1 -> the FP001S's USB (UVC / MJPEG up to 960x480 15 fps),
-        port 2 -> U6. Ports 3 / 4 unused. RESET# / PSELF (self-powered) / LED / OVCUR# / PWREN# left open.
-  - U6  RP2354A (QFN-60 7x7, RP2350 with 2 MB flash inside, no radio: no Giteki question, Economic PCBA): USB device
-        on the hub's port 2 (R107 / R108 27 R), UART0 GPIO0 TX -> the module's RXD, GPIO1 RX <- its TXD (115200 8N1,
-        plain: the UART is not encrypted, the user's choice 2026-11-18). Its core (regulator: L106 3.3 uH Abracon
-        AOTA-B201610S3R3-101-T, the right way round, C106 / C107 / C109 4.7 uF, R103 33 R; crystal Y106 ABM8-272-T3
-        with C103 / C104 15 pF and R102 1 k; the 100 nF decoupling) is Raspberry Pi's "RP2350A Minimal" design
-        (MIT, rp2350_core_LICENSE.txt) as they laid it out, footprints, tracks, vias and zones (rp_core_extract.py ->
-        rp2350_core.json; "Hardware design with RP2350" 2.1: use this layout, at your own risk otherwise). Their
-        0.25 drills are opened to 0.3 (JLC's standard). The firmware (ours) takes signed images over USB CDC, checks
-        them before writing and falls back to the old one if the new does not start; Secure Boot keys in OTP.
-        BOOTSEL (TP1: QSPI_SS through R110 1 k, short to TP2 GND at power-up for the ROM's USB boot), RUN (TP3, R111
-        10 k pull-up), SWD (TP4 SWDIO / TP5 SWCLK) are test pads, for the factory only.
-  - U5  SY8089AAAC (SOT-23-5, 2 A, 1 MHz buck): 5V -> 3V3 for the FP001S, U6 and the rest, L2 2.2 uH (SWPA4020S), FB
+        port 2 -> U4, port 3 -> U7. Port 4 unused. RESET# / PSELF (self-powered) / LED / OVCUR# / PWREN# left open.
+  - U4  CH340C (SOP-16, clock inside) at 3.3 V (VCC = V3 = 3V3): TXD -> FP001S RXD, RXD <- FP001S TXD (115200 8N1,
+        plain: the UART is not encrypted, the user's choice 2026-11-18).
+  - U7  CH32V203F6P6 (TSSOP-20, 32 KB flash / 10 KB RAM, RISC-V, no radio): the keys only, a USB full-speed device on
+        the hub's port 3 (PA11 = DM pin 17, PA12 = DP pin 18, straight: the pull-up on DP is inside). Y8 12 MHz HSE
+        (C10 / C11 22 pF): WCH's datasheet (V2.7, table 4-13) gives the HSI as -1.0 .. +1.6 % at 0..70 C, far outside
+        USB full speed's 0.25 %, and the USB's 48 MHz comes from the PLL (2.5.15.5), so the PLL runs from the crystal
+        (12 MHz x 4 = 48 or x 12 = 144 MHz: the firmware's HSE_VALUE is 12 MHz, not WCH's default 8). Y8 is the same
+        Basic part as Y1. BOOT0 (pin 1) R12 10 k to GND (runs from flash); SWD (TP1 SWDIO pin 19 / TP2 SWCLK pin 20,
+        WCH-Link), TP3 3V3, TP4 GND, TP5 BOOT0 (to 3V3 at power-up: WCH's USB / UART ISP bootloader), TP6 NRST
+        (pin 4, pulled up inside) are test pads, for the factory only. C12 / C13 100 nF on VDD (16) / VDDA (5).
+  - U5  SY8089AAAC (SOT-23-5, 2 A, 1 MHz buck): 5V -> 3V3 for the FP001S, U4, U7 and the rest, L2 2.2 uH (SWPA4020S), FB
         R6 100 k / R7 22 k (0.6 V x (1 + 100 / 22) = 3.33 V), EN tied to VIN. A buck, not an LDO (t1's AMS1117): the
         FP001S's 3.3 V 400 mA then takes ~290 mA from VBUS (90 %), not 400, so the whole board (+ hub ~30 mA,
-        RP2354A ~30 mA) stays inside a USB 2.0 port's 500 mA, and it keeps 3.3 V when VBUS sags to 4.4 V (an
-        AMS1117 drops out there: on the bench, 2026-11-18, the FP001S rebooted on a PC port behind an AMS1117
-        as soon as it saw a face). C5 10 uF on 5V is the only bulk on VBUS (with C1 1 uF: 11 uF, USB's 10 uF
+        CH340C ~15 mA, CH32V203 ~15 mA) stays inside a USB 2.0 port's 500 mA, and it keeps 3.3 V when VBUS sags to
+        4.4 V (an AMS1117 drops out there: on the bench, 2026-11-18, the FP001S rebooted on a PC port behind an
+        AMS1117 as soon as it saw a face). C5 10 uF on 5V is the only bulk on VBUS (with C1 1 uF: 11 uF, USB's 10 uF
         inrush limit in spirit); C6 / C8 22 uF + C9 220 uF tantalum on 3V3 take the module's current peaks.
   - J3  JST SH 1.0 6P (SM06B-SRSS-TB, horizontal, opening +y) for the FP001S cable: pins as the module's
         (manual 1.3.2): 1 VCC (3V3), 2 TXD (module out), 3 RXD (module in), 4 GND, 5 D-, 6 D+. The module's own
         cable (SH on the module end, loose wires: red 1, black 2, yellow 3, green 4 = GND, blue 5, white 6; found
-        2026-11-18) does not fit: use an SH 1.0 6P cable with both ends (1 -> 1).
+        2026-11-18) does not fit: use an SH 1.0 6P cable with both ends (1 -> 1). GND (4) is the module's only
+        ground: the UART is dead without it (2026-11-21), and here it is the same pour as the supply's.
         SH_REVERSED: if the cable is crossed (its pin 1 on the other end's pin 6, as Pimoroni / Adafruit SH
         cables are), set it True so the board's pin 6 takes VCC. CHECK THE CABLE BEFORE ORDERING: swapped, the
         module gets 3.3 V on GND.
   - D1 + R5: 3V3 power LED. H1..H4: M2 holes in the corners.
   The module's lens must stand upright (the round lens above the square window, manual 1.1): upside down it sees
   no face at all (2026-11-18).
-Board coords: origin = board centre. J1 (USB-C) on the -y edge at -x with the hub above it, U6 (RP2354A) in the middle
-(RP), the buck at +x, J3 on the +y edge at -x, the test pads on the -y edge at +x.
+Board coords: origin = board centre. J1 (USB-C) on the -y edge at -x with the hub above it, U4 (CH340C) towards J3,
+U7 (CH32V203) in the middle, the buck at +x, J3 on the +y edge at -x, the test pads on the -y edge at +x.
 Routing comes from freerouting and is kept in fp001s_test_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp001s_test_board.kicad_pcb
 Run with KiCad's python from pcb/fp001s_test_board/.
 """
-import json, math, os, re, sys
+import math, os, re, sys
 import pcbnew
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..'))
 from kicad_ses import import_ses  # noqa: E402
 
-REV = 't3'
+REV = 't4'
 NAME = 'fp001s_test_board'
 SH_REVERSED = False            # see the docstring: True if the module's SH cable crosses 1 <-> 6
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
 mm = pcbnew.FromMM
 
-X0, X1, Y0, Y1 = -27.0, 27.0, -17.0, 17.0          # 54 x 34 (t3: room for the RP2354A's core; t2 was 42 x 32)
+X0, X1, Y0, Y1 = -27.0, 27.0, -17.0, 17.0          # 54 x 34 (t3's, the box's; t2 was 42 x 32)
 HOLES = [(sx * 24.5, sy * 14.5) for sx in (-1, 1) for sy in (-1, 1)]
-RP = (2.0, 3.0)                                     # U6's (the RP2354A's) origin: the minimal design's core around it
 POS = {}                                            # ref -> (x, y, rot), overriding the places below
 
 
@@ -74,13 +76,13 @@ ds = b.GetDesignSettings()
 ds.SetCopperLayerCount(2)
 ds.SetBoardThickness(mm(1.6))
 nc = ds.m_NetSettings.m_DefaultNetClass
-nc.SetClearance(mm(0.12)); nc.SetTrackWidth(mm(0.2))   # 0.2 / 0.12: the CH334F's 0.5 pitch, the minimal design's core (0.127)
+nc.SetClearance(mm(0.12)); nc.SetTrackWidth(mm(0.2))   # 0.2 / 0.12: the CH334F's 0.5 pitch
 nc.SetViaDiameter(mm(0.6)); nc.SetViaDrill(mm(0.3))
 
 nets = {}
 for n in ['GND', '5V', '3V3', 'HUB33', 'CC1', 'CC2', 'UDP', 'UDN', 'XI', 'XO', 'LX', 'FB',
           'FPDP', 'FPDM', 'SDP', 'SDN', 'FPTX', 'FPRX', 'LEDA',
-          '1V1', 'VAVDD', 'VLX', 'RXI', 'RXO', 'RXO2', 'RDP', 'RDM', 'RUN', 'SWDIO', 'SWCLK', 'QSS', 'BOOT']:
+          'D3P', 'D3N', 'KXI', 'KXO', 'BOOT0', 'NRST', 'SWDIO', 'SWCLK']:
     ni = pcbnew.NETINFO_ITEM(b, n); b.Add(ni); nets[n] = ni
 
 LIBS = {}
@@ -138,73 +140,33 @@ wire(U2, {'1': 'UDP', '6': 'UDP', '3': 'UDN', '4': 'UDN', '2': 'GND', '5': '5V'}
 
 U3 = load('Package_DFN_QFN.pretty', 'QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm', 'U3', 'CH334F', -15.0, 0.0, 180)   # upstream (14 / 15) to -x over U2, ports 1 / 2 to +y, XI / XO to +x
 wire(U3, {'25': 'GND', '3': 'XO', '4': 'XI', '9': 'SDN', '10': 'SDP', '11': 'FPDM', '12': 'FPDP',
-          '14': 'UDN', '15': 'UDP', '19': '5V', '20': 'HUB33'})
+          '7': 'D3N', '8': 'D3P', '14': 'UDN', '15': 'UDP', '19': '5V', '20': 'HUB33'})   # 7 / 8 = port 3 (U7)
 XT = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y1', '12MHz', -10.5, 0.0, 270)
 wire(XT, {'1': 'XI', '3': 'XO', '2': 'GND', '4': 'GND'})
 C('C1', '1uF', '5V', 'GND', -17.0, -3.5, 0)               # V5 (pins 19 / 20 face -y)
 C('C2', '10uF', 'HUB33', 'GND', -13.5, -3.7, 0)         # VDD33
 C('C3', '100nF', 'HUB33', 'GND', -9.6, -3.6, 90)
 
-# ======== U6 RP2354A (USB device on hub port 2; UART0 to the FP001S) ========
-# The chip with its core regulator (L1 -> L106 here, the inductor the right way round), crystal, decoupling and USB
-# series resistors is the minimal design's (rp2350_core.json from rp_core_extract.py, MIT, see
-# rp2350_core_LICENSE.txt): footprints, tracks, vias and zones as Raspberry Pi laid them out, moved to RP, refs
-# renumbered (U1 -> U6, L1 -> L106, X1 -> Y106, Cn / Rn -> C1nn / R1nn).
-CORE = json.load(open(os.path.join(HERE, 'rp2350_core.json')))
-CORE_NET = {'+3V3': '3V3', 'GND': 'GND', '+1V1': '1V1', '/VREG_AVDD': 'VAVDD', '/VREG_LX': 'VLX', '/XIN': 'RXI',
-            '/XOUT': 'RXO', 'Net-(C4-Pad1)': 'RXO2', 'Net-(U1-USB_DP)': 'RDP', 'Net-(U1-USB_DM)': 'RDM',
-            '/USB_D+': 'SDP', '/USB_D-': 'SDN',                  # R7 / R8's outer pads: the hub's port 2
-            '/GPIO0': 'FPRX', '/GPIO1': 'FPTX',                  # UART0 TX -> the module's RXD, RX <- its TXD
-            '/RUN': 'RUN', '/SWD': 'SWDIO', '/SWCLK': 'SWCLK', '/QSPI_SS': 'QSS'}
-CORE_REF = lambda r: {'U1': 'U6', 'L1': 'L106', 'X1': 'Y106'}.get(r, r[0] + str(100 + int(r[1:])))
+# ======== U4 CH340C (USB-UART, the FP001S's UART) on hub port 2 (t2's) ========
+U4 = load('Package_SO.pretty', 'SOIC-16_3.9x9.9mm_P1.27mm', 'U4', 'CH340C', -2.0, 9.0, 90)
+wire(U4, {'1': 'GND', '2': 'FPRX', '3': 'FPTX', '4': '3V3', '5': 'SDP', '6': 'SDN', '16': '3V3'})   # 2 TXD, 3 RXD
+C('C4', '100nF', '3V3', 'GND', 4.6, 9.0, 90)
 
-
-def cxy(dx, dy):
-    """The core's coordinates (mm from U1, KiCad's y down) to ours."""
-    return P(RP[0] + dx, RP[1] - dy)
-
-
-SHAPE = {'rect': pcbnew.PAD_SHAPE_RECT, 'circle': pcbnew.PAD_SHAPE_CIRCLE, 'oval': pcbnew.PAD_SHAPE_OVAL}
-for f in CORE['footprints']:
-    fp = pcbnew.FOOTPRINT(b)
-    ref = CORE_REF(f['ref'])
-    fp.SetFPID(pcbnew.LIB_ID('rpi_minimal', f['fp'])); fp.SetReference(ref); fp.SetValue(f['value'])
-    fp.Reference().SetVisible(False); fp.Value().SetLayer(pcbnew.F_Fab)
-    b.Add(fp)
-    for q in f['pads']:
-        pd = pcbnew.PAD(fp)
-        pd.SetNumber(q['num']); pd.SetShape(SHAPE[q['shape']])
-        pd.SetSize(pcbnew.VECTOR2I(mm(q['w']), mm(q['h'])))
-        if q['type'] == 'thru_hole':
-            dr = max(q['drill'], 0.3)                    # the EP's vias 0.25 -> 0.3 (JLC's standard drill)
-            pd.SetAttribute(pcbnew.PAD_ATTRIB_PTH); pd.SetDrillSize(pcbnew.VECTOR2I(mm(dr), mm(dr)))
-            pd.SetLayerSet(pcbnew.PAD.PTHMask())
-        else:
-            pd.SetAttribute(pcbnew.PAD_ATTRIB_SMD); pd.SetLayerSet(pcbnew.PAD.SMDMask())
-            if 'F.Paste' not in q['layers']:
-                ls = pd.GetLayerSet(); ls.RemoveLayer(pcbnew.F_Paste); pd.SetLayerSet(ls)
-        loc = pcbnew.VECTOR2I(mm(q['x']), mm(q['y']))       # the footprint is still at the origin, unturned
-        pd.SetPos0(loc); pd.SetPosition(loc)
-        pd.SetOrientation(pcbnew.EDA_ANGLE(q['rot'] - f['rot'], pcbnew.DEGREES_T))
-        n = CORE_NET.get(q['net'])
-        if n:
-            pd.SetNet(nets[n])
-        fp.Add(pd)
-    for kind, x0, y0, x1, y1 in f['courtyard']:
-        g = pcbnew.FP_SHAPE(fp); g.SetShape(pcbnew.SHAPE_T_RECT if kind == 'fp_rect' else pcbnew.SHAPE_T_SEGMENT)
-        g.SetStart0(pcbnew.VECTOR2I(mm(x0), mm(y0))); g.SetEnd0(pcbnew.VECTOR2I(mm(x1), mm(y1)))
-        g.SetLayer(pcbnew.F_CrtYd); g.SetWidth(mm(0.05)); g.SetDrawCoord(); fp.Add(g)
-    fp.SetPosition(cxy(f['x'], f['y']))
-    fp.SetOrientationDegrees(f['rot'])
-U6 = next(fp for fp in b.GetFootprints() if fp.GetReference() == 'U6')
-U6.SetValue('RP2354A')
-# BOOTSEL / RUN / SWD on test pads (the factory's only): BOOT = QSPI_SS through R110 1 k (the minimal design's R6),
-# pulled to GND at power-up for USB boot; RUN pulled up by R111 10 k
-R('R110', '1k', 'QSS', 'BOOT', -4.0, 9.5, 0)
-R('R111', '10k', '3V3', 'RUN', 7.5, -7.0, 0)
-TP = [('TP1', 'BOOT'), ('TP2', 'GND'), ('TP3', 'RUN'), ('TP4', 'SWDIO'), ('TP5', 'SWCLK')]
+# ======== U7 CH32V203F6P6 (the keys only) on hub port 3, Y8 12 MHz HSE ========
+U7 = load('Package_SO.pretty', 'TSSOP-20_4.4x6.5mm_P0.65mm', 'U7', 'CH32V203F6P6', 5.0, -3.0, 0)
+wire(U7, {'1': 'BOOT0', '2': 'KXI', '3': 'KXO', '4': 'NRST', '5': '3V3', '15': 'GND', '16': '3V3',
+          '17': 'D3N', '18': 'D3P', '19': 'SWDIO', '20': 'SWCLK'})       # 5 VDDA, 16 VDD, 17 PA11 DM, 18 PA12 DP
+KX = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y8', '12MHz', -0.7, -1.0, 90)
+wire(KX, {'1': 'KXI', '3': 'KXO', '2': 'GND', '4': 'GND'})
+C('C10', '22pF', 'KXI', 'GND', -4.1, 0.6, 0)
+C('C11', '22pF', 'KXO', 'GND', -4.1, -2.6, 0)
+C('C12', '100nF', '3V3', 'GND', 9.8, -2.5, 90)             # VDD (16)
+C('C13', '100nF', '3V3', 'GND', -0.7, -5.0, 90)            # VDDA (5)
+R('R12', '10k', 'BOOT0', 'GND', 3.0, 2.2, 0)              # BOOT0 low: from flash
+# SWD (WCH-Link) / ISP / reset on test pads (the factory's only)
+TP = [('TP1', 'SWDIO'), ('TP2', 'SWCLK'), ('TP3', '3V3'), ('TP4', 'GND'), ('TP5', 'BOOT0'), ('TP6', 'NRST')]
 for i, (ref, n) in enumerate(TP):
-    t = load('TestPoint.pretty', 'TestPoint_Pad_D1.5mm', ref, n, 9.6 + 2.6 * i, -14.0)
+    t = load('TestPoint.pretty', 'TestPoint_Pad_D1.5mm', ref, n, 7.0 + 2.6 * i, -14.0)
     wire(t, {'1': n})
     t.SetAttributes(t.GetAttributes() | pcbnew.FP_EXCLUDE_FROM_POS_FILES | pcbnew.FP_EXCLUDE_FROM_BOM)   # copper only
     t.Reference().SetVisible(False)                          # the row is labelled by the silk under it
@@ -236,22 +198,6 @@ sig = [xy(p.GetPosition())[1] for p in J3.Pads() if p.GetNumber() != 'MP']
 mp = [xy(p.GetPosition())[1] for p in J3.Pads() if p.GetNumber() == 'MP']
 assert max(sig) < min(mp), 'J3 opening is not +y'
 
-# the core's copper, locked (freerouting routes round it and leaves it out of the .ses)
-for t in CORE['segments']:
-    tr = pcbnew.PCB_TRACK(b); tr.SetStart(cxy(t['x0'], t['y0'])); tr.SetEnd(cxy(t['x1'], t['y1']))
-    tr.SetWidth(mm(t['w'])); tr.SetLayer(pcbnew.F_Cu if t['layer'] == 'F.Cu' else pcbnew.B_Cu)
-    tr.SetNet(nets[CORE_NET[t['net']]]); tr.SetLocked(True); b.Add(tr)
-for v in CORE['vias']:
-    vi = pcbnew.PCB_VIA(b); vi.SetPosition(cxy(v['x'], v['y'])); vi.SetWidth(mm(v['size']))
-    vi.SetDrill(mm(max(v['drill'], 0.3)))                   # 0.25 -> 0.3 (JLC's standard drill)
-    vi.SetNet(nets[CORE_NET[v['net']]]); vi.SetLocked(True); b.Add(vi)
-# the core's zones (all on F.Cu) are kept free of other copper: a keepout for the routing (tracks / vias of other
-# nets) round each, 0.3 out; under the regulator also on B.Cu (the minimal design's B.Cu there is solid GND)
-CORE_KEEP = []
-for z in CORE['zones']:
-    xs = [p[0] for p in z['pts']]; ys = [p[1] for p in z['pts']]
-    CORE_KEEP.append((min(xs) - 0.3, max(xs) + 0.3, min(ys) - 0.3, max(ys) + 0.3))
-
 for i, (x, y) in enumerate(HOLES, 1):
     load('MountingHole.pretty', 'MountingHole_2.2mm_M2', f'H{i}', 'M2', x, y)
 
@@ -276,7 +222,7 @@ SILK = [('USB-C (PC)', -17.0, -12.2, 0.8),
         ('FP001S (SH1.0)', -16.0, 9.3, 0.8),
         ('J3 ' + ' '.join(f'{n}:{short[jn[n]]}' for n in '123'), -16.0, 8.0, 0.8),
         ('   ' + ' '.join(f'{n}:{short[jn[n]]}' for n in '456'), -16.0, 6.7, 0.8),
-        ('BOOT GND RUN DIO CLK', 14.8, -11.6, 0.8)]
+        ('DIO CLK 3V3 GND BT0 RST', 13.5, -11.6, 0.8)]
 for t, x, y, sz in SILK:
     assert X0 + 0.3 <= x - len(t) * 0.4 * sz and x + len(t) * 0.4 * sz <= X1 - 0.3, t
     text(t, x, y, size=sz)
@@ -353,53 +299,12 @@ def tie_islands(b, r=0.35, step=0.2):
     return added
 
 
-def core_zones(b, area=True):
-    """The minimal design's zones (priorities one up, over our pours) and a 3V3 area on F.Cu over the core (the
-    minimal design's F.Cu is a 3V3 pour, which several of its decoupling caps reach their supply through)."""
-    def zone(net, layer, pts, prio, clr, mint, solid, gap=0.5, width=0.5):
-        z = pcbnew.ZONE(b); z.SetLayer(layer); z.SetNet(b.FindNet(net)); z.SetAssignedPriority(prio)
-        ol = z.Outline(); ol.NewOutline()
-        for q in pts:
-            ol.Append(q.x, q.y)
-        z.SetLocalClearance(mm(clr)); z.SetMinThickness(mm(mint))
-        z.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL if solid else pcbnew.ZONE_CONNECTION_THERMAL)
-        z.SetThermalReliefGap(mm(gap)); z.SetThermalReliefSpokeWidth(mm(width))
-        z.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_ALWAYS)
-        b.Add(z)
-    x0, x1, y0, y1 = -7.6, 8.2, -8.6, 14.8                     # rp_core_extract.py's BOX
-    if area:                                                   # not in the DSN: the signals into the core cross it
-        zone('3V3', pcbnew.F_Cu, [cxy(x0, y0), cxy(x1, y0), cxy(x1, y1), cxy(x0, y1)], 1, 0.2, 0.2, False)
-    for z in CORE['zones']:
-        zone(CORE_NET[z['net']], pcbnew.F_Cu if z['layer'] == 'F.Cu' else pcbnew.B_Cu,
-             [cxy(px, py) for px, py in z['pts']], z['priority'] + 1, z['clearance'], z['min_thickness'],
-             z['connect'] == 'yes', z['thermal_gap'], z['thermal_width'])
-
-
-def core_keepouts(b):
-    """For freerouting only: the core's zones as keepouts (no tracks / vias), so nothing else is routed through the
-    regulator's and the crystal's copper. As planes in the DSN they would cover the other nets' pads under them."""
-    for z in CORE['zones']:
-        if z['net'] == '+3V3':            # 3V3 is routed to the core's pins through these (VREG_VIN, pin 49)
-            continue
-        k = pcbnew.ZONE(b); k.SetIsRuleArea(True); k.SetDoNotAllowTracks(True); k.SetDoNotAllowVias(True)
-        k.SetDoNotAllowCopperPour(False); k.SetDoNotAllowPads(False); k.SetDoNotAllowFootprints(False)
-        k.SetLayer(pcbnew.F_Cu if z['layer'] == 'F.Cu' else pcbnew.B_Cu)
-        ol = k.Outline(); ol.NewOutline()
-        for px, py in z['pts']:
-            q = cxy(px, py); ol.Append(q.x, q.y)
-        b.Add(k)
-
-
 os.chdir(HERE)
-if 'dsn' in sys.argv[1:]:
-    core_keepouts(b)
-else:
-    core_zones(b)
 if 'dsn' in sys.argv[1:]:
     b.Save(f'{NAME}.kicad_pcb')
     b = pcbnew.LoadBoard(f'{NAME}.kicad_pcb')
     print('dsn', pcbnew.ExportSpecctraDSN(b, f'{NAME}.dsn'))
-    # 5V / LX routed 0.5 wide, 3V3 0.3 (the FP001S's 400 mA; 0.3 still meets the RP2354A's 0.4 pitch pins with 0.12
+    # 5V / LX routed 0.5 wide, 3V3 0.3 (the FP001S's 400 mA; 0.3 still meets the TSSOP's 0.65 pitch pins with 0.12
     # clearance): net classes written into the DSN for freerouting
     d = open(f'{NAME}.dsn').read()
     i = d.index('    (class kicad_default'); j = d.index('(circuit', i)
