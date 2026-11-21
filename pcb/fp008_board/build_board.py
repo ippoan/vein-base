@@ -22,7 +22,7 @@ the keys on the PC's TPM, 2026-11-19). Sound comes from the PC's own speakers (n
         the flash inside while writing ~15) and the FP008's sensor supply (pin 6, 60 uA): a quarter of its 200 mA,
         ~0.1 W in the SOT-23, and 3.3 V still out at VBUS 4.4 V (dropout ~0.1 V at 50 mA). No buck: that is for a module
         drawing its own ~400 mA from 3V3 (the FP001S); the FP008 runs on 5V.
-  - J3  Molex PicoBlade 53261-0871 (MX1.25 8P, horizontal, opening +y) for the FP008 cable, the module's pins
+  - J3  Molex PicoBlade 53398-0871 (MX1.25 8P, vertical SMD, LCSC C471413; f7) for the FP008 cable, the module's pins
         (manual 1.3.2): 1 VCC 4.5-15 V (5V), 2 GND, 3 TXD (module out), 4 RXD (module in), 5 IRQ, 6 sensor VCC (3V3),
         7 D+, 8 D-. CHECK THE CABLE BEFORE ORDERING (pin 1 on pin 1).
   - D1 + R5: 3V3 power LED.
@@ -38,12 +38,21 @@ the keys on the PC's TPM, 2026-11-19). Sound comes from the PC's own speakers (n
   it (13.5 apart for two plugs), openings -x, wholly outside the body (asserted), and the cables take an L-shaped
   (90 deg) adapter at the plug. The parts keep KEEP clear of the screw bosses (asserted); J3 sits inside at the top
   centre and its cable goes straight to the module's own 8P socket (no slot). The module's rear recess has to take the
-  parts (up to 3.3): measure it before ordering.
+  parts (up to 3.3; J3 from f7 higher, below): measure it before ordering.
   5V load: FP008 200 mA + hub ~30 mA + RP2354A ~50 mA + whatever is on J2.
 Board coords (KiCad's, seen from the F side = from inside the module, so mirrored from behind): origin = the FP008's
 centre, its UP up, J1 (USB-C, PC) at the -x end and J2 (USB-C, device) at the +x end, J3 at the top centre, U6 (the
 RP2354A and its core) in the middle under J3, the hub above J1, the LDO below J2, the test pads on B at the bottom left.
 f6 (2026-11-21): the outline, holes, windows, J1 / J2 / J3 and the parts' height as f5; the CH340C (U4, C4) gone.
+f7 (2026-11-21, user: "まず縦して"): J3 is the vertical PicoBlade 53398-0871 (was f6's horizontal PicoBlade 8P at (0, 12.6),
+  opening +y), turned 0 at (0, 9.85): the pad row up, the MP pads down, pin 1 at -x; pins and nets unchanged,
+  rerouted. The plug goes in straight from the module's side. The module's own 8P socket is at the top edge by the wall
+  (user: "端じゃなければ関係ない"), so J3 sits just under its place (taken as f6's J3 housing SOCK, x +-7.58, y 11.0..15.2):
+  J3's housing x +-7.58, y 7.25..10.95, 0.05 under it (asserted). The footprint is KiCad's with the courtyard
+  tightened to 0.1 (vein_base.pretty) to fit between SOCK and the RP2354A core; C8 moved under J3's pin 1 (-5.0, 4.6).
+  Heights over the board: the housing 4.7 (JLC's Z height for C471413), the mated 51021 plug ~5.7 (as the 4P
+  53398-0471 on the station boards), the wires' bend over it ~1.8: J3 is now the tallest part (the rest up to 3.3), so
+  the module's rear recess has to take ~7.5 there -- not known, measure it before ordering.
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
@@ -58,7 +67,7 @@ from kicad_ses import import_ses  # noqa: E402
 sys.path.insert(0, HERE)
 from rp_core import Core  # noqa: E402
 
-REV = 'f6'
+REV = 'f7'
 NAME = 'fp008_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
@@ -251,16 +260,48 @@ R('R4', '56k', '5V', 'DCC2', 11.6, 12.6, 0)
 U5 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U5', 'USBLC6-2SC6', 11.6, 8.0, 0)
 wire(U5, {'1': 'D3P', '6': 'J2P', '3': 'D3N', '4': 'J2N', '2': 'GND', '5': '5V'})
 C('C9', '10uF', '5V', 'GND', 11.6, 14.6, 0)                # VBUS at J2
+for j, sx in ((J1, 1), (J2, -1)):                   # each USB-C's two 5V pad pairs (A4 / B9, A9 / B4) tied by a via
+    # beside each and B.Cu between them, as f6's routing had them at J2 (f7's freerouting left them apart): locked, so
+    # written into the DSN as fixed wiring (freerouting does not give fixed wiring back in the .ses: added here in both
+    # runs). 1.18 from the pad centre: the via 0.15 clear of the pad's inner end
+    (xa, ya), (xb, yb) = (xy(q.GetPosition()) for q in j.Pads() if q.GetNumber() in ('A4', 'A9'))
+    xv = xa + sx * 1.18
+    for (x0, y0), (x1, y1), lay in (((xa, ya), (xv, ya), pcbnew.F_Cu), ((xb, yb), (xv, yb), pcbnew.F_Cu),
+                                    ((xv, ya), (xv, yb), pcbnew.B_Cu)):
+        t = pcbnew.PCB_TRACK(b); t.SetStart(P(x0, y0)); t.SetEnd(P(x1, y1)); t.SetWidth(mm(0.5))
+        t.SetLayer(lay); t.SetNet(nets['5V']); t.SetLocked(True); b.Add(t)
+    for yv in (ya, yb):
+        v = pcbnew.PCB_VIA(b); v.SetPosition(P(xv, yv)); v.SetWidth(mm(0.6)); v.SetDrill(mm(0.3))
+        v.SetNet(nets['5V']); v.SetLocked(True); b.Add(v)
 
-# ======== J3 FP008 (PicoBlade 8P, opening +y) ========
-J3 = load('Connector_Molex.pretty', 'Molex_PicoBlade_53261-0871_1x08-1MP_P1.25mm_Horizontal', 'J3', 'FP008 (MX1.25 8P)',
-          0.0, 12.6, 180)
+# ======== J3 FP008 (PicoBlade 8P vertical, f7: the plug goes in straight from the module's side) ========
+# The module's own 8P socket sits at the top edge, by the wall (user, from the manual's rear photo): J3's housing (the
+# tall part, the mated plug inside the same outline) stays off the socket's place, taken as f6's horizontal J3's housing
+# SOCK. Turned 0: the pad row up (towards the socket), the MP pads down, pin 1 at -x. The space between SOCK and the
+# RP2354A core (R107 / R108 / L106 up to y 6.7, not moved) is 4.3: the footprint is KiCad's with the courtyard 0.1
+# round the copper and the body (vein_base.pretty, ..._Crt0.1; KiCad's is 0.5 and would hit the core's courtyards).
+SOCK = (-7.58, 7.58, 11.0, 15.2)                    # x0, x1, y0, y1: f6's horizontal J3 (at (0, 12.6), 180), its F.Fab body
+J3Y = SOCK[2] - 0.05 - 1.1                          # the housing's top (local -1.1, turned 0) 0.05 under SOCK
+J3 = load('vein_base.pretty', 'Molex_PicoBlade_53398-0871_1x08-1MP_P1.25mm_Vertical_Crt0.1', 'J3', 'FP008 (MX1.25 8P)',
+          0.0, J3Y, 0)
 FP_PINS = ['5V', 'GND', 'FPTX', 'FPRX', 'IRQ', '3V3', 'FPDP', 'FPDM']    # the module's pins 1..8
 wire(J3, {**{str(i + 1): n for i, n in enumerate(FP_PINS)}, 'MP': 'GND'})
-C('C8', '10uF', '5V', 'GND', 6.5, 7.7, 0)              # at J3: the module's 200 mA
-sig = [xy(p.GetPosition())[1] for p in J3.Pads() if p.GetNumber() != 'MP']
-mp = [xy(p.GetPosition())[1] for p in J3.Pads() if p.GetNumber() == 'MP']
-assert max(sig) < min(mp), 'J3 opening is not +y'
+C('C8', '10uF', '5V', 'GND', -5.0, 4.6, 0)             # the module's 200 mA: under J3's pin 1 (5V, -x), right of C1
+for p in J3.Pads():                                 # every pad on the board (not in a window, off the edge) and clear
+    bb_ = p.GetBoundingBox()                        # of the screw bosses
+    for qx in (bb_.GetLeft(), bb_.GetRight()):
+        for qy in (bb_.GetTop(), bb_.GetBottom()):
+            x_, y_ = xy(pcbnew.VECTOR2I(qx, qy))
+            assert inside(x_, y_, 0.5), ('J3 pad off the board', p.GetNumber(), x_, y_)
+            assert all(math.hypot(x_ - hx, y_ - hy) >= KEEP for hx, hy in HOLES), ('J3 pad on a boss', p.GetNumber())
+sig = sorted((xy(p.GetPosition())[0], int(p.GetNumber())) for p in J3.Pads() if p.GetNumber() != 'MP')
+assert [n for _, n in sig] == list(range(1, 9)), 'J3 pin 1 is not at -x'
+fab = [xy(q) for g in J3.GraphicalItems() if g.GetLayer() == pcbnew.F_Fab and g.GetClass() in ('MGRAPHIC', 'FP_SHAPE', 'PCB_SHAPE')
+       for q in (g.GetStart(), g.GetEnd())]       # the body's lines (F.Fab), their ends
+hx0, hx1 = min(q[0] for q in fab), max(q[0] for q in fab)
+hy0, hy1 = min(q[1] for q in fab), max(q[1] for q in fab)
+assert hx1 <= SOCK[0] or hx0 >= SOCK[1] or hy1 <= SOCK[2] or hy0 >= SOCK[3], ('J3 housing on the socket', hy1)
+print(f'J3 housing x {hx0:.2f}..{hx1:.2f} y {hy0:.2f}..{hy1:.2f}, {SOCK[2] - hy1:.2f} under the socket')
 
 for i, (x, y) in enumerate(HOLES, 1):
     assert inside(x, y, 2.4), ('hole too near the edge', x, y)
