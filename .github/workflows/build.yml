@@ -178,8 +178,9 @@ jobs:
           python3 tools/check_drc.py --board $B --report $D/drc.rpt --ignore silk_edge_clearance
 
       - name: Build FP008 USB board (KiCad) + DRC
-        # the Grow FP008 face / palm vein module on a PC over one USB-C, no MCU (pcb/fp008_board -> fab/fp008/): a CH334F
-        # hub to the module's UVC and a CH340C UART (CTS = the module's IRQ); sound comes from the PC (J2, a USB-C on hub port 3, takes e.g. a USB speaker). silk_edge_clearance:
+        # the Grow FP008 face / palm vein module on a PC over one USB-C (pcb/fp008_board -> fab/fp008/): a CH334F hub to
+        # the module's UVC and an RP2354A (f6: USB CDC, the module's UART on GP0 / GP1, its IRQ on GP2; its core is
+        # Raspberry Pi's RP2350A Minimal layout through pcb/fp008_board/rp_core.py); sound comes from the PC (J2, a USB-C on hub port 3, takes e.g. a USB speaker). silk_edge_clearance:
         # the USB-C outline silk runs off the board edge, as on the FP001S board.
         run: |
           cd pcb/fp008_board && python3 build_board.py && cd ../..

@@ -1,4 +1,4 @@
-"""3D preview of the FP008 USB board (f5: the parts face the module, windows for the L adapters) (site/fp008-board/) from the STEP with parts that the CI writes
+"""3D preview of the FP008 USB board (f6, as f5: the parts face the module, windows for the L adapters) (site/fp008-board/) from the STEP with parts that the CI writes
 (fab/fp008/fp008_board_v<VER>_full.step, KiCad library models fetched by tools/kicad_3d_models.py) and the CI's
 pos.csv. The two USB-C (HRO TYPE-C-31-M-12) have no model in the KiCad library and are drawn as plain boxes.
     python3 pcb/fp008_board/build_3d.py      # from the repo root, with CadQuery (after the board's CI step)
@@ -128,18 +128,18 @@ parts = [('lid', f'FP008(マニュアル 1.3.1: つば 59.5 × 38.5、後ろの�
          ('shell', 'USB-C J1(PC へ)・J2(USB スピーカーなどの機器、ハブのポート 3)。基板の内側の左右の端の近くで、口は外の窓に向く。KiCad に 3D モデルが無いので外形だけの箱',
           '#b8bcc2', 1, 'shell', usb('J1').union(usb('J2'))),
          ('conn', 'J3 PicoBlade 53261-0871(MX1.25 8P、FP008 のケーブル)', '#f1efe8', 1, 'shell', comp(groups['conn'])),
-         ('ics', 'CH334F(ハブ)・CH340C(UART)・USBLC6 × 2・XC6206(3.3 V)・水晶 12 MHz', '#202326', 1, 'shell',
+         ('ics', 'CH334F(ハブ)・USBLC6 × 2・XC6206(3.3 V)・水晶 12 MHz(RP2354A とそのまわりは Raspberry Pi の参考設計のフットプリントで 3D モデルが無く、出ていない)', '#202326', 1, 'shell',
           comp(groups['ics'])),
          ('pass', 'C・R', '#b08850', 1, 'shell', comp(groups['pass'])),
          ('led', 'D1(電源 LED、内側)', '#d23c3c', 1, 'shell', comp(groups['led'])),
-         ('board', f'基板 f5(FP008 の裏のふた、{size[0]:.0f} × {size[1]:.0f} × {T:g})。部品は内側', '#2f6b45', 1, 'shell', lid)]
+         ('board', f'基板 f6(FP008 の裏のふた、{size[0]:.0f} × {size[1]:.0f} × {T:g})。部品は内側', '#2f6b45', 1, 'shell', lid)]
 dims = [('基板', f'{size[0]:.0f} × {size[1]:.0f} × {T:g}。FP008 の後ろの本体の形(角 R12、外にはみ出さない)。左右の端の近くに L 字の変換が通る窓 2 つ(8.8 × 13.4)。部品は内側(FP008 の中、高さ 3.3 まで)'),
         ('固定', 'FP008 の後ろの 4 つのねじ穴(中心から ±18.35, ±11.95。マニュアルの図からの読み取り)に M2 ねじで。部品はねじのボスから 3.5 離す'),
         ('J1 / J2', 'USB-C を左右の端の近くに 1 つずつ、口は外の窓に向く。J1 = PC へ、J2 = USB スピーカーなどの機器(ハブのポート 3)。L 字の変換(オス → 90° のメス)は基板を FP008 から外して挿し、胴が窓を通って上を向く。ケーブルは後ろへ'),
         ('J3', 'MX1.25 8P、内側の上の真ん中。FP008 の中のソケットへ'),
         ('未確認', 'L 字の変換の寸法(窓 8.8 × 13.4 に入るか)、根元が FP008 の後ろのくぼみに入るか(約 5.1 の深さが要る)、ねじ穴の位置と太さ、本体の角の形、後ろのくぼみの深さ(部品 3.3 が入るか)、中のソケットの位置、ケーブルの長さ')]
-write_page('fp008-board', 'FP008 USB 基板 f5', [(k, l, c, o, g, s) for k, l, c, o, g, s in parts],
-           'Grow FP008(顔・手のひら静脈)の裏にふたとしてねじで留め、USB-C 1 本で PC につなぐ基板(マイコンなし)。部品は FP008 の内側。'
+write_page('fp008-board', 'FP008 USB 基板 f6', [(k, l, c, o, g, s) for k, l, c, o, g, s in parts],
+           'Grow FP008(顔・手のひら静脈)の裏にふたとしてねじで留め、USB-C 1 本で PC につなぐ基板(RP2354A が UART・鍵・シリアル OTA を持つ)。部品は FP008 の内側。'
            'ドラッグで回転、ホイール/ピンチで拡大。分解表示で基板と FP008 が離れる。', dims,
            '基板の部品は KiCad の 3D モデル(CI で取得)、USB-C は外形だけの箱。FP008 は外形だけで、中は仮。単位 mm。', 0,
            [('部品込みの STEP(基板だけ)', STEP)], tz='-6')
