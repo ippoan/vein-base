@@ -4,7 +4,7 @@ Comment,Designator,Footprint,LCSC Part #,Note
 "CH334F USB 2.0 hub (QFN-24 4x4)",U3,QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm,C5187527,self-powered from 5V; ports 1 FP008 camera / 2 RP2354A / 3 J2
 "XC6206P332MR 3.3V 200mA LDO (SOT-23)",U1,SOT-23,C5446,Basic part; 5V -> 3V3 for U6 (RP2354A, ~50 mA) and the FP008's sensor (60 uA); check pin 1 (VSS) in the assembly preview
 "12MHz crystal 20pF SMD3225 (YXC X322512MSB4SI)",Y1,Crystal_SMD_3225-4Pin_3.2x2.5mm,C9002,Basic part; no load caps (inside the CH334)
-"Molex PicoBlade 53261-0871 8P 1.25mm right angle",J3,Molex_PicoBlade_53261-0871_1x08-1MP_P1.25mm_Horizontal,C293349,FP008 cable; inside (parts face the module), top centre, opening +y; pin 1 = 5V (check the cable before ordering)
+"Molex PicoBlade 53398-0871 8P 1.25mm vertical SMD",J3,Molex_PicoBlade_53398-0871_1x08-1MP_P1.25mm_Vertical_Crt0.1,C471413,Extended part; FP008 cable; inside (parts face the module), top centre just under the module's own socket at (0, 9.85), the plug in straight from the module's side (housing 4.7 over the board; KiCad's footprint with the courtyard 0.1); pin 1 = 5V at -x (check the cable before ordering)
 "Red LED 0603 (KT-0603R)",D1,LED_0603_1608Metric,C2286,Basic part; 3V3 power
 "100nF 50V X7R 0603",C3,C_0603_1608Metric,C14663,Basic part
 "1uF 50V X5R 0603","C1,C6,C7",C_0603_1608Metric,C15849,Basic part
