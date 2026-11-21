@@ -1,7 +1,8 @@
-"""FP001S USB box: the Grow FP001S face / palm vein module and its USB board t2 (pcb/fp001s_test_board, 42 x 32) in
+"""FP001S USB box: the Grow FP001S face / palm vein module and its USB board t5 (pcb/fp001s_test_board, 54 x 34) in
 one printed box (MJF PA12), one USB-C cable to the PC like a USB camera.
-  - The board lies on four floor bosses (M2 x 4 pan tapping screws from the top through H1..H4), J1 (USB-C) out
-    through the back (-y) wall, J3 (SH 1.0 6P, opening +y) at the front edge.
+  - The board lies on four floor bosses (M2 x 4 pan tapping screws from the top through H1..H4), J1 (USB-C, the PC)
+    and J2 (USB-C, a device: the VoiceS3R, fp4) out through the back (-y) wall, J3 (SH 1.0 6P, opening +y) at the
+    front edge.
   - The module lies in the lid looking straight up (its face parallel to the desk, the user's choice 2026-11-18:
     the face is looked down at, the palm held over it), in front of the board (+y). Its front (dia 18.9, 1.8) fills
     a hole in the lid flush with the top, the flange (dia 20.9, 1.0) sits in a recess in the lid's underside, the
@@ -21,15 +22,16 @@ import cadquery as cq
 from shapes import (ROOT, VER, box, rbox, cyl_z, union, write_page, shell_and_lid, check, T_WALL, T_FLOOR, T_TOP,
                     LEDGE_D, LEDGE_W, LEDGE_H, RIB_W, RIB_PITCH, RIB_LID)
 
-REV = 'fp3'
-# ---- shared with pcb/fp001s_test_board/build_board.py (t3): outline, holes, part places. Keep the two together -------
+REV = 'fp4'
+# ---- shared with pcb/fp001s_test_board/build_board.py (t5): outline, holes, part places. Keep the two together -------
 BRD = (-27.0, 27.0, -17.0, 17.0)
 HOLES = [(sx * 24.5, sy * 14.5) for sx in (-1, 1) for sy in (-1, 1)]
 J1 = (-16.5, -13.95)                     # USB-C (HRO TYPE-C-31-M-12), footprint origin
 J3 = (-16.0, 13.6)                       # SH 1.0 6P horizontal (SM06B-SRSS-TB), turned 180, opening +y
 U6, Y106 = (2.0, 3.0), (2.0, -9.4)       # RP2354A QFN-60 7x7 (RP) and its 12 MHz 3225 (the minimal design's X1)
 U3, Y1 = (-15.0, 0.0), (-10.5, 0.0)      # CH334F QFN-24 4x4, 12 MHz 3225
-U1, L1, C9 = (18.5, -3.5), (23.5, -3.0), (22.0, 6.0)   # SY8089 SOT-23-5 (U5), SWPA4020 4x4 (L2), 220 uF 3528
+U1, L1, C9 = (18.5, -0.5), (23.5, 0.0), (22.0, 8.6)    # SY8089 SOT-23-5 (U5), SWPA4020 4x4 (L2), 220 uF 3528
+J2 = (16.5, -13.95)                      # t5: the second USB-C (a device: the VoiceS3R), same edge as J1
 # ----------------------------------------------------------------------------------------------------------------------
 GAP = 0.3
 BOSS_D, BOSS_H, PILOT = 5.0, 2.5, 1.6    # M2 x 4 tapping: 1.6 board + 2.4 into the boss (2.5); the pilot from z -0.4, 1.2 of floor left
@@ -76,10 +78,11 @@ fp = union(cyl_z(fx, fy, FP_REAR[0] / 2, Z_REAR, z1), cyl_z(fx, fy, FP_FLANGE[0]
 # from the front, the image comes out with the face upright (the manual's "Up" = the lens side)
 lens = cyl_z(fx, fy - 4.0, 1.2, Z_TOP - 0.01, Z_TOP + 0.05)
 win = box(fx - 1.5, fx + 1.5, fy + 4.0, fy + 7.0, Z_TOP - 0.01, Z_TOP + 0.05)
-usb = box(J1[0] - 4.47, J1[0] + 4.47, J1_FRONT, J1_FRONT + 7.3, ZBT, ZBT + 3.26)
+assert J2[1] == J1[1], 'J2 on the same line as J1 (one back wall, one J1_FRONT)'
 uz = ZBT + 1.63
-usb_plug = box(J1[0] - USB_PLUG[0] / 2 + 0.3, J1[0] + USB_PLUG[0] / 2 - 0.3, J1_FRONT - 30.0, J1_FRONT,
-               uz - USB_PLUG[1] / 2 + 0.3, uz + USB_PLUG[1] / 2 - 0.3).edges('|Y').fillet(0.7)
+usb = union(*[box(j[0] - 4.47, j[0] + 4.47, J1_FRONT, J1_FRONT + 7.3, ZBT, ZBT + 3.26) for j in (J1, J2)])
+usb_plug = union(*[box(j[0] - USB_PLUG[0] / 2 + 0.3, j[0] + USB_PLUG[0] / 2 - 0.3, J1_FRONT - 30.0, J1_FRONT,
+                       uz - USB_PLUG[1] / 2 + 0.3, uz + USB_PLUG[1] / 2 - 0.3).edges('|Y').fillet(0.7) for j in (J1, J2)])
 j3 = box(J3[0] - 4.0, J3[0] + 4.0, J3[1] - 1.2, BRD[3] - 0.1, ZBT, ZBT + 2.95)
 plug = box(J3[0] - 3.6, J3[0] + 3.6, BRD[3] - 0.1, PLUG_END, ZBT, ZBT + 2.9)
 # the SH cable: 10 cm, both ends SH (1 -> 1). J3 to the module's socket is 2..3 cm, ~7 cm left over. Where the
@@ -102,18 +105,18 @@ ics = union(box(U6[0] - 3.5, U6[0] + 3.5, U6[1] - 3.5, U6[1] + 3.5, ZBT, ZBT + 0
 power = union(box(L1[0] - 2.0, L1[0] + 2.0, L1[1] - 2.4, L1[1] + 2.4, ZBT, ZBT + 2.0),
               box(C9[0] - 2.6, C9[0] + 2.6, C9[1] - 1.4, C9[1] + 1.4, ZBT, ZBT + 2.1))
 heads = union(*[cyl_z(x, y, 1.9, ZBT, ZBT + 1.4) for x, y in HOLES])                         # M2 pan heads
-parts = [('FP001S', fp), ('board', board), ('USB-C J1', usb), ('USB-C plug', usb_plug), ('SH J3', j3),
+parts = [('FP001S', fp), ('board', board), ('USB-C J1 / J2', usb), ('USB-C plug', usb_plug), ('SH J3', j3),
          ('SH plug', plug), ('SH cable room', rise), ('ICs', ics), ('L1 / C9', power), ('screw heads', heads)]
 
 # ---- the case --------------------------------------------------------------------------------------------------------
 r_hole = FP_FRONT[0] / 2 + FIT
 lid_hole = union(cyl_z(fx, fy, r_hole, Z_IN - 1, Z_TOP + 1),
                  cyl_z(fx, fy, FP_FLANGE[0] / 2 + FIT, Z_IN - 1, Z_IN + FLANGE_UP))        # the flange's recess
-usb_hole = box(J1[0] - USB_PLUG[0] / 2, J1[0] + USB_PLUG[0] / 2, yi0 - T_WALL - 1, yi0 + 0.1,
-               uz - USB_PLUG[1] / 2, uz + USB_PLUG[1] / 2).edges('|Y').fillet(1.0)      # rounded in the wall's face
+usb_holes = [box(j[0] - USB_PLUG[0] / 2, j[0] + USB_PLUG[0] / 2, yi0 - T_WALL - 1, yi0 + 0.1,
+                 uz - USB_PLUG[1] / 2, uz + USB_PLUG[1] / 2).edges('|Y').fillet(1.0) for j in (J1, J2)]   # rounded in the wall's face
 bosses = union(*[cyl_z(x, y, BOSS_D / 2, -0.01, ZB) for x, y in HOLES])
 posts = union(*[cyl_z(x, y, POST_D / 2, -0.01, Z_REAR) for x, y in POSTS])
-tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, [usb_hole], [lid_hole], Z_IN,
+tray, lid, size, screws = shell_and_lid(xi0, xi1, yi0, yi1, usb_holes, [lid_hole], Z_IN,
                                         keep_clear=[o for _, o in parts], tht=[usb], floor=[bosses, posts],
                                         rib_floor=ZB, walls=('x-', 'x+'))
 for x, y in HOLES:
@@ -139,19 +142,19 @@ view = [
     ('shell', 'ふた(M2 皿ねじで本体の受けに締める。FP001S の穴と、裏につばの座ぐり)', '#2b2f33', 0.45, 'shell', lid),
     ('fp', 'FP001S-White(前 ⌀18.9・つば ⌀20.9・後ろ ⌀18.8、厚さ 6.2)。真上を向き、前の面はふたの上面とそろう', '#e9e9e4', 1, 'mods', fp),
     ('lens', 'レンズ(丸、奥 = USB-C の側)と四角い窓(手前 = 使う人の側)', '#202326', 1, 'mods', lens.union(win)),
-    ('board', 'USB 基板 t2(42 × 32、床のボスに M2 × 4 なべタッピング 4 本。pcb/fp001s_test_board)', '#1f7a4d', 1, 'mods', board),
-    ('usb', 'J1 USB-C と挿したプラグ(奥の壁から、PC へ 1 本)', '#b8bcc2', 1, 'mods', usb.union(usb_plug)),
+    ('board', 'USB 基板 t5(54 × 34、床のボスに M2 × 4 なべタッピング 4 本。pcb/fp001s_test_board)', '#1f7a4d', 1, 'mods', board),
+    ('usb', 'J1(PC へ)・J2(VoiceS3R へ)の USB-C と挿したプラグ(どちらも奥の壁から)', '#b8bcc2', 1, 'mods', usb.union(usb_plug)),
     ('j3', 'J3 SH 1.0 6P と挿したプラグ(手前の縁、口は +y)', '#f1efe8', 1, 'mods', j3.union(plug)),
     ('rise', 'SH ケーブル(10 cm)の置き場: J3 から FP001S の下へ、プラグの上の帯で左右へ、余り約 7 cm は FP001S の左右のポケットに折り返す', '#d9775c', 0.6, 'mods', rise),
-    ('ics', 'CH340C・CH334F・水晶・SY8089', '#202326', 1, 'mods', ics),
+    ('ics', 'RP2354A・CH334F・水晶 2 つ・SY8089', '#202326', 1, 'mods', ics),
     ('power', 'L1 2.2 µH・C9 220 µF', '#6b5b3e', 1, 'mods', power),
     ('lid', '本体(床・壁・ボス・リブ・FP001S を下から受ける柱 3 本、MJF PA12 で造形)', '#8fa09c', 0.9, 'lid', tray)]
 dims = [('外形', '%.1f × %.1f × %.1f(幅 × 奥行き × 高さ、ふた込み)' % size), ('体積', '%.1f cm³(本体 + ふた)' % vol),
         ('肉厚', f'壁 {T_WALL}、床 {T_FLOOR}、天板 {T_TOP}(MJF PA12)'),
         ('FP001S', f'ふたの手前側に、**真上を向けて**(机に平行)入れる。前(⌀18.9 × 1.8)がふたの穴を埋めて上面とそろい、つば(⌀20.9)がふたの裏の座ぐり(深さ {FLANGE_UP:.1f})に当たり、'
                    f'後ろ(⌀18.8)を床の柱 3 本(⌀{POST_D:g})が下から受ける。ふたを閉めると挟まる。**丸いレンズは奥(USB-C の側)、四角い窓は手前(使う人の側)**: 上からのぞき込んだ顔が正立して写る向き'),
-        ('基板', f't2(42 × 32)を床のボス(⌀{BOSS_D:g}、高さ {BOSS_H:g})に M2 × 4 なべタッピング 4 本で留める'),
-        ('USB-C', f'奥の壁の穴 {USB_PLUG[0]:g} × {USB_PLUG[1]:g}(R1)から PC へ 1 本。カメラ(UVC)と COM ポートが同時に出る'),
+        ('基板', f't5(54 × 34)を床のボス(⌀{BOSS_D:g}、高さ {BOSS_H:g})に M2 × 4 なべタッピング 4 本で留める'),
+        ('USB-C', f'奥の壁の穴 {USB_PLUG[0]:g} × {USB_PLUG[1]:g}(R1)× 2: 左の J1 から PC へ 1 本(カメラ(UVC)と COM ポートが同時に出る)、右の J2 に VoiceS3R(ハブのポート 3)'),
         ('ケーブル', f'J3 → FP001S は両端 SH 1.0 6P の 1 → 1、10 cm(付属のケーブルは片側がバラ線で使えない)。J3 から手前へ出し、FP001S の下を通して裏のソケットへ(2〜3 cm)。'
                      f'余り約 7 cm は FP001S の左右のポケット({POCKET[1] - POCKET[0]:.1f} × {POCKET[3] - POCKET[2]:.0f} × 高さ {POCKET[5] - POCKET[4]:.1f})のうちソケットに近い側に折り返す。'
                      'ソケットの位置(レンズに対してどの縁か)は実物で確かめる'),
@@ -160,7 +163,7 @@ dims = [('外形', '%.1f × %.1f × %.1f(幅 × 奥行き × 高さ、ふた込�
                  + ', '.join(f'({x:.1f}, {y:.1f})' for x, y in screws)),
         ('干渉', 'なし' if not bad else ', '.join(bad))]
 write_page('fp001s-print', f'FP001S USB ボックス {REV}', view,
-           'Grow FP001S(顔・手のひら静脈)と USB 基板 t2 を 3D 印刷(MJF PA12)の箱に入れ、USB-C 1 本で PC につなぐ案。FP001S は真上を向く。'
+           'Grow FP001S(顔・手のひら静脈)と USB 基板 t5 を 3D 印刷(MJF PA12)の箱に入れ、USB-C 1 本で PC につなぐ案。FP001S は真上を向く。'
            'ドラッグで回転、ホイール/ピンチで拡大。', dims,
            'FP001S の外形はマニュアル 1.3.1 の値、レンズと窓の位置は写真からのイメージ。基板の部品は KiCad のフットプリント寸法と'
            'データシートからの簡略形状。単位 mm。', Z_TOP, stls, tz='-12')
