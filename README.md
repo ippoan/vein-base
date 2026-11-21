@@ -100,23 +100,42 @@ NFC Unit を箱の外に置き(Grove ケーブルで J6 へ)、SW-75B(50 × 30 �
 
 本体を CoreS3 SE に替え、RS232M Module 13.2(アルコールチェッカー FC-1200 用)・NFC・指静脈を収める版。LAN は使わず、USB 1 本で Windows PC につなぐ。`station/build_station_se.py` が筐体と 3D プレビュー(https://ippoan.github.io/vein-base/station-se/)を作る。CoreS3 SE には PORT.B のコネクタが無いので、指静脈の UART(G8/G9)は RS232M の下に挿す M-Bus 分岐基板から取り出す。CoreS3 SE と Unit NFC は M5Stack 公式 STL([m5stack/M5_Hardware](https://github.com/m5stack/M5_Hardware)、MIT)を commit 固定で取得して表示とポート位置に使う(`station/cad/`、git 管理外)。CoreS3 SE の PWR・USB-C・PORT.A はすべて左側面にある。指静脈モジュールの外形は公式値(コネクタ位置は未確定)。RS232M・分岐基板は仮の箱。計画は #14。
 
-## FP001S の USB 基板(`pcb/fp001s_test_board`、t2)
+## FP001S の USB 基板(`pcb/fp001s_test_board`、t3)
 
-Grow の顔・手のひら静脈認証モジュール FP001S を、**USB-C 1 本**で PC につなぐ 42 × 32 mm の基板。USB カメラのように挿すだけで、PC からは FP001S のカメラ(UVC)と COM ポート(UART、登録・照合のコマンド)の両方が同時に見え、電源も同じケーブルから取る。t1(USB-C 2 口、電源は充電器から別に)を、2026-11-18 の実機の結果から 1 本にした。
+Grow の顔・手のひら静脈認証モジュール FP001S を、**USB-C 1 本**で PC につなぐ 54 × 34 mm の基板。PC からは FP001S のカメラ(UVC)と RP2354A(USB CDC)が同時に見え、電源も同じケーブルから取る。t2 の CH340C を RP2354A に替え、PC と FP001S の間にマイコンを置いた(鍵を持ち、署名つきのファームだけを USB で受けて書き換える運用のため。2026-11-18 ユーザー決定)。
 
-- J1(USB-C): PC へ。VBUS → 5 V、CC は 5.1 kΩ × 2(USB-C のポート・充電器が 5 V を出す)。D+ / D- は USBLC6 → CH334F ハブ。ポート 1 = FP001S の USB(UVC カメラ、MJPEG 最大 960 × 480 15 fps)、ポート 2 = CH340C(COM ポート、115200 8N1)。
-- U1(SY8089、降圧 DC-DC)で 3.3 V。t1 の AMS1117(LDO)をやめた理由: FP001S の 3.3 V 400 mA を LDO で作ると VBUS から 400 mA 取り、USB の 5 V が下がると 3.3 V を保てない。実機で、PC の USB から AMS1117 経由で給電すると、顔を見つけたところで FP001S が再起動した(2026-11-18)。降圧なら VBUS 側は約 290 mA で、ハブと CH340 を足しても約 350 mA と USB 2.0 の 500 mA に収まる見込み(FP001S の 400 mA はマニュアルの値で、未実測)。3.3 V 側に 22 µF × 2 + 220 µF(タンタル)。
+- J1(USB-C): PC へ。VBUS → 5 V、CC は 5.1 kΩ × 2。D+ / D- は USBLC6 → CH334F ハブ。ポート 1 = FP001S の USB(UVC カメラ)、ポート 2 = RP2354A。
+- U6(RP2354A、RP2350 にフラッシュ 2 MB を内蔵、無線なし): UART0(GPIO0 TX → FP001S の RXD、GPIO1 RX ← TXD、115200 8N1、暗号化しない)。**RP2354A まわり(内蔵の降圧のインダクター L106 = Abracon AOTA-B201610S3R3-101-T と C106 / C107 / C109 / R103、水晶 Y106 = ABM8-272-T3 と C103 / C104 / R102、100 nF のデカップリング、USB の 27 Ω)は Raspberry Pi の「RP2350A Minimal」(MIT、`rp2350_core_LICENSE.txt`)の配置・線・ビア・ゾーンをそのまま写した**(`rp_core_extract.py` → `rp2350_core.json`。資料「Hardware design with RP2350」2.1 で、この配置を使わないなら自己責任とされている)。穴だけ 0.25 → 0.3(JLC の標準)。freerouting はその銅を固定として避け、ゾーンは配線のときだけ配線禁止にする。
+- BOOTSEL(TP1 = QSPI_SS を R110 1 kΩ 経由、TP2 GND とショートして電源投入で ROM の USB 書き込み)、RUN(TP3、R111 10 kΩ プルアップ)、SWD(TP4 / TP5)はテストパッド(工場用)。**新品の RP2354A はフラッシュが空なので、TP をショートしなくても電源投入で ROM の USB 書き込みに入る**(工場の初回は J1 をつなぐだけで picotool から書ける。書くのは alc-app-s3 の `crates/fp001s-rp2354/bought.py` で TBYB の印を落とした写し)。TP1-TP2 が要るのは、書いたファームが USB に出てこなくなったときの書き直しだけ。RP2354A の QSPI_SD0〜3・SCLK はパッケージ内のフラッシュにつながっているので基板では開放のまま(QSPI_SS だけ BOOTSEL に使う)。
+- フラッシュ 2 MB の割り付け(ファーム `crates/fp001s-rp2354` の `partition_table.json` / `src/key.rs`): A 0x002000〜0x0FFFFF(1016 KiB)、B 0x100000〜0x1FDFFF(1016 KiB)、AUTH 鍵 0x1FF000〜0x1FFFFF(最後の 4 KiB)。2 MB にちょうど収まる(Pico 2 の 4 MB で試したときも同じ番地を使っている)。
+- GND: J3 の 4 番(FP001S の GND)と MP は基板の GND(両面のベタ、RP2354A の EP と同じネット)。2026-11-21 の Pico 2 での試験で、FP001S の GND を電源側だけにつなぎ RP2354 の GND とつながっていないと UART が無応答だった。この基板では J3 の 4 番が同じ GND なので起きないが、**両端 SH のケーブルの 4 番が導通していること**は確かめる。
+- U5(SY8089、降圧 DC-DC)で 3.3 V(t2 と同じ)。VBUS 側は約 350 mA の見込み(FP001S の 400 mA はマニュアルの値で未実測)。3.3 V の線は 0.3 mm(RP2354A の 0.4 ピッチのピンにつなぐため。5V・LX は 0.5)。クリアランスは 0.12 mm(参考の設計の 0.127 に合わせた)。
 - J3(SH 1.0 6P、SM06B-SRSS-TB): FP001S のケーブル。1 = 3V3、2 = TX(モジュールの出力)、3 = RX、4 = GND、5 = D-、6 = D+(マニュアル 1.3.2 の並び)。モジュールに付属のケーブルは片側がバラ線(赤 1・黒 2・黄 3・緑 4 = GND・青 5・白 6、2026-11-18 に実物で確認)なので、両端 SH の 6P ケーブル(1 → 1)を使う。**発注前にケーブルが 1 番 → 1 番か 1 番 → 6 番(反転)かを実物で確認し、反転なら `build_board.py` の `SH_REVERSED = True`**(逆だとモジュールの GND に 3.3 V が入る)。
 - FP001S は**丸いレンズを上、四角い窓を下**に立てる(マニュアル 1.1)。逆さだと顔も手のひらも検出しない(2026-11-18)。
-- 配線は freerouting 2.4.1 の `fp001s_test_board.ses`(`build_board.py dsn` → freerouting → `.ses`)。CI で `fab/fp001s/` にガーバー・CPL・BOM・DRC。CPL 補正は t1 で JLC の実装プレビューで確かめた分(QFN-24 は 270、SOT-23-6 は 270)。t2 で増えた SY8089(SOT-23-5、270 は SOT-23-6 からの類推)・タンタル C9 の極性・L1 は、発注時のプレビューで確かめる。
+- 配線は freerouting 2.4.1 の `fp001s_test_board.ses`(`build_board.py dsn` → freerouting → `.ses`)。CI で `fab/fp001s/` にガーバー・CPL・BOM・DRC・STEP。CPL 補正(`jlc_cpl_corrections.csv`)は t1 で確かめた QFN-24 270・SOT-23-6 270・USB-C の Y −1.57 と、SOT-23-5 の 180(SY8089 C78988 の JLC のフットプリントは 1 番が右下で、KiCad の左上と 180° 違う。2026-11-21 に EasyEDA の部品データと KiCad のパッド位置を突き合わせた。t3 までの 270 は SOT-23-6 からの類推で、90° ずれて載るところだった)。同じ突き合わせで、U6(RP2354A C41378174、1 番が左上)・L106・Y106・C9(1 番 = +)・J3 は補正なし(0°)で合う。
+- ファーム(RP2354A、Rust、USB CDC の中継と署名つきの更新)は alc-app-s3 の `crates/fp001s-rp2354`(2026-11-21 に Pico 2 で区画表・USB CDC 2 本・AUTH 鍵・シリアル OTA と 10 分のロールバック・FP001S の顔の照合まで確認)。
 
-### FP001S USB ボックス(`station/build_fp001s_print.py`、fp2)
+#### 発注前に確かめること
 
-上の基板と FP001S を 3D 印刷(MJF PA12)の箱に入れたもの。外形 46.2 × 58.5 × 16.8。3D プレビュー: https://ippoan.github.io/vein-base/fp001s-print/(main の CI が更新)。STL は CI の Artifacts の `station/vein_station_print_fp001s_v<版>_{body,lid}.stl`、基板の STEP は `fab/fp001s/fp001s_test_board_v<版>_pcb.step`(CI に KiCad の部品の 3D モデルが無いので基板だけ)。
+1. **SH 6P ケーブル(両端 SH、10 cm)が 1 → 1 か 1 → 6(反転)か**を実物でテスターで確かめる。反転なら `build_board.py` の `SH_REVERSED = True` にして CI を回し直す(逆のまま挿すと FP001S の GND に 3.3 V が入る)。あわせて 4 番(GND)の導通も見る。
+2. **JLC の実装プレビュー**で次を確かめる(CPL の補正が効いているか):
+   - U6 RP2354A: 1 番の印が左上(QFN-60、EP のビア 9 本が EP に重なる)
+   - U5 SY8089(SOT-23-5): 1 番(EN)が左上(基板の向きで)。補正を 180 に直したので最初に見る
+   - U3 CH334F(QFN-24)・U2 USBLC6(SOT-23-6): 1 番の位置(t1 と同じ 270)
+   - L106: 極性の点が Raspberry Pi の参考の設計と同じ側(JLC のデータに点の印が無いので、プレビューの部品の写真で見る)
+   - C9 タンタル: 帯(+)が 1 番 = 3V3 の側
+   - D1 LED・Y1 水晶(CH334 の 12 MHz): 向き(JLC のデータを取れず未照合)
+   - J1 USB-C: 口が −y の縁から出ている(Y −1.57 の補正)
+3. JLC の在庫: RP2354A(C41378174)・AOTA-B201610S3R3-101-T(C42411119)・ABM8-272-T3(C20625731)・CH334F(C5187527)は Extended / 在庫が出ない品があるので、発注画面で在庫と単価を見る。
+4. DRC は CI の `fab/fp001s/drc.rpt`(エラー 0・未接続 0、残りはシルクの重なりとライブラリ外のフットプリントの警告)。
+
+### FP001S USB ボックス(`station/build_fp001s_print.py`、fp3)
+
+上の基板(t3)と FP001S を 3D 印刷(MJF PA12)の箱に入れたもの。外形 58.2 × 60.5 × 16.8(t2 の基板のときの fp2 は 46.2 × 58.5)。3D プレビュー: https://ippoan.github.io/vein-base/fp001s-print/(main の CI が更新)。STL は CI の Artifacts の `station/vein_station_print_fp001s_v<版>_{body,lid}.stl`、基板の STEP は `fab/fp001s/fp001s_test_board_v<版>_pcb.step`(CI に KiCad の部品の 3D モデルが無いので基板だけ)。
 
 - 基板は床のボス 4 つに M2 × 4 なべタッピングねじで留める。USB-C は奥の壁の穴から PC へ 1 本。
 - FP001S はふたの手前側に**真上を向けて**(机に平行、2026-11-18 ユーザー決定。顔は上からのぞき込み、手のひらは上からかざす)入れる。前(⌀18.9)がふたの穴を埋めて上面とそろい、つば(⌀20.9)がふたの裏の座ぐりに当たり、後ろ(⌀18.8)を床の柱 3 本が下から受ける。ふたを閉めると挟まる。**丸いレンズは奥(USB-C の側)、四角い窓は手前(使う人の側)**: のぞき込んだ顔が正立して写る向き(マニュアルの「Up」= レンズの側)。
-- SH ケーブルは両端 SH 1.0 6P の 1 → 1、10 cm。J3 から手前へ出し、FP001S の下を通して裏のソケットへ(2〜3 cm)。余り約 7 cm は、FP001S の左右のポケット(約 7 × 13 × 高さ 10、ソケットの位置が分からないので両側)のうちソケットに近い側に折り返す。通り道とポケットは干渉チェックに入れている。
+- SH ケーブルは両端 SH 1.0 6P の 1 → 1、10 cm。J3 から手前へ出し、FP001S の下を通して裏のソケットへ(2〜3 cm)。余り約 7 cm は、FP001S の左右のポケット(右は約 10 × 13 × 高さ 10、左は J3 のプラグと通り道の上の段で高さ約 5.5、ソケットの位置が分からないので両側)のうちソケットに近い側に折り返す。通り道とポケットは干渉チェックに入れている。
 - ふたは M2 × 5 皿タッピングねじ 4 本で壁の受けに締める。
 - 干渉チェックと肉厚チェック(1.0 mm)を CI にかけている。部品は KiCad のフットプリント寸法からの簡略形状。FP001S のソケットの位置(レンズに対してどの縁か)は実物で確かめる。
 
