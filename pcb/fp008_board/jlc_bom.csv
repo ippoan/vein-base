@@ -1,15 +1,24 @@
 Comment,Designator,Footprint,LCSC Part #,Note
 "USB-C 16P receptacle (Korean Hroparts TYPE-C-31-M-12)","J1,J2",USB_C_Receptacle_HRO_TYPE-C-31-M-12,C165948,J1 = the PC (power and data); J2 = a device on hub port 3; J1 at the -x end and J2 at the +x end, openings out into the windows for the L adapters
 "USBLC6-2SC6 USB ESD (SOT-23-6)","U2,U5",SOT-23-6,C7519,U2 on J1's D+ / D-; U5 on J2's
-"CH334F USB 2.0 hub (QFN-24 4x4)",U3,QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm,C5187527,self-powered from 5V; ports 1 FP008 camera / 2 CH340C / 3 J2
-"CH340C USB-UART (SOP-16, clock inside)",U4,SOIC-16_3.9x9.9mm_P1.27mm,C84681,VCC = V3 = 3V3; CTS# = the FP008's IRQ
-"XC6206P332MR 3.3V 200mA LDO (SOT-23)",U1,SOT-23,C5446,Basic part; 5V -> 3V3 for U4 and the FP008's sensor; check pin 1 (VSS) in the assembly preview
+"CH334F USB 2.0 hub (QFN-24 4x4)",U3,QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm,C5187527,self-powered from 5V; ports 1 FP008 camera / 2 RP2354A / 3 J2
+"XC6206P332MR 3.3V 200mA LDO (SOT-23)",U1,SOT-23,C5446,Basic part; 5V -> 3V3 for U6 (RP2354A, ~50 mA) and the FP008's sensor (60 uA); check pin 1 (VSS) in the assembly preview
 "12MHz crystal 20pF SMD3225 (YXC X322512MSB4SI)",Y1,Crystal_SMD_3225-4Pin_3.2x2.5mm,C9002,Basic part; no load caps (inside the CH334)
 "Molex PicoBlade 53261-0871 8P 1.25mm right angle",J3,Molex_PicoBlade_53261-0871_1x08-1MP_P1.25mm_Horizontal,C293349,FP008 cable; inside (parts face the module), top centre, opening +y; pin 1 = 5V (check the cable before ordering)
 "Red LED 0603 (KT-0603R)",D1,LED_0603_1608Metric,C2286,Basic part; 3V3 power
-"100nF 50V X7R 0603","C3,C4",C_0603_1608Metric,C14663,Basic part
+"100nF 50V X7R 0603",C3,C_0603_1608Metric,C14663,Basic part
 "1uF 50V X5R 0603","C1,C6,C7",C_0603_1608Metric,C15849,Basic part
 "10uF 25V X5R 0805","C2,C5,C8,C9",C_0805_2012Metric,C15850,Basic part
 "5.1k 1% 0603","R1,R2",R_0603_1608Metric,C23186,Basic part; J1 CC1 / CC2
 "56k 1% 0603","R3,R4",R_0603_1608Metric,C23206,Basic part; J2 CC1 / CC2 Rp to 5V (default USB power)
-"1k 1% 0603",R5,R_0603_1608Metric,C21190,Basic part; LED
+"1k 1% 0603","R5,R110",R_0603_1608Metric,C21190,Basic part; LED / R110 BOOTSEL (QSPI_SS -> TP1)
+"10k 1% 0603",R111,R_0603_1608Metric,C25804,Basic part; RUN pull-up
+"RP2354A (QFN-60 7x7, 2 MB flash inside)",U6,rpi_rp2350a_vias,C41378174,the minimal design's footprint (EP with 9 vias); USB on hub port 2, UART0 GP0 / GP1 = the FP008's RX / TX, GP2 = its IRQ; check pin 1 and the rotation in the assembly preview
+"3.3uH Abracon AOTA-B201610S3R3-101-T (0806, polarity dot)",L106,abracon_aota-b201610s3r3-101-t,C42411119,RP2354A core regulator; the dot must sit as in the minimal design (check in the assembly preview)
+"12MHz crystal Abracon ABM8-272-T3 (3225)",Y106,generic_xtalcc320x250x80-4,C20625731,RP2354A clock (Raspberry Pi's recommended part)
+"4.7uF 10V X5R 0402","C106,C107,C109",generic_capc1005x50_wide,C23733,Basic part; VREG_VIN / DVDD / VREG_AVDD (C109 on the narrow footprint)
+"100nF 16V X7R 0402","C108,C110,C111,C112,C113,C114,C115,C116,C117,C118",generic_capc1005x50,C1525,Basic part; RP2354A decoupling
+"15pF 50V C0G 0402","C103,C104",generic_capc1005x50,C1548,Basic part; crystal load
+"1k 1% 0402",R102,generic_resc1005x35,C11702,Basic part; XOUT series
+"33R 1% 0402",R103,generic_resc1005x35,C25105,Basic part; VREG_AVDD filter
+"27R 1% 0402","R107,R108",generic_resc1005x35,C25100,USB D+ / D- series
