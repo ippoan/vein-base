@@ -1,8 +1,8 @@
 """FP008 USB board (f6): the Grow FP008 face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through one
 USB-C cable: the PC sees the module's camera (UVC) and an RP2354A (USB CDC), both behind one hub. The RP2354A talks to
 the module's UART (the same commands as the FP001S, EF AA), holds the keys, does the face-check exchange and takes
-signed firmware over its serial port (A / B with fallback): the firmware is alc-app-s3's crates/fp001s-rp2354, as on
-the FP001S board (2026-11-21, user: the MCU does the serial OTA and the face-check exchange; f1..f5 had a CH340C and
+signed firmware over its serial port (A / B with fallback): the firmware is alc-app-s3's crates/fp001s-rp2354
+(2026-11-21, user: the MCU does the serial OTA and the face-check exchange; f1..f5 had a CH340C and
 the keys on the PC's TPM, 2026-11-19). Sound comes from the PC's own speakers (no audio on the board).
   - J1  USB-C (to the PC): VBUS -> 5V, CC1 / CC2 5.1 k (R1 / R2), D+ / D- through U2 (USBLC6-2SC6) to U3's upstream.
   - U3  CH334F (QFN-24 4x4) USB 2.0 hub, self-powered from 5V (V5 -> internal LDO -> VDD33 = HUB33), Y1 12 MHz (load
@@ -15,13 +15,13 @@ the keys on the PC's TPM, 2026-11-19). Sound comes from the PC's own speakers (n
         -> FP008 RXD, GPIO1 RX <- FP008 TXD (115200 8N1), GPIO2 <- the FP008's IRQ (its infrared presence sensor;
         high = someone is there; f5 had it on the CH340C's CTS#). Its core (regulator L106 / C106 / C107 / C109 /
         R103, crystal Y106 with C103 / C104 / R102, the 100 nF decoupling) is Raspberry Pi's "RP2350A Minimal"
-        layout as they drew it (rp_core.py here, the data and the MIT licence in pcb/fp001s_test_board/), their
+        layout as they drew it (rp_core.py, the data rp2350_core.json and the MIT licence, all here), their
         0.25 drills opened to 0.3. BOOTSEL (TP1: QSPI_SS through R110 1 k, short to TP2 GND at power-up), RUN (TP3,
         R111 10 k pull-up), SWD (TP4 SWDIO / TP5 SWCLK) are test pads on B, the outside, for the factory only.
   - U1  XC6206P332MR (SOT-23, 3.3 V LDO, 200 mA) 5V -> 3V3 for U6 (~50 mA at most: RP2350 at 150 MHz with USB ~30,
         the flash inside while writing ~15) and the FP008's sensor supply (pin 6, 60 uA): a quarter of its 200 mA,
-        ~0.1 W in the SOT-23, and 3.3 V still out at VBUS 4.4 V (dropout ~0.1 V at 50 mA). No buck as on the FP001S
-        board: there the module's own 400 mA was on 3V3; the FP008 runs on 5V.
+        ~0.1 W in the SOT-23, and 3.3 V still out at VBUS 4.4 V (dropout ~0.1 V at 50 mA). No buck: that is for a module
+        drawing its own ~400 mA from 3V3 (the FP001S); the FP008 runs on 5V.
   - J3  Molex PicoBlade 53261-0871 (MX1.25 8P, horizontal, opening +y) for the FP008 cable, the module's pins
         (manual 1.3.2): 1 VCC 4.5-15 V (5V), 2 GND, 3 TXD (module out), 4 RXD (module in), 5 IRQ, 6 sensor VCC (3V3),
         7 D+, 8 D-. CHECK THE CABLE BEFORE ORDERING (pin 1 on pin 1).
@@ -212,8 +212,8 @@ C('C3', '100nF', 'HUB33', 'GND', -7.7, 0.5, 90)
 
 # ======== U6 RP2354A on hub port 2 (f6): UART0 to the FP008, its IRQ on GPIO2; U1 3.3 V LDO ========
 # The chip with its core regulator, crystal, decoupling and USB series resistors is Raspberry Pi's "RP2350A Minimal"
-# layout, footprints, tracks, vias and zones, as on the FP001S board (rp_core.py here, the data in
-# pcb/fp001s_test_board/rp2350_core.json, MIT: rp2350_core_LICENSE.txt there). Refs: U1 -> U6, L1 -> L106,
+# layout, footprints, tracks, vias and zones (rp_core.py here, the data in
+# rp2350_core.json here, MIT: rp2350_core_LICENSE.txt here). Refs: U1 -> U6, L1 -> L106,
 # X1 -> Y106, Cn / Rn -> C1nn / R1nn.
 RP = (0.5, -1.4)                                    # U6's origin
 core = Core(b, nets, RP, {'/USB_D+': 'SDP', '/USB_D-': 'SDN',           # R7 / R8's outer pads: the hub's port 2

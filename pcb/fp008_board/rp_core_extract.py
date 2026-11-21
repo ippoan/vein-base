@@ -1,6 +1,6 @@
 """Take the RP2350A core (the chip, its regulator, crystal, decoupling and USB series resistors, with their copper)
 out of Raspberry Pi's "RP2350A Minimal" KiCad design (RPI-RP2350A-MINIMAL_R4-S1, MIT licence, see
-rp2350_core_LICENSE.txt) into rp2350_core.json, for build_board.py t3 to put on our board around the RP2354A (same
+rp2350_core_LICENSE.txt) into rp2350_core.json, for build_board.py (f6, through rp_core.py) to put on our board around the RP2354A (same
 QFN-60 and pins, flash inside). The minimal design's own regulator layout is the one Raspberry Pi stands behind
 ("Hardware design with RP2350" 2.1: the inductor the right way round and this exact layout), so it is copied, not
 redrawn. Plain Python, no KiCad (the design is KiCad 9; our CI has KiCad 7):
@@ -114,7 +114,7 @@ def in_poly(x, y, pts):
 
 
 def connected(x, y, net, me):
-    if net == '+3V3':                  # build_board.py t3 pours 3V3 on F.Cu over the whole BOX (as the minimal design's F.Cu)
+    if net == '+3V3':                  # rp_core.py pours 3V3 on F.Cu over the whole BOX (as the minimal design's F.Cu)
         return True
     if any(math.hypot(x - px, y - py) <= r for px, py, r in pad_pts(net)):
         return True
