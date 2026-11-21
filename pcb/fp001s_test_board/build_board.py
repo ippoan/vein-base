@@ -1,11 +1,14 @@
-"""FP001S USB board (t3): the Grow FP001S face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through
+"""FP001S USB board (t5): the Grow FP001S face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through
 one USB-C cable, like a USB camera: the PC sees the module's camera (UVC) and the RP2354A (a USB CDC device that talks
 to the module's UART and holds the keys), and the board takes its power from the same cable. 54 x 34.
+t5 (2026-11-21, user: "2 of them, the VoiceS3R hangs off it"): a second USB-C, J2, for a device (the VoiceS3R, the
+warning unit, USB CDC) on the hub's port 3, so the PC still needs only J1's cable. (t4 was the CH340C + CH32V203
+board, given up: ippoan/vein-base#168.)
   - J1  USB-C (to the PC): VBUS -> 5V, CC1 / CC2 5.1 k (R1 / R2, so a USB-C port or charger turns VBUS on),
         D+ / D- through U2 (USBLC6-2SC6, clamp reference on 5V) to U3's upstream port.
   - U3  CH334F (QFN-24 4x4) USB 2.0 hub, self-powered from 5V (V5 -> internal LDO -> VDD33 = HUB33), Y1 12 MHz
         (load caps inside the CH334). Port 1 -> the FP001S's USB (UVC / MJPEG up to 960x480 15 fps),
-        port 2 -> U6. Ports 3 / 4 unused. RESET# / PSELF (self-powered) / LED / OVCUR# / PWREN# left open.
+        port 2 -> U6, port 3 -> J2. Port 4 unused. RESET# / PSELF (self-powered) / LED / OVCUR# / PWREN# left open.
   - U6  RP2354A (QFN-60 7x7, RP2350 with 2 MB flash inside, no radio: no Giteki question, Economic PCBA): USB device
         on the hub's port 2 (R107 / R108 27 R), UART0 GPIO0 TX -> the module's RXD, GPIO1 RX <- its TXD (115200 8N1,
         plain: the UART is not encrypted, the user's choice 2026-11-18). Its core (regulator: L106 3.3 uH Abracon
@@ -20,10 +23,11 @@ to the module's UART and holds the keys), and the board takes its power from the
   - U5  SY8089AAAC (SOT-23-5, 2 A, 1 MHz buck): 5V -> 3V3 for the FP001S, U6 and the rest, L2 2.2 uH (SWPA4020S), FB
         R6 100 k / R7 22 k (0.6 V x (1 + 100 / 22) = 3.33 V), EN tied to VIN. A buck, not an LDO (t1's AMS1117): the
         FP001S's 3.3 V 400 mA then takes ~290 mA from VBUS (90 %), not 400, so the whole board (+ hub ~30 mA,
-        RP2354A ~30 mA) stays inside a USB 2.0 port's 500 mA, and it keeps 3.3 V when VBUS sags to 4.4 V (an
-        AMS1117 drops out there: on the bench, 2026-11-18, the FP001S rebooted on a PC port behind an AMS1117
-        as soon as it saw a face). C5 10 uF on 5V is the only bulk on VBUS (with C1 1 uF: 11 uF, USB's 10 uF
-        inrush limit in spirit); C6 / C8 22 uF + C9 220 uF tantalum on 3V3 take the module's current peaks.
+        RP2354A ~30 mA) stays inside a USB 2.0 port's 500 mA (t5: J2's device comes on top of that, see the README),
+        and it keeps 3.3 V when VBUS sags to 4.4 V (an AMS1117 drops out there: on the bench, 2026-11-18, the
+        FP001S rebooted on a PC port behind an AMS1117 as soon as it saw a face). C5 10 uF on 5V is the only bulk
+        on VBUS (with C1 1 uF: 11 uF, USB's 10 uF inrush limit in spirit); C6 / C8 22 uF + C9 220 uF tantalum on
+        3V3 take the module's current peaks.
   - J3  JST SH 1.0 6P (SM06B-SRSS-TB, horizontal, opening +y) for the FP001S cable: pins as the module's
         (manual 1.3.2): 1 VCC (3V3), 2 TXD (module out), 3 RXD (module in), 4 GND, 5 D-, 6 D+. The module's own
         cable (SH on the module end, loose wires: red 1, black 2, yellow 3, green 4 = GND, blue 5, white 6; found
@@ -31,11 +35,16 @@ to the module's UART and holds the keys), and the board takes its power from the
         SH_REVERSED: if the cable is crossed (its pin 1 on the other end's pin 6, as Pimoroni / Adafruit SH
         cables are), set it True so the board's pin 6 takes VCC. CHECK THE CABLE BEFORE ORDERING: swapped, the
         module gets 3.3 V on GND.
+  - J2  USB-C (a device, the VoiceS3R; FP008's J2 copied: pcb/fp008_board) on the -y edge at +x beside J1, on hub
+        port 3 (DM3 7 / DP3 8) through U7 (USBLC6-2SC6, as J1's U2): VBUS = 5V straight (no switch), CC1 / CC2
+        56 k (R3 / R4) to 5V: the Rp of default USB power. J1's 5V feeds the FP001S, the hub, the RP2354A and J2's
+        device: past USB 2.0's 500 mA on a plain PC port (see the README). No bulk at J2: J1's VBUS keeps C5 + C1.
   - D1 + R5: 3V3 power LED. H1..H4: M2 holes in the corners.
   The module's lens must stand upright (the round lens above the square window, manual 1.1): upside down it sees
   no face at all (2026-11-18).
 Board coords: origin = board centre. J1 (USB-C) on the -y edge at -x with the hub above it, U6 (RP2354A) in the middle
-(RP), the buck at +x, J3 on the +y edge at -x, the test pads on the -y edge at +x.
+(RP), J2 (USB-C) on the -y edge at +x with the buck above it, J3 on the +y edge at -x, the test pads on the +y edge
+in the middle.
 Routing comes from freerouting and is kept in fp001s_test_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp001s_test_board.kicad_pcb
@@ -48,7 +57,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..'))
 from kicad_ses import import_ses  # noqa: E402
 
-REV = 't3'
+REV = 't5'
 NAME = 'fp001s_test_board'
 SH_REVERSED = False            # see the docstring: True if the module's SH cable crosses 1 <-> 6
 FP = '/usr/share/kicad/footprints/'
@@ -79,7 +88,7 @@ nc.SetViaDiameter(mm(0.6)); nc.SetViaDrill(mm(0.3))
 
 nets = {}
 for n in ['GND', '5V', '3V3', 'HUB33', 'CC1', 'CC2', 'UDP', 'UDN', 'XI', 'XO', 'LX', 'FB',
-          'FPDP', 'FPDM', 'SDP', 'SDN', 'FPTX', 'FPRX', 'LEDA',
+          'FPDP', 'FPDM', 'SDP', 'SDN', 'FPTX', 'FPRX', 'LEDA', 'DCC1', 'DCC2', 'J2P', 'J2N',
           '1V1', 'VAVDD', 'VLX', 'RXI', 'RXO', 'RXO2', 'RDP', 'RDM', 'RUN', 'SWDIO', 'SWCLK', 'QSS', 'BOOT']:
     ni = pcbnew.NETINFO_ITEM(b, n); b.Add(ni); nets[n] = ni
 
@@ -136,14 +145,24 @@ R('R2', '5.1k', 'CC2', 'GND', -11.5, -6.2, 90)
 U2 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U2', 'USBLC6-2SC6', -17.0, -6.4, 90)
 wire(U2, {'1': 'UDP', '6': 'UDP', '3': 'UDN', '4': 'UDN', '2': 'GND', '5': '5V'})
 
-U3 = load('Package_DFN_QFN.pretty', 'QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm', 'U3', 'CH334F', -15.0, 0.0, 180)   # upstream (14 / 15) to -x over U2, ports 1 / 2 to +y, XI / XO to +x
-wire(U3, {'25': 'GND', '3': 'XO', '4': 'XI', '9': 'SDN', '10': 'SDP', '11': 'FPDM', '12': 'FPDP',
+U3 = load('Package_DFN_QFN.pretty', 'QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm', 'U3', 'CH334F', -15.0, 0.0, 180)   # upstream (14 / 15) to -x over U2, ports 1..3 to +y, XI / XO to +x
+wire(U3, {'25': 'GND', '3': 'XO', '4': 'XI', '7': 'J2N', '8': 'J2P', '9': 'SDN', '10': 'SDP', '11': 'FPDM', '12': 'FPDP',
           '14': 'UDN', '15': 'UDP', '19': '5V', '20': 'HUB33'})
 XT = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y1', '12MHz', -10.5, 0.0, 270)
 wire(XT, {'1': 'XI', '3': 'XO', '2': 'GND', '4': 'GND'})
 C('C1', '1uF', '5V', 'GND', -17.0, -3.5, 0)               # V5 (pins 19 / 20 face -y)
 C('C2', '10uF', 'HUB33', 'GND', -13.5, -3.7, 0)         # VDD33
 C('C3', '100nF', 'HUB33', 'GND', -9.6, -3.6, 90)
+
+# ======== J2 USB-C (a device: the VoiceS3R) on hub port 3 (pcb/fp008_board's J2) ========
+J2X = 16.5
+J2 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J2', 'USB-C (device)', J2X, Y0 + 3.05)
+wire(J2, {**USB_GND, 'A5': 'DCC1', 'B5': 'DCC2', 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V',
+          'A6': 'J2P', 'B6': 'J2P', 'A7': 'J2N', 'B7': 'J2N'})
+R('R3', '56k', '5V', 'DCC1', J2X - 4.3, -6.4, 90)
+R('R4', '56k', '5V', 'DCC2', J2X + 4.5, -6.6, 90)
+U7 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U7', 'USBLC6-2SC6', J2X, -6.5, 90)
+wire(U7, {'1': 'J2P', '6': 'J2P', '3': 'J2N', '4': 'J2N', '2': 'GND', '5': '5V'})
 
 # ======== U6 RP2354A (USB device on hub port 2; UART0 to the FP001S) ========
 # The chip with its core regulator (L1 -> L106 here, the inductor the right way round), crystal, decoupling and USB
@@ -204,22 +223,22 @@ R('R110', '1k', 'QSS', 'BOOT', -4.0, 9.5, 0)
 R('R111', '10k', '3V3', 'RUN', 7.5, -7.0, 0)
 TP = [('TP1', 'BOOT'), ('TP2', 'GND'), ('TP3', 'RUN'), ('TP4', 'SWDIO'), ('TP5', 'SWCLK')]
 for i, (ref, n) in enumerate(TP):
-    t = load('TestPoint.pretty', 'TestPoint_Pad_D1.5mm', ref, n, 9.6 + 2.6 * i, -14.0)
+    t = load('TestPoint.pretty', 'TestPoint_Pad_D1.5mm', ref, n, 4.0 + 2.6 * i, 14.4)    # t5: off the -y edge (J2)
     wire(t, {'1': n})
     t.SetAttributes(t.GetAttributes() | pcbnew.FP_EXCLUDE_FROM_POS_FILES | pcbnew.FP_EXCLUDE_FROM_BOM)   # copper only
-    t.Reference().SetVisible(False)                          # the row is labelled by the silk under it
+    t.Reference().SetVisible(False)                          # the row is labelled by the silk over it (t5)
 
 # ======== U5 SY8089 buck: 5V -> 3V3 (t2's U1) ========
-U5 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-5', 'U5', 'SY8089AAAC', 18.5, -3.5, 0)
+U5 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-5', 'U5', 'SY8089AAAC', 18.5, -0.5, 0)
 wire(U5, {'1': '5V', '2': 'GND', '3': 'LX', '4': '5V', '5': 'FB'})        # 1 EN (tied to IN), 2 GND, 3 LX, 4 IN, 5 FB
-C('C5', '10uF', '5V', 'GND', 18.5, -7.0, 0)                                # VIN, beside pin 4
-L2 = load('vein_base.pretty', 'L_Sunlord_SWPA4020S', 'L2', '2.2uH', 23.5, -3.0, 90)
+C('C5', '10uF', '5V', 'GND', 20.8, -4.0, 0)                                # VIN, by pin 4
+L2 = load('vein_base.pretty', 'L_Sunlord_SWPA4020S', 'L2', '2.2uH', 23.5, 0.0, 90)
 wire(L2, {'1': 'LX', '2': '3V3'})
-R('R6', '100k', '3V3', 'FB', 14.0, -4.0, 0)
-R('R7', '22k', 'FB', 'GND', 14.0, -6.0, 0)
-C('C6', '22uF', '3V3', 'GND', 24.0, 2.0, 0)
-C('C8', '22uF', '3V3', 'GND', 20.0, 2.0, 0)
-C9 = load('Capacitor_Tantalum_SMD.pretty', 'CP_EIA-3528-21_Kemet-B', 'C9', '220uF 6.3V', 22.0, 6.0, 0)
+R('R6', '100k', '3V3', 'FB', 14.0, -1.0, 0)
+R('R7', '22k', 'FB', 'GND', 14.0, -3.0, 0)
+C('C6', '22uF', '3V3', 'GND', 24.0, 5.0, 0)
+C('C8', '22uF', '3V3', 'GND', 20.0, 5.0, 0)
+C9 = load('Capacitor_Tantalum_SMD.pretty', 'CP_EIA-3528-21_Kemet-B', 'C9', '220uF 6.3V', 22.0, 8.6, 0)
 wire(C9, {'1': '3V3', '2': 'GND'})                                          # 1 = + (the band)
 C('C7', '100nF', '3V3', 'GND', 25.5, 9.5, 90)
 two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', 16.0, 12.2, 0)   # 1 = K, 2 = A
@@ -273,10 +292,11 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 # silk: 1 character ~ 0.8 x size wide, centred: keep both ends inside the outline
 short = {'3V3': '3V3', 'FPTX': 'TX', 'FPRX': 'RX', 'GND': 'G', 'FPDM': 'D-', 'FPDP': 'D+'}
 SILK = [('USB-C (PC)', -17.0, -12.2, 0.8),
+        ('USB-C (DEVICE)', J2X, -12.2, 0.8),
         ('FP001S (SH1.0)', -16.0, 9.3, 0.8),
         ('J3 ' + ' '.join(f'{n}:{short[jn[n]]}' for n in '123'), -16.0, 8.0, 0.8),
         ('   ' + ' '.join(f'{n}:{short[jn[n]]}' for n in '456'), -16.0, 6.7, 0.8),
-        ('BOOT GND RUN DIO CLK', 14.8, -11.6, 0.8)]
+        ('BOOT GND RUN DIO CLK', 9.2, 16.2, 0.8)]
 for t, x, y, sz in SILK:
     assert X0 + 0.3 <= x - len(t) * 0.4 * sz and x + len(t) * 0.4 * sz <= X1 - 0.3, t
     text(t, x, y, size=sz)
@@ -368,7 +388,9 @@ def core_zones(b, area=True):
         b.Add(z)
     x0, x1, y0, y1 = -7.6, 8.2, -8.6, 14.8                     # rp_core_extract.py's BOX
     if area:                                                   # not in the DSN: the signals into the core cross it
-        zone('3V3', pcbnew.F_Cu, [cxy(x0, y0), cxy(x1, y0), cxy(x1, y1), cxy(x0, y1)], 1, 0.2, 0.2, False)
+        # pads joined solid, as the minimal design's own 3V3 zones (connect_pads yes): with thermals, a pad hemmed in
+        # by the tracks into the core kept one spoke only (t5: DRC starved_thermal at U6 pin 1 / C113)
+        zone('3V3', pcbnew.F_Cu, [cxy(x0, y0), cxy(x1, y0), cxy(x1, y1), cxy(x0, y1)], 1, 0.2, 0.2, True)
     for z in CORE['zones']:
         zone(CORE_NET[z['net']], pcbnew.F_Cu if z['layer'] == 'F.Cu' else pcbnew.B_Cu,
              [cxy(px, py) for px, py in z['pts']], z['priority'] + 1, z['clearance'], z['min_thickness'],
