@@ -28,8 +28,7 @@ the keys on the PC's TPM, 2026-11-19). Sound comes from the PC's own speakers (n
   - D1 + R5: 3V3 power LED.
   f3 (2026-11-19, user): the board is the FP008's back lid. Its outline is the module's rear body (manual 1.3.1:
   55.45 x 34.45, drawn as a rounded rectangle, corners R12 -- the real corner shape is to be checked), screwed to the
-  module's four rear screw holes H1..H4 at (+-18.35, +-11.95) (read off the manual's rear drawing, ~36.7 x 23.9 apart;
-  measure before ordering).
+  module's four rear screw holes H1..H4 (read off the manual's rear drawing then; f8 below).
   f5 (2026-11-20, user: no tongue): the outline is the rear body only. J1 (-x end) and J2 (+x end) face a window
   each (WIN), the L adapters' bodies go up through them and their elbows sit in the module's rear recess (~5.1 deep
   needed). The parts moved around the two (U4 at the bottom, J3 at the top centre); U3's exposed pad has vias.
@@ -53,6 +52,11 @@ f7 (2026-11-21, user: "まず縦して"): J3 is the vertical PicoBlade 53398-087
   Heights over the board: the housing 4.7 (JLC's Z height for C471413), the mated 51021 plug ~5.7 (as the 4P
   53398-0471 on the station boards), the wires' bend over it ~1.8: J3 is now the tallest part (the rest up to 3.3), so
   the module's rear recess has to take ~7.5 there -- not known, measure it before ordering.
+f8 (2026-11-23, the maker on the real module): the screw holes H1..H4 are M3 (MountingHole_3.2mm_M3; the module takes
+  M3 x 6 through its bracket's inner holes), at (+-18.35, +-12.5): y 25 apart from the maker's answer (the bracket's
+  inner two holes), x 36.7 still read off the manual's drawing (not measured). Parts, pads (the test pads on B too) and
+  windows 3.5 from a hole's centre (KEEP, asserted), the holes 3.0 inside the outline (the M3 head 5.5). No part moved,
+  f7's routing kept (DRC clean).
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
@@ -67,7 +71,7 @@ from kicad_ses import import_ses  # noqa: E402
 sys.path.insert(0, HERE)
 from rp_core import Core  # noqa: E402
 
-REV = 'f7'
+REV = 'f8'
 NAME = 'fp008_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
@@ -75,7 +79,7 @@ mm = pcbnew.FromMM
 
 X0, X1, Y0, Y1 = -27.5, 27.5, -17.0, 17.0          # the FP008's rear body 55.45 x 34.45, a hair inside
 RC = 12.0                                           # corner radius (guess from the drawing)
-HOLES = [(sx * 18.35, sy * 11.95) for sx in (-1, 1) for sy in (-1, 1)]   # the module's rear screw holes (manual 1.3.1)
+HOLES = [(sx * 18.35, sy * 12.5) for sx in (-1, 1) for sy in (-1, 1)]    # the module's rear screw holes, M3 (f8)
 # f5 (2026-11-20, user: no tongue, the cables' plugs inside): J1 / J2 sit inside the rear body's outline, J1 opening -x
 # and J2 opening +x, each facing a window WIN through the board between it and the edge. An L adapter (USB-C plug ->
 # female turned 90 deg, ~AD_W x AD_D across, the female end up, sizes from a product photo: check the real one) goes in
@@ -86,7 +90,7 @@ NW, ND = AD_W + 1.0, AD_D + 1.0 + 0.3               # window across, deep from X
 EDGE = 1.5                                          # board left between a window and the outline
 XF = -X0 - EDGE - ND                                # J1's opening at x = -XF, J2's at +XF (|x| of the window's inner side)
 WIN = [(-XF - ND, -XF, -NW / 2, NW / 2), (XF, XF + ND, -NW / 2, NW / 2)]   # (x0, x1, y0, y1)
-KEEP = 3.5                                          # clear of each screw boss (parts face the module, f4)
+KEEP = 3.5                                          # clear of each screw hole's centre (M3 head 5.5, its boss; f4, f8)
 
 
 def outline(n=10):
@@ -123,9 +127,9 @@ def inside(x, y, m=0.0):
     return c
 
 
-for x0, x1, y0, y1 in WIN:                          # the windows clear of the screw holes (M2, boss ~2.5)
+for x0, x1, y0, y1 in WIN:                          # the windows clear of the screw holes (M3, f8)
     for hx, hy in HOLES:
-        assert math.hypot(max(x0 - hx, 0, hx - x1), max(y0 - hy, 0, hy - y1)) >= 3.0, ('window on a hole', hx, hy)
+        assert math.hypot(max(x0 - hx, 0, hx - x1), max(y0 - hy, 0, hy - y1)) >= KEEP, ('window on a hole', hx, hy)
 
 
 POS = {}                                            # ref -> (x, y, rot), overriding the places below
@@ -304,8 +308,8 @@ assert hx1 <= SOCK[0] or hx0 >= SOCK[1] or hy1 <= SOCK[2] or hy0 >= SOCK[3], ('J
 print(f'J3 housing x {hx0:.2f}..{hx1:.2f} y {hy0:.2f}..{hy1:.2f}, {SOCK[2] - hy1:.2f} under the socket')
 
 for i, (x, y) in enumerate(HOLES, 1):
-    assert inside(x, y, 2.4), ('hole too near the edge', x, y)
-    load('MountingHole.pretty', 'MountingHole_2.2mm_M2', f'H{i}', 'M2', x, y)
+    assert inside(x, y, 3.0), ('hole too near the edge', x, y)   # the M3 head (5.5) on the board
+    load('MountingHole.pretty', 'MountingHole_3.2mm_M3', f'H{i}', 'M3', x, y)
 
 # ---- outline
 def edge_loop(pts):
@@ -333,6 +337,15 @@ for fp in b.GetFootprints():                        # every part inside the outl
         for hx, hy in HOLES:                        # clear of the screw bosses (the parts face the module)
             dx = max(L - hx, 0, hx - Rr); dy = max(T_ - hy, 0, hy - B_)
             assert math.hypot(dx, dy) >= KEEP, (fp.GetReference(), 'on the boss at', hx, hy)
+for fp in b.GetFootprints():                        # every pad (F and B, the test pads too) KEEP from a hole's centre (f8)
+    if fp.GetReference().startswith('H'):
+        continue
+    for p in fp.Pads():
+        bb_ = p.GetBoundingBox()
+        L, Rr = pcbnew.ToMM(bb_.GetLeft()) - OX, pcbnew.ToMM(bb_.GetRight()) - OX
+        T_, B_ = OY - pcbnew.ToMM(bb_.GetBottom()), OY - pcbnew.ToMM(bb_.GetTop())
+        for hx, hy in HOLES:
+            assert math.hypot(max(L - hx, 0, hx - Rr), max(T_ - hy, 0, hy - B_)) >= KEEP, (fp.GetReference(), p.GetNumber())
 for j, sx in ((J1, -1), (J2, 1)):                   # each USB-C's opening at its window (J1 -x, J2 +x)
     bb_ = j.GetCourtyard(pcbnew.F_CrtYd).BBox()
     front = pcbnew.ToMM(bb_.GetLeft() if sx < 0 else bb_.GetRight()) - OX
@@ -374,7 +387,7 @@ def stitch(b, pitch=2.5, clr=0.25):
         x = X0 + 1.5
         while x < X1 - 1.0:
             q = P(x, y)
-            ok = (inside(x, y, 1.0) and all((x - hx) ** 2 + (y - hy) ** 2 > 3.0 ** 2 for hx, hy in HOLES)
+            ok = (inside(x, y, 1.0) and all((x - hx) ** 2 + (y - hy) ** 2 > KEEP ** 2 for hx, hy in HOLES)
                   and not any(c.OutlineCount() and c.Contains(q) for c in crt)
                   and not any(s.Collide(q, mm(r)) for s in items))
             if ok:
@@ -415,7 +428,7 @@ def tie_islands(b, r=0.35, step=0.2):
                 x = bb.GetLeft()
                 while x <= bb.GetRight():
                     q = pcbnew.VECTOR2I(x, y)
-                    if (room(piece, q) and room(other, q) and all((q - h).EuclideanNorm() > mm(2.0) for h in holes)
+                    if (room(piece, q) and room(other, q) and all((q - h).EuclideanNorm() > mm(KEEP) for h in holes)
                             and not any((q - h).EuclideanNorm() < mm(0.9) for h in pth)):
                         if not any(c.OutlineCount() and c.Contains(q) for c in crt):
                             best = q
