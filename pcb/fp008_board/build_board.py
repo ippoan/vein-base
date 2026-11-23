@@ -57,8 +57,10 @@ f8 (2026-11-23, the maker on the real module): the screw holes H1..H4 are M3 (Mo
   inner two holes); x 36.3 measured on the manual's rear drawing (1.3.1, scanned at 300 dpi, the scale set so that
   the holes' y comes to 25; +-0.2), f7's 36.7 was too wide. The holes are drilled 3.4 (M3 loose) for that +-0.2:
   KiCad's MountingHole_3.2mm_M3 (NPTH, no copper) with its drill and hole size set to 3.4. Parts, pads (the test pads on B too) and
-  windows 3.5 from a hole's centre (KEEP, asserted), the holes 3.0 inside the outline (the M3 head 5.5). No part moved,
-  f7's routing kept (DRC clean).
+  windows 3.5 from a hole's centre (KEEP, asserted), the holes 3.0 inside the outline (the M3 head 5.5). The module's
+  bracket (metal, 7.5 wide) lies on B over each hole's x +-3.75: the test pad row moved +x 0.45 to take TP1 out of it
+  (asserted); the vias are
+  tented, J1 / J2's shell legs (GND) stay under it. Otherwise no part moved, f7's routing kept (DRC clean).
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
@@ -244,9 +246,15 @@ U6.SetValue('RP2354A')
 R('R110', '1k', 'QSS', 'BOOT', -11.6, -15.6, 0)
 R('R111', '10k', '3V3', 'RUN', 6.5, -9.0, 90)
 TP = [('TP1', 'BOOT'), ('TP2', 'GND'), ('TP3', 'RUN'), ('TP4', 'SWDIO'), ('TP5', 'SWCLK')]
-TPX, TPY, TPP = -14.0, -14.6, 2.6                   # the row on B (seen from the F side, as everything here)
+TPX, TPY, TPP = -13.55, -14.6, 2.6                  # the row on B (seen from the F side, as everything here)
+# The module's mounting bracket (metal, 7.5 wide, on the same M3 x 6) lies on B over |x - hole x| <= 3.75 across the whole
+# board (f8, the maker 2026-11-23): no bare copper on B under it but the holes and J1 / J2's shell legs (GND). The row
+# moved +x by 0.45 (TPX -14.0 -> -13.55) to take TP1 out of it (the track ends from f7's .ses still inside the pads)
+BRACKET = [(hx - 3.75, hx + 3.75) for hx in sorted({hx for hx, _ in HOLES})]
 for i, (ref, n) in enumerate(TP):
     t = load('TestPoint.pretty', 'TestPoint_Pad_D1.5mm', ref, n, TPX + TPP * i, TPY)
+    tx_ = TPX + TPP * i
+    assert all(tx_ + 0.75 <= x0 or tx_ - 0.75 >= x1 for x0, x1 in BRACKET), (ref, 'under the bracket')
     t.Flip(t.GetPosition(), False)                  # B: the outside
     wire(t, {'1': n})
     t.SetAttributes(t.GetAttributes() | pcbnew.FP_EXCLUDE_FROM_POS_FILES | pcbnew.FP_EXCLUDE_FROM_BOM)   # copper only
