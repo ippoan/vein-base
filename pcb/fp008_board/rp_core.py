@@ -4,13 +4,19 @@ their footprints, tracks, vias and zones as Raspberry Pi laid them out ("Hardwar
 layout). The data is rp2350_core.json here (from rp_core_extract.py here); this module is how a board script takes it in,
 written so that any board can import it (pcb/fp008_board f6 does). Run with KiCad's python.
 
-    core = Core(b, nets, at, net_map, ref_map, rot=0)   # at(x, y) -> VECTOR2I: our board's coordinates (mm, y up)
+    core = Core(b, nets, at, net_map, ref_map, rot=0, moved={}, drop_nets=(), drop_boxes=(), box=BOX)
+                            # at(x, y) -> VECTOR2I: our board's coordinates (mm, y up)
     core.place()            # footprints + the locked tracks / vias; returns the chip's footprint
     core.zones()            # the minimal design's zones (+ a 3V3 area over the core): the board file
     core.keepouts()         # the zones as routing keepouts: the DSN for freerouting
 
 Core coordinates are the JSON's: mm from U1's origin, KiCad's axes (y down). `origin` is where U1 goes on our board,
 `rot` (deg, anticlockwise as seen from F) turns the whole core about it.
+A board short of room can re-place some of the core's parts (`moved`: JSON ref -> (x, y, rot) in core coordinates) and
+leave out the copper that went to them: the tracks of `drop_nets` (JSON net names), every track with an end / via
+inside one of `drop_boxes` ((x0, x1, y0, y1) in core coordinates) and the zones wholly inside one; `box` is then the BOX
+the 3V3 area over the core takes (FP008 f8 moves the crystal's parts close under the chip and the left side's
+decoupling next to its pins, and routes them itself).
 """
 import json, math, os
 import pcbnew
@@ -28,11 +34,16 @@ BASE_REF = lambda r: {'U1': 'U6', 'L1': 'L106', 'X1': 'Y106'}.get(r, r[0] + str(
 
 
 class Core:
-    def __init__(self, b, nets, origin, net_map, ref_map=BASE_REF, rot=0):
+    def __init__(self, b, nets, origin, net_map, ref_map=BASE_REF, rot=0, moved=None, drop_nets=(), drop_boxes=(), box=BOX):
         self.b, self.nets, self.origin, self.rot = b, nets, origin, rot
+        self.moved, self.drop_nets, self.drop_boxes, self.BOX = moved or {}, set(drop_nets), list(drop_boxes), box
         self.net = {**BASE_NET, **net_map}
         self.ref = ref_map
         self.data = json.load(open(JSON))
+
+    def dropped(self, *pts):
+        """Any of the points (core coordinates) inside one of drop_boxes."""
+        return any(x0 < x < x1 and y0 < y < y1 for x, y in pts for x0, x1, y0, y1 in self.drop_boxes)
 
     def to_board(self, dx, dy):
         """Core (mm from U1, y down) -> our board (mm, y up)."""
@@ -47,7 +58,7 @@ class Core:
 
     def box(self):
         """The core's BOX on our board: (x0, x1, y0, y1), y up."""
-        pts = [self.to_board(x, y) for x in BOX[:2] for y in BOX[2:]]
+        pts = [self.to_board(x, y) for x in self.BOX[:2] for y in self.BOX[2:]]
         return (min(p[0] for p in pts), max(p[0] for p in pts), min(p[1] for p in pts), max(p[1] for p in pts))
 
     def place(self):
@@ -80,18 +91,28 @@ class Core:
                 g = pcbnew.FP_SHAPE(fp); g.SetShape(pcbnew.SHAPE_T_RECT if kind == 'fp_rect' else pcbnew.SHAPE_T_SEGMENT)
                 g.SetStart0(pcbnew.VECTOR2I(mm(x0), mm(y0))); g.SetEnd0(pcbnew.VECTOR2I(mm(x1), mm(y1)))
                 g.SetLayer(pcbnew.F_CrtYd); g.SetWidth(mm(0.05)); g.SetDrawCoord(); fp.Add(g)
-            fp.SetPosition(self.P(f['x'], f['y']))
-            fp.SetOrientationDegrees(f['rot'] + self.rot)
+            fx, fy, frot = self.moved.get(f['ref'], (f['x'], f['y'], f['rot']))
+            fp.SetPosition(self.P(fx, fy))
+            fp.SetOrientationDegrees(frot + self.rot)
         # the core's copper, locked (freerouting routes round it and leaves it out of the .ses)
         for t in self.data['segments']:
+            if t['net'] in self.drop_nets or self.dropped((t['x0'], t['y0']), (t['x1'], t['y1'])):
+                continue
             tr = pcbnew.PCB_TRACK(b); tr.SetStart(self.P(t['x0'], t['y0'])); tr.SetEnd(self.P(t['x1'], t['y1']))
             tr.SetWidth(mm(t['w'])); tr.SetLayer(pcbnew.F_Cu if t['layer'] == 'F.Cu' else pcbnew.B_Cu)
             tr.SetNet(nets[self.net[t['net']]]); tr.SetLocked(True); b.Add(tr)
         for v in self.data['vias']:
+            if self.dropped((v['x'], v['y'])):
+                continue
             vi = pcbnew.PCB_VIA(b); vi.SetPosition(self.P(v['x'], v['y'])); vi.SetWidth(mm(v['size']))
             vi.SetDrill(mm(max(v['drill'], DRILL)))
             vi.SetNet(nets[self.net[v['net']]]); vi.SetLocked(True); b.Add(vi)
         return next(fp for fp in b.GetFootprints() if fp.GetReference() == self.ref('U1'))
+
+    def zlist(self):
+        """The minimal design's zones, but those wholly inside one of drop_boxes."""
+        return [z for z in self.data['zones'] if not any(all(x0 < x < x1 and y0 < y < y1 for x, y in z['pts'])
+                                                         for x0, x1, y0, y1 in self.drop_boxes)]
 
     def zones(self, area=True):
         """The minimal design's zones (priorities one up, over the board's GND pours) and a 3V3 area on F.Cu over the
@@ -110,10 +131,10 @@ class Core:
             z.SetThermalReliefGap(mm(gap)); z.SetThermalReliefSpokeWidth(mm(width))
             z.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_ALWAYS)
             b.Add(z)
-        x0, x1, y0, y1 = BOX
+        x0, x1, y0, y1 = self.BOX
         if area:                                       # not in the DSN: the signals into the core cross it
             zone('3V3', pcbnew.F_Cu, [self.P(x0, y0), self.P(x1, y0), self.P(x1, y1), self.P(x0, y1)], 1, 0.2, 0.2, True)
-        for z in self.data['zones']:
+        for z in self.zlist():
             zone(self.net[z['net']], pcbnew.F_Cu if z['layer'] == 'F.Cu' else pcbnew.B_Cu,
                  [self.P(px, py) for px, py in z['pts']], z['priority'] + 1, z['clearance'], z['min_thickness'],
                  z['connect'] == 'yes', z['thermal_gap'], z['thermal_width'])
@@ -124,7 +145,7 @@ class Core:
         them. 3V3's are left out (3V3 is routed to the core's pins through them: VREG_VIN, pin 49), but for the ring
         under the chip (the 3V3 square round its centre): a signal via dropped there between the pins cuts the ring in
         two (FP008 f6: FPRX and SWDIO vias, DRC unconnected 3V3 zone)."""
-        for z in self.data['zones']:
+        for z in self.zlist():
             xs = [p[0] for p in z['pts']]; ys = [p[1] for p in z['pts']]
             if z['net'] == '+3V3' and not (min(xs) < 0 < max(xs) and min(ys) < 0 < max(ys)):
                 continue
