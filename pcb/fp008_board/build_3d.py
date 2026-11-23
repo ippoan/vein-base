@@ -62,7 +62,7 @@ size = (bb.xlen, bb.ylen)
 FW, FH, FL = 59.54, 38.54, 2.2                     # flange (manual 1.3.1)
 BW, BH, BD = 55.45, 34.45, 15.35                   # rear body
 R_BODY, R_FLANGE = 12.4, 14.0                      # corner radii (guess from the drawing)
-HOLES = [(sx * 18.35, sy * 12.5) for sx in (-1, 1) for sy in (-1, 1)]    # = build_board.py's HOLES (symmetric, M3, f8)
+HOLES = [(sx * 18.15, sy * 12.5) for sx in (-1, 1) for sy in (-1, 1)]    # = build_board.py's HOLES (symmetric, M3, f8)
 CAV, WALL, BOSS = 5.0, 1.5, 3.0                    # the module's rear recess depth, wall, boss radius (guesses; M3 f8)
 
 
@@ -73,7 +73,7 @@ def rrect(w, h, r, z0, z1):
 fp = (rrect(BW, BH, R_BODY, -BD, 0).union(rrect(FW, FH, R_FLANGE, -BD - FL, -BD))
       .cut(rrect(BW - 2 * WALL, BH - 2 * WALL, R_BODY - WALL, -CAV, 0)))
 for x, y in HOLES:
-    fp = fp.union(cq.Workplane().circle(BOSS).circle(1.5).extrude(CAV).translate((x, y, -CAV)))
+    fp = fp.union(cq.Workplane().circle(BOSS).circle(1.7).extrude(CAV).translate((x, y, -CAV)))
 screws = None
 for x, y in HOLES:
     sc = (cq.Workplane().circle(1.5).extrude(6.0).translate((x, y, T - 6.0))     # M3 x 6 (the maker, 2026-11-23)
@@ -126,7 +126,7 @@ parts = [('lid', f'FP008(マニュアル 1.3.1: つば 59.5 × 38.5、後ろの�
           '#30343a', 0.55, 'lid', fp),
          ('cable', 'J3 → FP008 のケーブル(MX1.25 8P、1 → 1)。中のソケットの位置は未確認', '#d9775c', 1, 'mods', cable),
          ('adapter', f'USB-C の L 字の変換(オス → 90° のメス、参考の外形 {AD_W:g} × {AD_D:g} × {AD_DOWN + AD_UP:g}、写真から)。根元は FP008 の後ろのくぼみ(基板から {-AD_BOTTOM:.1f} 下まで)、胴は基板の窓を通る', '#8a8f96', 0.6, 'mods', adapters),
-         ('screw', 'M3 × 6 ねじ × 4(ふたの上から FP008 の後ろのねじ穴へ。前後 25 はメーカー回答、左右 36.7 は図からの読み取り)', '#6b6f75', 1, 'mods', screws),
+         ('screw', 'M3 × 6 ねじ × 4(ふたの上から FP008 の後ろのねじ穴へ。前後 25 はメーカー回答、左右 36.3 は図の実測。穴は 3.4)', '#6b6f75', 1, 'mods', screws),
          ('shell', 'USB-C J1(PC へ)・J2(USB スピーカーなどの機器、ハブのポート 3)。基板の内側の左右の端の近くで、口は外の窓に向く。KiCad に 3D モデルが無いので外形だけの箱',
           '#b8bcc2', 1, 'shell', usb('J1').union(usb('J2'))),
          ('conn', 'J3 PicoBlade 53398-0871(MX1.25 8P 縦型、ハウジング 4.7、FP008 のケーブル)', '#f1efe8', 1, 'shell', comp(groups['conn'])),
@@ -136,7 +136,7 @@ parts = [('lid', f'FP008(マニュアル 1.3.1: つば 59.5 × 38.5、後ろの�
          ('led', 'D1(電源 LED、内側)', '#d23c3c', 1, 'shell', comp(groups['led'])),
          ('board', f'基板 f7(FP008 の裏のふた、{size[0]:.0f} × {size[1]:.0f} × {T:g})。部品は内側', '#2f6b45', 1, 'shell', lid)]
 dims = [('基板', f'{size[0]:.0f} × {size[1]:.0f} × {T:g}。FP008 の後ろの本体の形(角 R12、外にはみ出さない)。左右の端の近くに L 字の変換が通る窓 2 つ(8.8 × 13.4)。部品は内側(FP008 の中、高さ 3.3 まで。J3 は 4.7、プラグを挿すと約 5.7)'),
-        ('固定', 'FP008 の後ろの 4 つのねじ穴(中心から ±18.35, ±12.5。前後 25 はメーカー回答(2026-11-23)、左右 36.7 はマニュアルの図からの読み取りで未実測)に M3 × 6 ねじで。部品・パッド・窓は穴の中心から 3.5 離す'),
+        ('固定', 'FP008 の後ろの 4 つのねじ穴(中心から ±18.15, ±12.5。前後 25 はメーカー回答(2026-11-23)、左右 36.3 はマニュアルの背面図の実測(縮尺を前後 25 に合わせて補正、誤差 ±0.2)。穴は M3 のゆるめ 3.4)に M3 × 6 ねじで。部品・パッド・窓は穴の中心から 3.5 離す'),
         ('J1 / J2', 'USB-C を左右の端の近くに 1 つずつ、口は外の窓に向く。J1 = PC へ、J2 = USB スピーカーなどの機器(ハブのポート 3)。L 字の変換(オス → 90° のメス)は基板を FP008 から外して挿し、胴が窓を通って上を向く。ケーブルは後ろへ'),
         ('J3', 'MX1.25 8P の縦型(53398-0871)、内側の上の真ん中で、FP008 の中のソケット(上のふちの壁ぎわ)のすぐ下。プラグは FP008 の側からまっすぐ挿す'),
         ('未確認', 'L 字の変換の寸法(窓 8.8 × 13.4 に入るか)、根元が FP008 の後ろのくぼみに入るか(約 5.1 の深さが要る)、ねじ穴の位置と太さ、本体の角の形、後ろのくぼみの深さ(部品 3.3、J3 のプラグと線の曲がり約 7.5 が入るか)、中のソケットの位置、ケーブルの長さ')]

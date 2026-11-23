@@ -53,8 +53,10 @@ f7 (2026-11-21, user: "まず縦して"): J3 is the vertical PicoBlade 53398-087
   53398-0471 on the station boards), the wires' bend over it ~1.8: J3 is now the tallest part (the rest up to 3.3), so
   the module's rear recess has to take ~7.5 there -- not known, measure it before ordering.
 f8 (2026-11-23, the maker on the real module): the screw holes H1..H4 are M3 (MountingHole_3.2mm_M3; the module takes
-  M3 x 6 through its bracket's inner holes), at (+-18.35, +-12.5): y 25 apart from the maker's answer (the bracket's
-  inner two holes), x 36.7 still read off the manual's drawing (not measured). Parts, pads (the test pads on B too) and
+  M3 x 6 through its bracket's inner holes), at (+-18.15, +-12.5): y 25 apart from the maker's answer (the bracket's
+  inner two holes); x 36.3 measured on the manual's rear drawing (1.3.1, scanned at 300 dpi, the scale set so that
+  the holes' y comes to 25; +-0.2), f7's 36.7 was too wide. The holes are drilled 3.4 (M3 loose) for that +-0.2:
+  KiCad's MountingHole_3.2mm_M3 (NPTH, no copper) with its drill and hole size set to 3.4. Parts, pads (the test pads on B too) and
   windows 3.5 from a hole's centre (KEEP, asserted), the holes 3.0 inside the outline (the M3 head 5.5). No part moved,
   f7's routing kept (DRC clean).
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
@@ -79,7 +81,8 @@ mm = pcbnew.FromMM
 
 X0, X1, Y0, Y1 = -27.5, 27.5, -17.0, 17.0          # the FP008's rear body 55.45 x 34.45, a hair inside
 RC = 12.0                                           # corner radius (guess from the drawing)
-HOLES = [(sx * 18.35, sy * 12.5) for sx in (-1, 1) for sy in (-1, 1)]    # the module's rear screw holes, M3 (f8)
+HOLES = [(sx * 18.15, sy * 12.5) for sx in (-1, 1) for sy in (-1, 1)]    # the module's rear screw holes, M3 (f8)
+HOLE_D = 3.4                                        # M3, loose: the x read off the drawing is +-0.2 (f8)
 # f5 (2026-11-20, user: no tongue, the cables' plugs inside): J1 / J2 sit inside the rear body's outline, J1 opening -x
 # and J2 opening +x, each facing a window WIN through the board between it and the edge. An L adapter (USB-C plug ->
 # female turned 90 deg, ~AD_W x AD_D across, the female end up, sizes from a product photo: check the real one) goes in
@@ -309,7 +312,9 @@ print(f'J3 housing x {hx0:.2f}..{hx1:.2f} y {hy0:.2f}..{hy1:.2f}, {SOCK[2] - hy1
 
 for i, (x, y) in enumerate(HOLES, 1):
     assert inside(x, y, 3.0), ('hole too near the edge', x, y)   # the M3 head (5.5) on the board
-    load('MountingHole.pretty', 'MountingHole_3.2mm_M3', f'H{i}', 'M3', x, y)
+    h = load('MountingHole.pretty', 'MountingHole_3.2mm_M3', f'H{i}', 'M3', x, y)
+    for p in h.Pads():                              # NPTH: the hole is the pad, both 3.4
+        p.SetDrillSize(pcbnew.VECTOR2I(mm(HOLE_D), mm(HOLE_D))); p.SetSize(pcbnew.VECTOR2I(mm(HOLE_D), mm(HOLE_D)))
 
 # ---- outline
 def edge_loop(pts):
