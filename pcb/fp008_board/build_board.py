@@ -1,4 +1,4 @@
-"""FP008 USB board (f8): the Grow FP008 face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through one
+"""FP008 USB board (f9): the Grow FP008 face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through one
 USB-C cable: the PC sees the module's camera (UVC) and an RP2354A (USB CDC), both behind one hub. The RP2354A talks to
 the module's UART (the same commands as the FP001S, EF AA), holds the keys, does the face-check exchange and takes
 signed firmware over its serial port (A / B with fallback): the firmware is alc-app-s3's crates/fp001s-rp2354
@@ -40,7 +40,7 @@ the keys on the PC's TPM, 2026-11-19). Sound comes from the PC's own speakers (n
   parts (up to 3.3; J3 from f7 higher, below): measure it before ordering.
   5V load: FP008 200 mA + hub ~30 mA + RP2354A ~50 mA + whatever is on J2.
 Board coords (KiCad's, seen from the F side = from inside the module, so mirrored from behind): origin = the FP008's
-centre, its UP up, J3 at the top centre; from f8 J1 / J2 at the bottom centre over their windows, U6 (the RP2354A and
+centre, its UP up, J3 at the top centre; from f8 J1 / J2 at the bottom centre over their windows (f9: one notch), U6 (the RP2354A and
 its core) at the left end, the hub and the LDO at the right end (f5..f7: J1 / J2 at the -x / +x ends).
 f6 (2026-11-21): the outline, holes, windows, J1 / J2 / J3 and the parts' height as f5; the CH340C (U4, C4) gone.
 f7 (2026-11-21, user: "まず縦して"): J3 is the vertical PicoBlade 53398-0871 (was f6's horizontal PicoBlade 8P at (0, 12.6),
@@ -78,6 +78,12 @@ f8 (2026-11-23, the maker on the real module): the screw holes H1..H4 are M3 (Mo
   F), FPRX taken off the .ses and the rest of the three to J3 from a grid A* router (0.025 grid, clearance 0.12, holes
   0.25) written out as points; the .ses's GND / 3V3 / 1V1 tracks round the left side's pins are taken out (the pours and
   the 3V3 area over the core join those pads) and their dangling remains pruned. DRC clean.
+f9 (2026-11-23, user: "この基盤の線いる？" / "いらないでしょ"): f8's two bottom windows are opened to the outline as one
+  notch (NOTCH, x -13.9..13.9, from the bottom edge up to y -6.7, inner corners R0.5 for JLC's router; it meets the
+  bottom edge on its straight part, so the outer corners are square). The 1.5 of board below the windows and the 1.0
+  between them are gone; Edge.Cuts is one closed loop. J1 / J2 and every other part, the holes and the routing are as
+  f8 (nothing ran through the removed strips). F parts keep WALL off the rear body's outline (BODY) only: under the
+  notch is the module's recess, and J1 / J2 keep their fronts 0.3 past the notch's top as over f8's windows.
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
@@ -92,7 +98,7 @@ from kicad_ses import import_ses, prune_dangling  # noqa: E402
 sys.path.insert(0, HERE)
 from rp_core import Core  # noqa: E402
 
-REV = 'f8'
+REV = 'f9'
 NAME = 'fp008_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
@@ -103,48 +109,60 @@ RC = 12.0                                           # corner radius (guess from 
 HOLES = [(sx * 18.15, sy * 12.5) for sx in (-1, 1) for sy in (-1, 1)]    # the module's rear screw holes, M3 (f8)
 HOLE_D = 3.4                                        # M3, loose: the x read off the drawing is +-0.2 (f8)
 # f5 (2026-11-20, user: no tongue, the cables' plugs inside): J1 / J2 sit inside the rear body's outline, each opening
-# at a window WIN through the board between it and the edge. An L adapter (USB-C plug -> female turned 90 deg, ~AD_W x
-# AD_D across, the female end up, sizes from a product photo: check the real one) goes in the window and its elbow under
+# over a cut through the board between it and the edge. An L adapter (USB-C plug -> female turned 90 deg, ~AD_W x
+# AD_D across, the female end up, sizes from a product photo: check the real one) goes in the cut and its elbow under
 # the board sits in the module's rear recess (needs ~5 deep: measure it). The plugs go in with the board off the module.
 # f8 (2026-11-23, user: the module's bracket is used): the bracket (metal, 7.5 wide) lies on B over each hole's x +-3.75,
-# so the windows moved from the -x / +x ends to the bottom edge (-y, opposite J3), side by side between the two brackets:
-# J1 (PC) at -x, J2 (device) at +x, openings -y. The windows keep EDGE of board to the outline, WGAP between them, and
-# their outer sides BAND_CLR off the bracket's band (asserted).
+# so the cuts moved from the -x / +x ends to the bottom edge (-y, opposite J3), side by side between the two brackets:
+# J1 (PC) at -x, J2 (device) at +x, openings -y.
+# f9 (2026-11-23, user: the board left round f8's two windows is not needed): one notch NOTCH open to the bottom edge,
+# x -NX..NX (f8's two windows' outer sides), y up to YF (f8's windows' top: J1 / J2 do not move), its inner corners
+# R NR (the router). Its sides BAND_CLR off the bracket's band (asserted).
 AD_W, AD_D = 12.4, 7.5                              # adapter across (x) and deep (y, from the receptacle's face)
-NW, ND = AD_W + 1.0, AD_D + 1.0 + 0.3               # window across (x), deep (y) from YF (the receptacle's face 0.3 past)
-EDGE = 1.5                                          # board left between a window and the outline
-WGAP = 1.0                                          # board left between the two windows
-YF = Y0 + EDGE + ND                                 # the windows' inner (upper) side: J1 / J2's openings face it
-JX = WGAP / 2 + NW / 2                              # |x| of J1 / J2 (each window's middle)
-WIN = [(-WGAP / 2 - NW, -WGAP / 2, Y0 + EDGE, YF), (WGAP / 2, WGAP / 2 + NW, Y0 + EDGE, YF)]   # (x0, x1, y0, y1)
-BAND_CLR = 0.5                                      # bare copper on B and the windows off the bracket's band
+NX = 13.9                                           # the notch's half width (f8's windows: 0.5 + AD_W + 1.0)
+YF = -6.7                                           # the notch's top side: J1 / J2's openings face it (f8's windows' top)
+NR = 0.5                                            # the notch's inner corner radius (JLC's router)
+JX = 7.2                                            # |x| of J1 / J2 (f8's windows' middles)
+NOTCH = (-NX, NX, Y0 - 1.0, YF)                     # (x0, x1, y0, y1): y0 below the board
+WIN = [NOTCH]
+BAND_CLR = 0.5                                      # bare copper on B and the notch off the bracket's band
 KEEP = 3.5                                          # clear of each screw hole's centre (M3 head 5.5, its boss; f4, f8)
 WALL = 1.5                                          # F parts' courtyards off the outline: the module's rear wall (f8, thickness not measured)
 
 
-def outline(n=10):
-    """The rear body's rounded rectangle, as a closed list of points (anticlockwise)."""
+def outline(n=10, notch=True):
+    """The rear body's rounded rectangle, as a closed list of points (anticlockwise); with notch, the bottom edge cut
+    by NOTCH (f9: one closed loop)."""
     pts = []
     for cx, cy, a0 in ((X1 - RC, Y0 + RC, -90), (X1 - RC, Y1 - RC, 0), (X0 + RC, Y1 - RC, 90), (X0 + RC, Y0 + RC, 180)):
         for k in range(n + 1):
             t = math.radians(a0 + 90 * k / n)
             pts.append((cx + RC * math.cos(t), cy + RC * math.sin(t)))
+    if notch:                                       # the bottom edge runs from the last point (-x) to the first (+x)
+        pts.append((-NX, Y0))
+        for cx, a0, a1 in ((-NX + NR, 180, 90), (NX - NR, 90, 0)):   # the inner corners, round the router's radius
+            for k in range(n // 2 + 1):
+                t = math.radians(a0 + (a1 - a0) * k / (n // 2))
+                pts.append((cx + NR * math.cos(t), YF - NR + NR * math.sin(t)))
+        pts.append((NX, Y0))
     return pts
 
 
 OUTLINE = outline()
+BODY = outline(notch=False)                         # the rear body's outline: the module's wall under it
 
 
 def in_win(x, y, m=0.0):
-    """(x, y) within m of a window."""
+    """(x, y) within m of the notch (WIN: f8's windows, f9 the one notch)."""
     return any(x0 - m < x < x1 + m and y0 - m < y < y1 + m for x0, x1, y0, y1 in WIN)
 
 
 def inside(x, y, m=0.0, win=True):
-    """(x, y) on the board (inside the outline, out of the windows unless win is False) and at least m from its edges."""
+    """(x, y) on the board (inside the outline, the notch cut) and at least m from its edges; with win False, inside the
+    rear body's outline (the notch not cut)."""
     if win and in_win(x, y, m):
         return False
-    pts = OUTLINE
+    pts = OUTLINE if win else BODY
     c = False
     for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]):
         if (y0 > y) != (y1 > y) and x < x0 + (y - y0) * (x1 - x0) / (y1 - y0):
@@ -157,13 +175,11 @@ def inside(x, y, m=0.0, win=True):
 
 
 BRACKET = [(hx - 3.75, hx + 3.75) for hx in sorted({hx for hx, _ in HOLES})]   # the bracket's band on B (f8)
-for x0, x1, y0, y1 in WIN:                          # the windows clear of the screw holes, the outline and the bracket (f8)
-    for hx, hy in HOLES:
-        assert math.hypot(max(x0 - hx, 0, hx - x1), max(y0 - hy, 0, hy - y1)) >= KEEP, ('window on a hole', hx, hy)
-    for wx in (x0, x1):
-        for wy in (y0, y1):
-            assert inside(wx, wy, EDGE - 1e-6, win=False), ('window too near the outline', wx, wy)
-    assert all(x1 <= bx0 - BAND_CLR + 1e-6 or x0 >= bx1 + BAND_CLR - 1e-6 for bx0, bx1 in BRACKET), ("window on the bracket", x0, x1)
+x0, x1, y0, y1 = NOTCH                              # the notch clear of the screw holes and the bracket (f8, f9)
+for hx, hy in HOLES:
+    assert math.hypot(max(x0 - hx, 0, hx - x1), max(y0 - hy, 0, hy - y1)) >= KEEP, ('notch on a hole', hx, hy)
+assert all(x1 <= bx0 - BAND_CLR + 1e-6 or x0 >= bx1 + BAND_CLR - 1e-6 for bx0, bx1 in BRACKET), ("notch on the bracket", x0, x1)
+assert NX < X1 - RC, 'the notch meets the bottom edge on its straight part (square outer corners, no point)'
 
 
 POS = {}                                            # ref -> (x, y, rot), overriding the places below
@@ -386,9 +402,7 @@ def edge_loop(pts):
         sh.SetStart(P(a, c)); sh.SetEnd(P(d, e)); sh.SetLayer(pcbnew.Edge_Cuts); sh.SetWidth(mm(0.1)); b.Add(sh)
 
 
-edge_loop(OUTLINE)
-for x0, x1, y0, y1 in WIN:
-    edge_loop([(x0, y0), (x1, y0), (x1, y1), (x0, y1)])
+edge_loop(OUTLINE)                                  # the notch is part of the loop (f9)
 for fp in b.GetFootprints():                        # every part inside the outline (courtyard corners)
     cy_ = fp.GetCourtyard(pcbnew.F_CrtYd)
     if cy_.OutlineCount() and not fp.GetReference().startswith('H'):
@@ -397,10 +411,10 @@ for fp in b.GetFootprints():                        # every part inside the outl
             for qx in (bb_.GetLeft(), bb_.GetRight()):
                 for qy in (bb_.GetTop(), bb_.GetBottom()):
                     x_, y_ = xy(pcbnew.VECTOR2I(qx, qy))
-                    if fp.GetReference() in ('J1', 'J2'):   # its front over the window, as over an edge: check the rest
+                    if fp.GetReference() in ('J1', 'J2'):   # its front over the notch, as over an edge: check the rest
                         y_ = max(y_, YF + 0.3)
                     assert inside(x_, y_, 0.2 if fp.IsFlipped() else WALL, win=False) and not in_win(x_, y_, 0.2), (
-                        fp.GetReference(), x_, y_)          # off the outline by WALL (F: the module's wall), the windows 0.2
+                        fp.GetReference(), x_, y_)          # off the body's outline by WALL (F: the module's wall), the notch 0.2 (f9: over the recess)
         L, Rr = pcbnew.ToMM(bb_.GetLeft()) - OX, pcbnew.ToMM(bb_.GetRight()) - OX
         T_, B_ = OY - pcbnew.ToMM(bb_.GetBottom()), OY - pcbnew.ToMM(bb_.GetTop())
         for hx, hy in HOLES:                        # clear of the screw bosses (the parts face the module)
@@ -415,11 +429,11 @@ for fp in b.GetFootprints():                        # every pad (F and B, the te
         T_, B_ = OY - pcbnew.ToMM(bb_.GetBottom()), OY - pcbnew.ToMM(bb_.GetTop())
         for hx, hy in HOLES:
             assert math.hypot(max(L - hx, 0, hx - Rr), max(T_ - hy, 0, hy - B_)) >= KEEP, (fp.GetReference(), p.GetNumber())
-for j in (J1, J2):                                  # each USB-C's opening at its window, -y (f8)
+for j in (J1, J2):                                  # each USB-C's opening at the notch, -y (f8, f9)
     bb_ = j.GetCourtyard(pcbnew.F_CrtYd).BBox()
-    assert OY - pcbnew.ToMM(bb_.GetBottom()) < YF, (j.GetReference(), 'opening not at its window')
+    assert OY - pcbnew.ToMM(bb_.GetBottom()) < YF, (j.GetReference(), 'opening not at the notch')
     ys_ = [xy(q.GetPosition())[1] for q in j.Pads() if q.GetNumber()[:1] in 'AB']
-    assert min(ys_) > YF, (j.GetReference(), 'its pad row not inward of the window')
+    assert min(ys_) > YF, (j.GetReference(), 'its pad row not inward of the notch')
 for fp in b.GetFootprints():                        # no bare copper on B under the module's bracket (f8): but the holes
     if fp.GetReference().startswith('H'):
         continue
@@ -440,7 +454,7 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 # silk: 1 character ~ 0.8 x size wide, centred: keep both ends inside the outline
 # the outside is B (the parts face the module, f4): labels on B.SilkS, beside each USB-C on the board's inner side
-SILK = [('PC', -JX, YF + 1.1, 1.0), ('DEVICE', JX, YF + 1.1, 1.0)]   # over each window (f8)
+SILK = [('PC', -JX, YF + 1.1, 1.0), ('DEVICE', JX, YF + 1.1, 1.0)]   # over the notch (f8, f9)
 for t, x, y, sz in SILK:
     assert inside(x - len(t) * 0.4 * sz, y, 0.3) and inside(x + len(t) * 0.4 * sz, y, 0.3), t
     text(t, x, y, layer=pcbnew.B_SilkS, size=sz)
@@ -553,8 +567,8 @@ HAND_VIA = [('FPTX', -25.2, 1.35), ('IRQ', -13.325, 13.0), ('IRQ', -10.925, 12.6
 os.chdir(HERE)
 if 'dsn' in sys.argv[1:]:
     core.keepouts()
-    for x0, x1, y0, y1 in WIN:                      # f8: freerouting kept tracks only 0.36 off the windows' edges: the
-        for lay in (pcbnew.F_Cu, pcbnew.B_Cu):      # board's 0.5 edge clearance round each window, for the DSN only
+    for x0, x1, y0, y1 in WIN:                      # f8: freerouting kept tracks only 0.36 off the cuts' edges: the
+        for lay in (pcbnew.F_Cu, pcbnew.B_Cu):      # board's 0.5 edge clearance round the notch, for the DSN only
             k = pcbnew.ZONE(b); k.SetIsRuleArea(True); k.SetDoNotAllowTracks(True); k.SetDoNotAllowVias(True)
             k.SetDoNotAllowCopperPour(False); k.SetDoNotAllowPads(False); k.SetDoNotAllowFootprints(False)
             k.SetLayer(lay); ko = k.Outline(); ko.NewOutline()
