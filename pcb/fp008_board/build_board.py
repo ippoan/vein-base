@@ -1,4 +1,4 @@
-"""FP008 USB board (f9): the Grow FP008 face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through one
+"""FP008 USB board (f10): the Grow FP008 face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through one
 USB-C cable: the PC sees the module's camera (UVC) and an RP2354A (USB CDC), both behind one hub. The RP2354A talks to
 the module's UART (the same commands as the FP001S, EF AA), holds the keys, does the face-check exchange and takes
 signed firmware over its serial port (A / B with fallback): the firmware is alc-app-s3's crates/fp001s-rp2354
@@ -84,6 +84,10 @@ f9 (2026-11-23, user: "この基盤の線いる？" / "いらないでしょ"): 
   between them are gone; Edge.Cuts is one closed loop. J1 / J2 and every other part, the holes and the routing are as
   f8 (nothing ran through the removed strips). F parts keep WALL off the rear body's outline (BODY) only: under the
   notch is the module's recess, and J1 / J2 keep their fronts 0.3 past the notch's top as over f8's windows.
+f10 (2026-11-23, the maker measured the real module: the holes' x spacing "about 37", the drawing gave 36.3; user: slots):
+  H1..H4 are NPTH oval slots SLOT_L 4.25 (x) x HOLE_D 3.4 (y) centred at (+-18.575, +-12.5): an M3 goes in anywhere with
+  its centre on |x| HX0 18.15..HX1 19.0 (A = 36.3..38.0), y +-12.5 as f8 (the maker's 25). KEEP, the bracket's band
+  (|x| 14.4..22.75) and the holes' 3.0 off the outline are taken from that whole line (hole_d), not one centre.
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
@@ -98,7 +102,7 @@ from kicad_ses import import_ses, prune_dangling  # noqa: E402
 sys.path.insert(0, HERE)
 from rp_core import Core  # noqa: E402
 
-REV = 'f9'
+REV = 'f10'
 NAME = 'fp008_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
@@ -106,8 +110,24 @@ mm = pcbnew.FromMM
 
 X0, X1, Y0, Y1 = -27.5, 27.5, -17.0, 17.0          # the FP008's rear body 55.45 x 34.45, a hair inside
 RC = 12.0                                           # corner radius (guess from the drawing)
-HOLES = [(sx * 18.15, sy * 12.5) for sx in (-1, 1) for sy in (-1, 1)]    # the module's rear screw holes, M3 (f8)
-HOLE_D = 3.4                                        # M3, loose: the x read off the drawing is +-0.2 (f8)
+# f10 (2026-11-23, the maker measured the real module: x "about 37"; the manual's drawing gave 36.3): the holes are
+# slots along x, their centre anywhere on x HX0..HX1 (A = 36.3..38.0 takes both), y +-12.5 (the maker's answer, fixed)
+HX0, HX1, HY = 18.15, 19.0, 12.5                    # |x| range of a hole's centre, |y|
+HOLE_D = 3.4                                        # M3, loose (f8): the slot's width (y)
+SLOT_L = HX1 - HX0 + HOLE_D                         # the slot's length (x): 4.25
+SLOTS = [(sx * HX0, sx * HX1, sy * HY) for sx in (-1, 1) for sy in (-1, 1)]   # (x a, x b, y): the line a centre runs on
+SLOTS = [(min(a, c), max(a, c), y) for a, c, y in SLOTS]
+HOLES = [((a + c) / 2, y) for a, c, y in SLOTS]     # the slots' middles (+-18.575, +-12.5): the footprints' places
+
+
+def hole_d(L, T, Rr=None, B=None):
+    """The least distance from a point (L, T) -- or a box L..Rr, T..B -- to the lines the screws' centres run on
+    (f10: KEEP is measured from these, not from one centre). Box: hole_d(L, T, R, B)."""
+    if Rr is None:
+        Rr, B = L, T
+    return min(math.hypot(max(L - b_, 0, a_ - Rr), max(T - y_, 0, y_ - B)) for a_, b_, y_ in SLOTS)
+
+
 # f5 (2026-11-20, user: no tongue, the cables' plugs inside): J1 / J2 sit inside the rear body's outline, each opening
 # over a cut through the board between it and the edge. An L adapter (USB-C plug -> female turned 90 deg, ~AD_W x
 # AD_D across, the female end up, sizes from a product photo: check the real one) goes in the cut and its elbow under
@@ -174,10 +194,9 @@ def inside(x, y, m=0.0, win=True):
     return c
 
 
-BRACKET = [(hx - 3.75, hx + 3.75) for hx in sorted({hx for hx, _ in HOLES})]   # the bracket's band on B (f8)
+BRACKET = sorted({(a - 3.75, c + 3.75) for a, c, _ in SLOTS})   # the bracket's band on B (f8), over the slot (f10)
 x0, x1, y0, y1 = NOTCH                              # the notch clear of the screw holes and the bracket (f8, f9)
-for hx, hy in HOLES:
-    assert math.hypot(max(x0 - hx, 0, hx - x1), max(y0 - hy, 0, hy - y1)) >= KEEP, ('notch on a hole', hx, hy)
+assert hole_d(x0, y0, x1, y1) >= KEEP, 'notch on a hole'
 assert all(x1 <= bx0 - BAND_CLR + 1e-6 or x0 >= bx1 + BAND_CLR - 1e-6 for bx0, bx1 in BRACKET), ("notch on the bracket", x0, x1)
 assert NX < X1 - RC, 'the notch meets the bottom edge on its straight part (square outer corners, no point)'
 
@@ -379,7 +398,7 @@ for p in J3.Pads():                                 # every pad on the board (no
         for qy in (bb_.GetTop(), bb_.GetBottom()):
             x_, y_ = xy(pcbnew.VECTOR2I(qx, qy))
             assert inside(x_, y_, 0.5), ('J3 pad off the board', p.GetNumber(), x_, y_)
-            assert all(math.hypot(x_ - hx, y_ - hy) >= KEEP for hx, hy in HOLES), ('J3 pad on a boss', p.GetNumber())
+            assert hole_d(x_, y_) >= KEEP, ('J3 pad on a boss', p.GetNumber())
 sig = sorted((xy(p.GetPosition())[0], int(p.GetNumber())) for p in J3.Pads() if p.GetNumber() != 'MP')
 assert [n for _, n in sig] == list(range(1, 9)), 'J3 pin 1 is not at -x'
 fab = [xy(q) for g in J3.GraphicalItems() if g.GetLayer() == pcbnew.F_Fab and g.GetClass() in ('MGRAPHIC', 'FP_SHAPE', 'PCB_SHAPE')
@@ -389,11 +408,13 @@ hy0, hy1 = min(q[1] for q in fab), max(q[1] for q in fab)
 assert hx1 <= SOCK[0] or hx0 >= SOCK[1] or hy1 <= SOCK[2] or hy0 >= SOCK[3], ('J3 housing on the socket', hy1)
 print(f'J3 housing x {hx0:.2f}..{hx1:.2f} y {hy0:.2f}..{hy1:.2f}, {SOCK[2] - hy1:.2f} under the socket')
 
-for i, (x, y) in enumerate(HOLES, 1):
-    assert inside(x, y, 3.0), ('hole too near the edge', x, y)   # the M3 head (5.5) on the board
+for i, ((a, c, y), (x, _)) in enumerate(zip(SLOTS, HOLES), 1):
+    for xe in (a, c):                               # the M3 head (5.5) on the board at either end of the slot (f10)
+        assert inside(xe, y, 3.0), ('hole too near the edge', xe, y)
     h = load('MountingHole.pretty', 'MountingHole_3.2mm_M3', f'H{i}', 'M3', x, y)
-    for p in h.Pads():                              # NPTH: the hole is the pad, both 3.4
-        p.SetDrillSize(pcbnew.VECTOR2I(mm(HOLE_D), mm(HOLE_D))); p.SetSize(pcbnew.VECTOR2I(mm(HOLE_D), mm(HOLE_D)))
+    for p in h.Pads():                              # NPTH: the hole is the pad, an oval slot SLOT_L x HOLE_D (f10)
+        p.SetShape(pcbnew.PAD_SHAPE_OVAL); p.SetDrillShape(pcbnew.PAD_DRILL_SHAPE_OBLONG)
+        p.SetDrillSize(pcbnew.VECTOR2I(mm(SLOT_L), mm(HOLE_D))); p.SetSize(pcbnew.VECTOR2I(mm(SLOT_L), mm(HOLE_D)))
 
 # ---- outline
 def edge_loop(pts):
@@ -417,9 +438,7 @@ for fp in b.GetFootprints():                        # every part inside the outl
                         fp.GetReference(), x_, y_)          # off the body's outline by WALL (F: the module's wall), the notch 0.2 (f9: over the recess)
         L, Rr = pcbnew.ToMM(bb_.GetLeft()) - OX, pcbnew.ToMM(bb_.GetRight()) - OX
         T_, B_ = OY - pcbnew.ToMM(bb_.GetBottom()), OY - pcbnew.ToMM(bb_.GetTop())
-        for hx, hy in HOLES:                        # clear of the screw bosses (the parts face the module)
-            dx = max(L - hx, 0, hx - Rr); dy = max(T_ - hy, 0, hy - B_)
-            assert math.hypot(dx, dy) >= KEEP, (fp.GetReference(), 'on the boss at', hx, hy)
+        assert hole_d(L, T_, Rr, B_) >= KEEP, (fp.GetReference(), 'on a boss')   # the parts face the module
 for fp in b.GetFootprints():                        # every pad (F and B, the test pads too) KEEP from a hole's centre (f8)
     if fp.GetReference().startswith('H'):
         continue
@@ -427,8 +446,7 @@ for fp in b.GetFootprints():                        # every pad (F and B, the te
         bb_ = p.GetBoundingBox()
         L, Rr = pcbnew.ToMM(bb_.GetLeft()) - OX, pcbnew.ToMM(bb_.GetRight()) - OX
         T_, B_ = OY - pcbnew.ToMM(bb_.GetBottom()), OY - pcbnew.ToMM(bb_.GetTop())
-        for hx, hy in HOLES:
-            assert math.hypot(max(L - hx, 0, hx - Rr), max(T_ - hy, 0, hy - B_)) >= KEEP, (fp.GetReference(), p.GetNumber())
+        assert hole_d(L, T_, Rr, B_) >= KEEP, (fp.GetReference(), p.GetNumber())
 for j in (J1, J2):                                  # each USB-C's opening at the notch, -y (f8, f9)
     bb_ = j.GetCourtyard(pcbnew.F_CrtYd).BBox()
     assert OY - pcbnew.ToMM(bb_.GetBottom()) < YF, (j.GetReference(), 'opening not at the notch')
@@ -480,7 +498,7 @@ def stitch(b, pitch=2.5, clr=0.25):
         x = X0 + 1.5
         while x < X1 - 1.0:
             q = P(x, y)
-            ok = (inside(x, y, 1.0) and all((x - hx) ** 2 + (y - hy) ** 2 > KEEP ** 2 for hx, hy in HOLES)
+            ok = (inside(x, y, 1.0) and hole_d(x, y) > KEEP
                   and not any(c.OutlineCount() and c.Contains(q) for c in crt)
                   and not any(s.Collide(q, mm(r)) for s in items))
             if ok:
@@ -499,7 +517,6 @@ def tie_islands(b, r=0.35, step=0.2):
     gvias = [v.GetPosition() for v in b.GetTracks() if v.GetClass() == 'PCB_VIA' and v.GetNetname() == 'GND']
     crt = [fp.GetCourtyard(pcbnew.F_CrtYd) for fp in b.GetFootprints()]
     ring = [(mm(r * math.cos(a)), mm(r * math.sin(a))) for a in [k * math.pi / 4 for k in range(8)]]
-    holes = [P(hx, hy) for hx, hy in HOLES]
     pth = [p.GetPosition() for f in b.GetFootprints() for p in f.Pads() if p.GetAttribute() == pcbnew.PAD_ATTRIB_PTH]
 
     def room(poly, q):
@@ -521,7 +538,7 @@ def tie_islands(b, r=0.35, step=0.2):
                 x = bb.GetLeft()
                 while x <= bb.GetRight():
                     q = pcbnew.VECTOR2I(x, y)
-                    if (room(piece, q) and room(other, q) and all((q - h).EuclideanNorm() > mm(KEEP) for h in holes)
+                    if (room(piece, q) and room(other, q) and hole_d(*xy(q)) > KEEP
                             and not any((q - h).EuclideanNorm() < mm(0.9) for h in pth)):
                         if not any(c.OutlineCount() and c.Contains(q) for c in crt):
                             best = q
@@ -555,14 +572,18 @@ HAND = [
     ('IRQ', 'F', [(-8.2, 12.0), (-0.4, 12.0), (-0.375, 11.975), (-0.3, 11.975), (-0.275, 11.95), (-0.225, 11.95), (-0.175, 11.9), (-0.15, 11.9), (0.625, 11.125), (0.625, 11.1)]),
     ('FPRX', 'F', [(-25.9, 2.4), (-25.9, 4.325)]),
     ('FPRX', 'B', [(-25.9, 4.325), (-25.9, 5.9)]),
-    ('FPRX', 'F', [(-25.9, 5.9), (-24.475, 7.325), (-24.475, 7.35), (-23.675, 8.15), (-23.675, 8.175), (-23.65, 8.2), (-23.65, 8.275), (-23.625, 8.3), (-23.625, 8.35), (-23.6, 8.375), (-23.6, 8.4), (-23.55, 8.45), (-23.55, 8.475), (-23.275, 8.75), (-23.25, 8.75), (-23.2, 8.8), (-23.175, 8.8), (-23.15, 8.825), (-23.1, 8.825), (-23.075, 8.85), (-23.0, 8.85), (-22.975, 8.875), (-22.875, 8.875), (-22.85, 8.9), (-21.0, 8.9), (-19.75, 10.15), (-19.725, 10.15), (-19.7, 10.175), (-19.675, 10.175), (-19.65, 10.2), (-19.6, 10.2), (-19.575, 10.225), (-19.5, 10.225), (-19.475, 10.25), (-16.825, 10.25), (-13.625, 13.45), (-13.6, 13.45), (-13.55, 13.5), (-13.5, 13.5), (-13.475, 13.525), (-13.375, 13.525), (-13.35, 13.55), (-12.475, 13.55), (-12.2, 13.825), (-12.175, 13.825), (-12.15, 13.85), (-12.125, 13.85), (-12.1, 13.875), (-3.85, 13.875), (-3.65, 14.075)]),
+    ('FPRX', 'F', [(-25.9, 5.9), (-24.475, 7.325), (-24.475, 7.35), (-23.675, 8.15), (-23.675, 8.175), (-23.65, 8.2), (-23.65, 8.275), (-23.625, 8.3), (-23.625, 8.35), (-23.6, 8.375), (-23.6, 8.4), (-23.55, 8.45), (-23.55, 8.475), (-23.275, 8.75), (-21.45, 10.575), (-21.45, 13.2), (-20.95, 14.0), (-20.2, 14.65), (-19.3, 14.95), (-17.3, 14.95), (-16.7, 14.35), (-12.575, 14.35), (-12.1, 13.875), (-3.85, 13.875), (-3.65, 14.075)]),
     ('FPRX', 'B', [(-3.65, 14.075), (-1.025, 11.45)]),
     ('FPRX', 'F', [(-1.025, 11.45), (-0.7, 11.125), (-0.675, 11.125), (-0.65, 11.1), (-0.625, 11.1)]),
     ('FPTX', 'B', [(-25.2, 1.35), (-25.2, 7.35)]),
-    ('FPTX', 'F', [(-25.2, 7.35), (-21.825, 10.725), (-21.825, 10.775), (-20.225, 12.375), (-20.225, 12.65), (-20.2, 12.675), (-20.2, 12.85), (-20.175, 12.875), (-20.175, 12.975), (-20.15, 13.0), (-20.15, 13.05), (-20.125, 13.075), (-20.125, 13.15), (-20.1, 13.175), (-20.1, 13.2), (-20.075, 13.225), (-20.075, 13.275), (-20.05, 13.3), (-20.05, 13.325), (-20.025, 13.35), (-20.025, 13.375), (-20.0, 13.4), (-20.0, 13.425), (-19.975, 13.45), (-19.975, 13.475), (-19.95, 13.5), (-19.95, 13.525), (-19.925, 13.55), (-19.925, 13.575), (-19.875, 13.625), (-19.875, 13.65), (-19.825, 13.7), (-19.825, 13.725), (-19.725, 13.825), (-19.725, 13.85), (-19.5, 14.075), (-19.475, 14.075), (-19.375, 14.175), (-19.35, 14.175), (-19.3, 14.225), (-19.275, 14.225), (-19.225, 14.275), (-19.2, 14.275), (-19.175, 14.3), (-19.15, 14.3), (-19.125, 14.325), (-19.1, 14.325), (-19.075, 14.35), (-19.05, 14.35), (-19.025, 14.375), (-19.0, 14.375), (-18.975, 14.4), (-18.95, 14.4), (-18.925, 14.425), (-18.875, 14.425), (-18.85, 14.45), (-18.825, 14.45), (-18.8, 14.475), (-18.725, 14.475), (-18.7, 14.5), (-18.65, 14.5), (-18.625, 14.525), (-18.525, 14.525), (-18.5, 14.55), (-18.325, 14.55), (-18.3, 14.575), (-9.5, 14.575), (-9.475, 14.55), (-9.45, 14.55), (-9.425, 14.525), (-9.4, 14.525), (-9.375, 14.5), (-9.325, 14.5), (-9.3, 14.475), (-9.275, 14.475), (-9.25, 14.45), (-9.225, 14.45), (-9.2, 14.425), (-4.975, 14.425)]),
+    ('FPTX', 'F', [(-25.2, 7.35), (-22.15, 10.4), (-22.15, 13.2), (-21.55, 14.2), (-20.6, 15.0), (-19.4, 15.35), (-17.15, 15.35), (-16.5, 14.7), (-9.6, 14.7), (-9.325, 14.425), (-4.975, 14.425)]),
     ('FPTX', 'B', [(-4.975, 14.425), (-2.0, 11.45)]),
     ('FPTX', 'F', [(-2.0, 11.45), (-2.0, 11.35), (-1.975, 11.325), (-1.975, 11.3), (-1.95, 11.275), (-1.95, 11.25), (-1.925, 11.225), (-1.925, 11.2), (-1.9, 11.175), (-1.9, 11.15), (-1.875, 11.125), (-1.875, 11.1)]),
 ]
+# f10: H2's slot reaches x -20.7, and FPRX's run under it (y 10.25, IRQ 0.35 below and SDP under that) came 0.45 off it
+# (the edge clearance is 0.5): FPRX now goes round the slot's left and top beside FPTX (FPTX outside, 0.35 apart), both
+# redrawn by hand from (-23.275, 8.75) / (-25.2, 7.35): track centres >= 2.35 from the line the slot's centre runs on,
+# <= 11.4 from the board's top-left corner's centre (R12: 0.5 edge clearance + half the track). IRQ as f9.
 HAND_VIA = [('FPTX', -25.2, 1.35), ('IRQ', -13.325, 13.0), ('IRQ', -10.925, 12.675), ('IRQ', -9.175, 12.675), ('IRQ', -8.2, 12.0), ('FPRX', -25.9, 4.325), ('FPRX', -25.9, 5.9), ('FPRX', -3.65, 14.075), ('FPRX', -1.025, 11.45), ('FPTX', -25.2, 7.35), ('FPTX', -4.975, 14.425), ('FPTX', -2.0, 11.45)]
 os.chdir(HERE)
 if 'dsn' in sys.argv[1:]:
