@@ -1,4 +1,4 @@
-"""FP008 USB board (f11): the Grow FP008 face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through one
+"""FP008 USB board (f12): the Grow FP008 face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through one
 USB-C cable: the PC sees the module's camera (UVC) and an RP2354A (USB CDC), both behind one hub. The RP2354A talks to
 the module's UART (the same commands as the FP001S, EF AA), holds the keys, does the face-check exchange and takes
 signed firmware over its serial port (A / B with fallback): the firmware is alc-app-s3's crates/fp001s-rp2354
@@ -8,7 +8,7 @@ the keys on the PC's TPM, 2026-11-19). Sound comes from the PC's own speakers (n
   - U3  CH334F (QFN-24 4x4) USB 2.0 hub, self-powered from 5V (V5 -> internal LDO -> VDD33 = HUB33), Y1 12 MHz (load
         caps inside the CH334). Pins (WCH CH334/CH335 datasheet V2.4, table 1-3, column 4F): DMU 14 / DPU 15,
         DM1 11 / DP1 12 -> the FP008's USB (camera), DM2 9 / DP2 10 -> U6, DM3 7 / DP3 8 -> J2, port 4 unused.
-  - J2  USB-C receptacle (a device, e.g. a USB speaker; beside J1 at the bottom, f8) on hub port 3: VBUS = 5V straight (no switch,
+  - J2  USB-C receptacle (a device, e.g. a USB speaker; f12: at the top edge, opening +y) on hub port 3: VBUS = 5V straight (no switch,
         no fuse), CC1 / CC2 56 k to 5V (R3 / R4, Rp: default USB power), D+ / D- through U5 (USBLC6-2SC6).
         The PC port feeds everything: on a 500 mA USB 2.0 port leave the device ~250 mA.
   - U6  RP2354A (QFN-60 7x7, RP2350 with 2 MB flash inside, no radio) on hub port 2 (R107 / R108 27 R): UART0 GPIO0 TX
@@ -98,7 +98,20 @@ f11 (2026-11-26, user measured the real module with calipers; user: "無駄に�
   set to 2.4. The hole lies inside f10's slot, so every clearance (KEEP, the bracket's band, FPRX round it) only grows.
   Depths into the module, from the rim the board sits on (user's caliper, 2026-11-26): the 8P socket's top 10.9 (J3,
   its plug and the wires' bend 7.5: 3.4 to spare), a heat sink near one end 4.4 (the parts on F, up to 3.3: 1.1 to
-  spare). Not measured: whether the L adapters' elbows (~5.1 down, in the notch) sit over the heat sink.
+  spare).
+f12 (2026-11-26, user: J2 elsewhere): the heat sink is at the bottom edge's left (board x -14.4..-4.7, y -14.2..-5.6,
+  from a straight photo scaled on the four holes, +-1), under J1's adapter, and an "up-down" L adapter (the product's
+  drawing: body 12 x 7 x 21, the plug 8 out of its side ~6 from one end) reaches ~7.6 under the board: 3.2 into it. So
+  J1 (PC) moved to the bottom edge's right (x 7.3, opening -y, NOTCH_B x 0.7..13.9) and J2 (device) to the top edge's left
+  (x -7.5, turned 180, opening +y, NOTCH_T): the two cannot share an x (a receptacle with its pads 9.4 deep and the
+  adapter's ~8 in front of it, twice, is more than the board's 34). The module's 8P socket is in the middle (x -7..7,
+  y 0.4..4.4; f6..f11 took it by the top wall): J3 sits right of the middle over J1 (7.5, 5.9), its plug clear of the
+  socket by 3.4. J1's ESD / CC / bulk, J2's and the BOOT / RUN resistors moved to the free bottom-left (over the heat
+  sink: up to 3.3 high, 1.1 under it), the test pads to a row on B along the bottom edge, D1 and the labels to the
+  free top-right. f8..f11's hand routes from the core's left pins to J3 are gone: the pins' escapes (HAND) go into the
+  DSN as fixed wiring and freerouting 2.4.1 did the rest (one run; it reports zone-joined nets as unrouted); the .ses
+  is taken whole. build_3d.py asserts the adapters (the product's size) clear the board, the module's wall and heat
+  sink and the parts, and the parts clear the heat sink.
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
@@ -113,7 +126,7 @@ from kicad_ses import import_ses, prune_dangling  # noqa: E402
 sys.path.insert(0, HERE)
 from rp_core import Core  # noqa: E402
 
-REV = 'f11'
+REV = 'f12'
 NAME = 'fp008_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
@@ -151,13 +164,23 @@ def hole_d(L, T, Rr=None, B=None):
 # f9 (2026-11-23, user: the board left round f8's two windows is not needed): one notch NOTCH open to the bottom edge,
 # x -NX..NX (f8's two windows' outer sides), y up to YF (f8's windows' top: J1 / J2 do not move), its inner corners
 # R NR (the router). Its sides BAND_CLR off the bracket's band (asserted).
-AD_W, AD_D = 12.4, 7.5                              # adapter across (x) and deep (y, from the receptacle's face)
-NX = 13.9                                           # the notch's half width (f8's windows: 0.5 + AD_W + 1.0)
-YF = -6.7                                           # the notch's top side: J1 / J2's openings face it (f8's windows' top)
-NR = 0.5                                            # the notch's inner corner radius (JLC's router)
-JX = 7.2                                            # |x| of J1 / J2 (f8's windows' middles)
-NOTCH = (-NX, NX, Y0 - 1.0, YF)                     # (x0, x1, y0, y1): y0 below the board
-WIN = [NOTCH]
+# f12 (2026-11-26, user: J2 elsewhere): the module has a heat sink HS under the bottom edge's left half (its top 4.4 under
+# the rim; user's caliper, its place from a straight photo scaled on the four holes, +-1) and an L adapter reaches ~7
+# under the board (the product's drawing: body 21 x 12 x 7, the plug 8 out of its side near one end): no adapter over
+# HS. So the two USB-C are split: J1 (PC) at the bottom edge right of HS, its opening -y into the notch NOTCH_B; J2
+# (device) at the top edge left, turned 180, its opening +y into NOTCH_T. Each notch is one adapter wide (AD_W + 2 x 0.6)
+# and BAND_CLR off the bracket's band. The two cannot share an x: a receptacle with its pads is 9.4 deep and an adapter
+# needs ~8 in front of it, more than the board's 34.
+HS = (-14.4, -4.7, -14.2, -5.6)                     # the module's heat sink under the board (x0, x1, y0, y1)
+AD_W, AD_D = 12.0, 7.5                              # adapter across (x; f12: the product's drawing, 12) and deep (y)
+NH = AD_W / 2 + 0.6                                 # a notch's half width
+YF, YT = -6.7, 6.7                                  # the bottom notch's top side (J1's opening), the top notch's bottom (J2's)
+NR = 0.5                                            # the notches' inner corner radius (JLC's router)
+J1X, J2X = 7.3, -7.5                                # J1 / J2's x (the notches' middles)
+NOTCH_B = (J1X - NH, J1X + NH, Y0 - 1.0, YF)        # (x0, x1, y0, y1): y0 below the board
+NOTCH_T = (J2X - NH, J2X + NH, YT, Y1 + 1.0)        # y1 above it
+WIN = [NOTCH_B, NOTCH_T]
+assert NOTCH_B[0] >= HS[1] + 0.5, 'J1\'s adapter over the heat sink'
 BAND_CLR = 0.5                                      # bare copper on B and the notch off the bracket's band
 KEEP = 3.5                                          # clear of each screw hole's centre (M3 head 5.5, its boss; f4, f8)
 WALL = 1.5                                          # F parts' courtyards off the outline: the module's rear wall (f8, thickness not measured)
@@ -165,19 +188,22 @@ WALL = 1.5                                          # F parts' courtyards off th
 
 def outline(n=10, notch=True):
     """The rear body's rounded rectangle, as a closed list of points (anticlockwise); with notch, the bottom edge cut
-    by NOTCH (f9: one closed loop)."""
+    by NOTCH_B and the top edge by NOTCH_T (f9: one closed loop)."""
+    def corner(cx, cy, a0, a1):
+        return [(cx + NR * math.cos(math.radians(a0 + (a1 - a0) * k / (n // 2))),
+                 cy + NR * math.sin(math.radians(a0 + (a1 - a0) * k / (n // 2)))) for k in range(n // 2 + 1)]
     pts = []
-    for cx, cy, a0 in ((X1 - RC, Y0 + RC, -90), (X1 - RC, Y1 - RC, 0), (X0 + RC, Y1 - RC, 90), (X0 + RC, Y0 + RC, 180)):
+    for i, (cx, cy, a0) in enumerate(((X1 - RC, Y0 + RC, -90), (X1 - RC, Y1 - RC, 0), (X0 + RC, Y1 - RC, 90),
+                                      (X0 + RC, Y0 + RC, 180))):
         for k in range(n + 1):
             t = math.radians(a0 + 90 * k / n)
             pts.append((cx + RC * math.cos(t), cy + RC * math.sin(t)))
+        if notch and i == 1:                        # the top edge runs from +x to -x: NOTCH_T (f12)
+            x0, x1 = NOTCH_T[:2]
+            pts += [(x1, Y1)] + corner(x1 - NR, YT + NR, 0, -90) + corner(x0 + NR, YT + NR, -90, -180) + [(x0, Y1)]
     if notch:                                       # the bottom edge runs from the last point (-x) to the first (+x)
-        pts.append((-NX, Y0))
-        for cx, a0, a1 in ((-NX + NR, 180, 90), (NX - NR, 90, 0)):   # the inner corners, round the router's radius
-            for k in range(n // 2 + 1):
-                t = math.radians(a0 + (a1 - a0) * k / (n // 2))
-                pts.append((cx + NR * math.cos(t), YF - NR + NR * math.sin(t)))
-        pts.append((NX, Y0))
+        x0, x1 = NOTCH_B[:2]
+        pts += [(x0, Y0)] + corner(x0 + NR, YF - NR, 180, 90) + corner(x1 - NR, YF - NR, 90, 0) + [(x1, Y0)]
     return pts
 
 
@@ -208,10 +234,10 @@ def inside(x, y, m=0.0, win=True):
 
 
 BRACKET = sorted({(a - 3.75, c + 3.75) for a, c, _ in SLOTS})   # the bracket's band on B (f8), over the slot (f10)
-x0, x1, y0, y1 = NOTCH                              # the notch clear of the screw holes and the bracket (f8, f9)
-assert hole_d(x0, y0, x1, y1) >= KEEP, 'notch on a hole'
-assert all(x1 <= bx0 - BAND_CLR + 1e-6 or x0 >= bx1 + BAND_CLR - 1e-6 for bx0, bx1 in BRACKET), ("notch on the bracket", x0, x1)
-assert NX < X1 - RC, 'the notch meets the bottom edge on its straight part (square outer corners, no point)'
+for x0, x1, y0, y1 in WIN:                          # the notches clear of the screw holes and the bracket (f8, f9, f12)
+    assert hole_d(x0, y0, x1, y1) >= KEEP, 'notch on a hole'
+    assert all(x1 <= bx0 - BAND_CLR + 1e-6 or x0 >= bx1 + BAND_CLR - 1e-6 for bx0, bx1 in BRACKET), ("notch on the bracket", x0, x1)
+    assert X0 + RC < x0 and x1 < X1 - RC, 'a notch meets its edge on the straight part (square outer corners, no point)'
 
 
 POS = {}                                            # ref -> (x, y, rot), overriding the places below
@@ -282,14 +308,14 @@ def C(ref, value, a, c, x, y, rot=0):
 USB_GND = {'A1': 'GND', 'A12': 'GND', 'B1': 'GND', 'B12': 'GND', 'S1': 'GND'}
 
 # ======== J1 USB-C (the PC; power and data) -> U2 ESD -> U3 hub ========
-J1 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J1', 'USB-C (PC)', -JX, YF + 3.05, 0)
+J1 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J1', 'USB-C (PC)', J1X, YF + 3.05, 0)
 wire(J1, {**USB_GND, 'A5': 'CC1', 'B5': 'CC2', 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V',
           'A6': 'UDP', 'B6': 'UDP', 'A7': 'UDN', 'B7': 'UDN'})
-R('R1', '5.1k', 'CC1', 'GND', -7.0, 4.2, 90)            # f8: J1's parts over it
-R('R2', '5.1k', 'CC2', 'GND', -5.3, 4.2, 90)
-U2 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U2', 'USBLC6-2SC6', -10.0, 4.2, 0)
+R('R1', '5.1k', 'CC1', 'GND', -1.0, -8.6, 90)           # f12: J1's parts left of it (J3 over it)
+R('R2', '5.1k', 'CC2', 'GND', -2.7, -8.6, 90)
+U2 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U2', 'USBLC6-2SC6', 0.0, -4.0, 90)
 wire(U2, {'1': 'UDP', '6': 'UDP', '3': 'UDN', '4': 'UDN', '2': 'GND', '5': '5V'})
-C('C5', '10uF', '5V', 'GND', -3.3, 4.2, 90)               # VBUS bulk at J1
+C('C5', '10uF', '5V', 'GND', -3.1, -4.0, 90)              # VBUS bulk at J1
 
 U3 = load('Package_DFN_QFN.pretty', 'QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm', 'U3', 'CH334F', 17.5, -1.0, 180)   # f8: the right end
 wire(U3, {'25': 'GND', '3': 'XO', '4': 'XI', '9': 'SDN', '10': 'SDP', '11': 'FPDM', '12': 'FPDP',
@@ -299,7 +325,7 @@ for dx in ((-0.7, 0.7) if 'dsn' in sys.argv[1:] else ()):   # U3's exposed pad (
     for dy in (-0.7, 0.7):                                   # vias in the pad, kept in the .ses with the routing
         v = pcbnew.PCB_VIA(b); v.SetPosition(P(ux + dx, uy + dy)); v.SetWidth(mm(0.6)); v.SetDrill(mm(0.3))
         v.SetNet(nets['GND']); b.Add(v)
-XTAL = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y1', '12MHz', 17.5, 3.6, 0)
+XTAL = load('Crystal.pretty', 'Crystal_SMD_3225-4Pin_3.2x2.5mm', 'Y1', '12MHz', 18.0, 3.6, 0)   # f12: 0.5 right, off J3
 wire(XTAL, {'1': 'XI', '3': 'XO', '2': 'GND', '4': 'GND'})
 C('C1', '1uF', '5V', 'GND', 21.6, -1.5, 90)       # V5 (pins 19 / 20)
 C('C2', '10uF', 'HUB33', 'GND', 23.4, 0.0, 90)             # VDD33
@@ -347,16 +373,17 @@ for p in U6.Pads():                                 # f8: the core sits under th
 # BOOTSEL / RUN / SWD on test pads on B (the outside: reached with the board on the module), for the factory only:
 # BOOT = QSPI_SS through R110 1 k (the minimal design's R6), shorted to GND at power-up for the ROM's USB boot; RUN
 # pulled up by R111 10 k
-R('R110', '1k', 'QSS', 'BOOT', -10.5, 7.6, 0)
-R('R111', '10k', '3V3', 'RUN', -10.5, 9.3, 0)
+R('R110', '1k', 'QSS', 'BOOT', -12.6, -8.6, 90)           # f12: out of the top notch
+R('R111', '10k', '3V3', 'RUN', -10.9, -8.6, 90)
 TP = [('TP1', 'BOOT'), ('TP2', 'GND'), ('TP3', 'RUN'), ('TP4', 'SWDIO'), ('TP5', 'SWCLK')]
-TPX, TPY, TPP = -11.9, 12.0, 2.6                    # a column on B right of the left bracket, by the core (f8)
+TPX, TPY, TPP = -12.0, -13.4, 2.6                   # f12: a row on B along the bottom edge left of the notch (x TPX + TPP * i)
 # The module's mounting bracket (metal, 7.5 wide, on the same M3 x 6) lies on B over |x - hole x| <= 3.75 across the whole
 # board (f8, the maker 2026-11-23): no bare copper on B under it but the holes and J1 / J2's shell legs (GND). The row
 # moved +x by 0.45 (TPX -14.0 -> -13.55) to take TP1 out of it (the track ends from f7's .ses still inside the pads)
 for i, (ref, n) in enumerate(TP):
-    t = load('TestPoint.pretty', 'TestPoint_Pad_D1.5mm', ref, n, TPX, TPY - TPP * i)
-    tx_ = TPX
+    tx_ = TPX + TPP * i
+    t = load('TestPoint.pretty', 'TestPoint_Pad_D1.5mm', ref, n, tx_, TPY)
+    assert not in_win(tx_, TPY, 1.0), (ref, 'in a notch')
     assert all(tx_ + 0.75 <= x0 or tx_ - 0.75 >= x1 for x0, x1 in BRACKET), (ref, 'under the bracket')
     t.Flip(t.GetPosition(), False)                  # B: the outside
     wire(t, {'1': n})
@@ -366,24 +393,24 @@ U1 = load('Package_TO_SOT_SMD.pretty', 'SOT-23', 'U1', 'XC6206P332MR', 17.0, -6.
 wire(U1, {'1': 'GND', '2': '3V3', '3': '5V'})                              # 1 VSS, 2 VOUT, 3 VIN
 C('C6', '1uF', '5V', 'GND', 21.6, -4.6, 0)
 C('C7', '1uF', '3V3', 'GND', 21.6, -6.2, 0)
-two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', -1.0, 4.2, 90)   # 1 = K, 2 = A
+two('LED_SMD.pretty', 'LED_0603_1608Metric', 'D1', 'PWR (3V3)', 'GND', 'LEDA', 12.0, 10.5, 90)   # 1 = K, 2 = A
 R('R5', '1k', '3V3', 'LEDA', 21.6, -7.8, 0)
 
-# ======== J2 USB-C (a device on hub port 3; opening -y beside J1) ========
-J2 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J2', 'USB-C (device)', JX, YF + 3.05, 0)
+# ======== J2 USB-C (a device on hub port 3; f12: the top edge, opening +y) ========
+J2 = load('Connector_USB.pretty', 'USB_C_Receptacle_HRO_TYPE-C-31-M-12', 'J2', 'USB-C (device)', J2X, YT - 3.05, 180)
 wire(J2, {**USB_GND, 'A5': 'DCC1', 'B5': 'DCC2', 'A4': '5V', 'A9': '5V', 'B4': '5V', 'B9': '5V',
           'A6': 'J2P', 'B6': 'J2P', 'A7': 'J2N', 'B7': 'J2N'})
-R('R3', '56k', '5V', 'DCC1', 7.6, 4.2, 90)                # f8: J2's parts over it
-R('R4', '56k', '5V', 'DCC2', 5.9, 4.2, 90)
-U5 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U5', 'USBLC6-2SC6', 10.5, 4.2, 0)
+R('R3', '56k', '5V', 'DCC1', -10.6, -4.2, 90)              # f12: J2's parts under it (its pads face -y)
+R('R4', '56k', '5V', 'DCC2', -12.3, -4.2, 90)
+U5 = load('Package_TO_SOT_SMD.pretty', 'SOT-23-6', 'U5', 'USBLC6-2SC6', -7.0, -4.2, 0)
 wire(U5, {'1': 'D3P', '6': 'J2P', '3': 'D3N', '4': 'J2N', '2': 'GND', '5': '5V'})
-C('C9', '10uF', '5V', 'GND', 3.9, 4.2, 90)                 # VBUS at J2
+C('C9', '10uF', '5V', 'GND', -7.0, -8.2, 0)                 # VBUS at J2
 for j in (J1, J2):                                  # each USB-C's two 5V pad pairs (A4 / B9, A9 / B4) tied by a via
     # beside each and B.Cu between them, as f6's routing had them at J2 (f7's freerouting left them apart): locked, so
     # written into the DSN as fixed wiring (freerouting does not give fixed wiring back in the .ses: added here in both
     # runs). 1.18 from the pad centre: the via 0.15 clear of the pad's inner end
     (xa, ya), (xb, yb) = (xy(q.GetPosition()) for q in j.Pads() if q.GetNumber() in ('A4', 'A9'))
-    yv = ya + 1.18                                  # f8: the pad row along x, the vias inward (+y)
+    yv = ya + (1.18 if j is J1 else -1.18)          # f8: the pad row along x, the vias inward (f12: J2 turned, -y)
     for (x0, y0), (x1, y1), lay in (((xa, ya), (xa, yv), pcbnew.F_Cu), ((xb, yb), (xb, yv), pcbnew.F_Cu),
                                     ((xa, yv), (xb, yv), pcbnew.B_Cu)):
         t = pcbnew.PCB_TRACK(b); t.SetStart(P(x0, y0)); t.SetEnd(P(x1, y1)); t.SetWidth(mm(0.5))
@@ -393,18 +420,15 @@ for j in (J1, J2):                                  # each USB-C's two 5V pad pa
         v.SetNet(nets['5V']); v.SetLocked(True); b.Add(v)
 
 # ======== J3 FP008 (PicoBlade 8P vertical, f7: the plug goes in straight from the module's side) ========
-# The module's own 8P socket sits at the top edge, by the wall (user, from the manual's rear photo): J3's housing (the
-# tall part, the mated plug inside the same outline) stays off the socket's place, taken as f6's horizontal J3's housing
-# SOCK. Turned 0: the pad row up (towards the socket), the MP pads down, pin 1 at -x. The space between SOCK and the
-# RP2354A core (R107 / R108 / L106 up to y 6.7, not moved) is 4.3: the footprint is KiCad's with the courtyard 0.1
-# round the copper and the body (vein_base.pretty, ..._Crt0.1; KiCad's is 0.5 and would hit the core's courtyards).
-SOCK = (-7.58, 7.58, 11.0, 15.2)                    # x0, x1, y0, y1: f6's horizontal J3 (at (0, 12.6), 180), its F.Fab body
-J3Y = SOCK[2] - 0.05 - 1.1                          # the housing's top (local -1.1, turned 0) 0.05 under SOCK
+# f12: the module's 8P socket is in the middle (x -7..7, y 0.4..4.4, its top 10.9 under the rim; user, 2026-11-26), not
+# by the top wall as f6..f11 took it. J3 sits right of the middle over J1 (the top notch is at the left): its mated plug
+# and the wires' bend (~7.5 under the board) clear the socket's top by 3.4. Turned 0: the pad row up, the MP pads down,
+# pin 1 at -x. The footprint is KiCad's with the courtyard 0.1 round the copper and the body (vein_base.pretty, ..._Crt0.1).
 J3 = load('vein_base.pretty', 'Molex_PicoBlade_53398-0871_1x08-1MP_P1.25mm_Vertical_Crt0.1', 'J3', 'FP008 (MX1.25 8P)',
-          0.0, J3Y, 0)
+          7.5, 5.9, 0)
 FP_PINS = ['5V', 'GND', 'FPTX', 'FPRX', 'IRQ', '3V3', 'FPDP', 'FPDM']    # the module's pins 1..8
 wire(J3, {**{str(i + 1): n for i, n in enumerate(FP_PINS)}, 'MP': 'GND'})
-C('C8', '10uF', '5V', 'GND', 1.5, 4.2, 90)             # the module's 200 mA, under J3
+C('C8', '10uF', '5V', 'GND', 0.0, 0.6, 90)             # the module's 200 mA, by J3 (f12: between J1 and J2)
 for p in J3.Pads():                                 # every pad on the board (not in a window, off the edge) and clear
     bb_ = p.GetBoundingBox()                        # of the screw bosses
     for qx in (bb_.GetLeft(), bb_.GetRight()):
@@ -414,12 +438,6 @@ for p in J3.Pads():                                 # every pad on the board (no
             assert hole_d(x_, y_) >= KEEP, ('J3 pad on a boss', p.GetNumber())
 sig = sorted((xy(p.GetPosition())[0], int(p.GetNumber())) for p in J3.Pads() if p.GetNumber() != 'MP')
 assert [n for _, n in sig] == list(range(1, 9)), 'J3 pin 1 is not at -x'
-fab = [xy(q) for g in J3.GraphicalItems() if g.GetLayer() == pcbnew.F_Fab and g.GetClass() in ('MGRAPHIC', 'FP_SHAPE', 'PCB_SHAPE')
-       for q in (g.GetStart(), g.GetEnd())]       # the body's lines (F.Fab), their ends
-hx0, hx1 = min(q[0] for q in fab), max(q[0] for q in fab)
-hy0, hy1 = min(q[1] for q in fab), max(q[1] for q in fab)
-assert hx1 <= SOCK[0] or hx0 >= SOCK[1] or hy1 <= SOCK[2] or hy0 >= SOCK[3], ('J3 housing on the socket', hy1)
-print(f'J3 housing x {hx0:.2f}..{hx1:.2f} y {hy0:.2f}..{hy1:.2f}, {SOCK[2] - hy1:.2f} under the socket')
 
 for i, ((a, c, y), (x, _)) in enumerate(zip(SLOTS, HOLES), 1):
     for xe in (a, c):                               # 3.0 inside the outline (the bracket over it, f8)
@@ -444,8 +462,10 @@ for fp in b.GetFootprints():                        # every part inside the outl
             for qx in (bb_.GetLeft(), bb_.GetRight()):
                 for qy in (bb_.GetTop(), bb_.GetBottom()):
                     x_, y_ = xy(pcbnew.VECTOR2I(qx, qy))
-                    if fp.GetReference() in ('J1', 'J2'):   # its front over the notch, as over an edge: check the rest
+                    if fp.GetReference() == 'J1':   # its front over the notch, as over an edge: check the rest
                         y_ = max(y_, YF + 0.3)
+                    if fp.GetReference() == 'J2':   # f12: J2's over the top notch
+                        y_ = min(y_, YT - 0.3)
                     assert inside(x_, y_, 0.2 if fp.IsFlipped() else WALL, win=False) and not in_win(x_, y_, 0.2), (
                         fp.GetReference(), x_, y_)          # off the body's outline by WALL (F: the module's wall), the notch 0.2 (f9: over the recess)
         L, Rr = pcbnew.ToMM(bb_.GetLeft()) - OX, pcbnew.ToMM(bb_.GetRight()) - OX
@@ -459,11 +479,14 @@ for fp in b.GetFootprints():                        # every pad (F and B, the te
         L, Rr = pcbnew.ToMM(bb_.GetLeft()) - OX, pcbnew.ToMM(bb_.GetRight()) - OX
         T_, B_ = OY - pcbnew.ToMM(bb_.GetBottom()), OY - pcbnew.ToMM(bb_.GetTop())
         assert hole_d(L, T_, Rr, B_) >= KEEP, (fp.GetReference(), p.GetNumber())
-for j in (J1, J2):                                  # each USB-C's opening at the notch, -y (f8, f9)
-    bb_ = j.GetCourtyard(pcbnew.F_CrtYd).BBox()
-    assert OY - pcbnew.ToMM(bb_.GetBottom()) < YF, (j.GetReference(), 'opening not at the notch')
-    ys_ = [xy(q.GetPosition())[1] for q in j.Pads() if q.GetNumber()[:1] in 'AB']
-    assert min(ys_) > YF, (j.GetReference(), 'its pad row not inward of the notch')
+bb_ = J1.GetCourtyard(pcbnew.F_CrtYd).BBox()       # each USB-C's opening at its notch: J1 -y, J2 +y (f8, f9, f12)
+assert OY - pcbnew.ToMM(bb_.GetBottom()) < YF, ('J1', 'opening not at the notch')
+assert min(xy(q.GetPosition())[1] for q in J1.Pads() if q.GetNumber()[:1] in 'AB') > YF, 'J1 pad row in the notch'
+bb_ = J2.GetCourtyard(pcbnew.F_CrtYd).BBox()
+assert OY - pcbnew.ToMM(bb_.GetTop()) > YT, ('J2', 'opening not at the notch')
+assert max(xy(q.GetPosition())[1] for q in J2.Pads() if q.GetNumber()[:1] in 'AB') < YT, 'J2 pad row in the notch'
+for x0, x1, y0, y1 in ((J1X - AD_W / 2, J1X + AD_W / 2, Y0, YF), (J2X - AD_W / 2, J2X + AD_W / 2, YT, Y1)):
+    assert x1 <= HS[0] or x0 >= HS[1] or y1 <= HS[2] or y0 >= HS[3], ('an L adapter over the heat sink', x0, x1)
 for fp in b.GetFootprints():                        # no bare copper on B under the module's bracket (f8): but the holes
     if fp.GetReference().startswith('H'):
         continue
@@ -484,18 +507,20 @@ def text(s, x, y, layer=pcbnew.F_SilkS, size=1.0, rot=0):
 
 # silk: 1 character ~ 0.8 x size wide, centred: keep both ends inside the outline
 # the outside is B (the parts face the module, f4): labels on B.SilkS, beside each USB-C on the board's inner side
-SILK = [('PC', -JX, YF + 1.1, 1.0), ('DEVICE', JX, YF + 1.1, 1.0)]   # over the notch (f8, f9)
+SILK = [('PC', J1X, YF + 1.1, 1.0), ('DEVICE', J2X, YT - 1.1, 1.0)]   # by each notch (f8, f9, f12)
 for t, x, y, sz in SILK:
     assert inside(x - len(t) * 0.4 * sz, y, 0.3) and inside(x + len(t) * 0.4 * sz, y, 0.3), t
     text(t, x, y, layer=pcbnew.B_SilkS, size=sz)
 VERSION = open(os.path.join(HERE, '..', '..', 'VERSION')).read().strip()
-text(f'FP008 USB {REV} v{VERSION}', 0, 2.0, layer=pcbnew.B_SilkS)
-text('CHECK THE CABLE: PIN 1 = 5V', 0, 0.0, layer=pcbnew.B_SilkS, size=0.8)
-text('J3 1:5V 2:G 3:TX 4:RX 5:IRQ 6:3V3 7:D+ 8:D-', 0, -1.6, layer=pcbnew.B_SilkS, size=0.7)
-for i, tps in enumerate(['BOOT', 'GND', 'RUN', 'DIO', 'CLK']):   # beside each test pad on B (f8: a column)
-    tx_ = TPX + 1.2 + len(tps) * 0.32                # right of the pad (seen from F; B's silk is mirrored)
-    text(tps, tx_, TPY - TPP * i, layer=pcbnew.B_SilkS, size=0.8)
-    assert inside(tx_ - len(tps) * 0.32, TPY - TPP * i, 0.3) and inside(tx_ + len(tps) * 0.32, TPY - TPP * i, 0.3), tps
+LINES = [(f'FP008 USB {REV} v{VERSION}', 13.6, 0.8), ('CHECK CABLE PIN1=5V', 12.4, 0.8),
+         ('J3 1:5V 2:G 3:TX 4:RX', 11.2, 0.8), ('5:IRQ 6:3V3 7:D+ 8:D-', 10.0, 0.8)]   # f12: the free top-right quarter
+for t, y, sz in LINES:
+    assert inside(J1X - len(t) * 0.4 * sz, y, 0.3) and inside(J1X + len(t) * 0.4 * sz, y, 0.3), t
+    text(t, J1X, y, layer=pcbnew.B_SilkS, size=sz)
+for i, tps in enumerate(['BOOT', 'GND', 'RUN', 'DIO', 'CLK']):   # over each test pad on B (f12: a row)
+    tx_ = TPX + TPP * i
+    text(tps, tx_, TPY + 1.6, layer=pcbnew.B_SilkS, size=0.8)
+    assert inside(tx_ - len(tps) * 0.32, TPY + 1.6, 0.3) and inside(tx_ + len(tps) * 0.32, TPY + 1.6, 0.3), tps
 
 
 def stitch(b, pitch=2.5, clr=0.25):
@@ -576,27 +601,28 @@ HAND = [
     ('1V1', 'F', [(-24.15, 0.2), (-24.6, 0.2), (-24.67, 0.27), (-25.2, 0.27)]),      # pin 6 -> C108 (upside down)
     ('1V1', 'F', [(-25.2, 0.27), (-25.7, 0.27), (-26.25, -0.28)]),                    # C108 -> the .ses's 1V1 via
     ('RXO2', 'F', [(-22.725, -9.5), (-22.725, -8.8)]),                                 # C104 -> the crystal's pad 3
-    # from the escapes to J3 (the A* router, 0.025 grid, clearance 0.12 + 0.006, holes 0.25)
-    ('IRQ', 'F', [(-26.5, 1.3), (-26.475, 1.325), (-26.475, 4.5), (-25.525, 5.45), (-25.525, 5.475), (-25.5, 5.5), (-25.5, 5.525), (-25.475, 5.55), (-25.475, 5.575), (-23.35, 7.7), (-23.35, 8.025), (-23.325, 8.05), (-23.325, 8.15), (-23.3, 8.175), (-23.3, 8.225), (-23.25, 8.275), (-23.25, 8.3), (-23.1, 8.45), (-23.075, 8.45), (-23.025, 8.5), (-22.975, 8.5), (-22.95, 8.525), (-22.85, 8.525), (-22.825, 8.55), (-20.875, 8.55), (-19.575, 9.85), (-19.55, 9.85), (-19.525, 9.875), (-19.475, 9.875), (-19.45, 9.9), (-16.575, 9.9), (-16.525, 9.95), (-16.5, 9.95), (-16.425, 10.025), (-16.4, 10.025), (-16.375, 10.05), (-16.35, 10.05), (-16.325, 10.075), (-16.25, 10.075), (-13.325, 13.0)]),
-    ('IRQ', 'B', [(-13.325, 13.0), (-11.25, 13.0), (-10.925, 12.675)]),
-    ('IRQ', 'F', [(-10.925, 12.675), (-9.175, 12.675)]),
-    ('IRQ', 'B', [(-9.175, 12.675), (-8.875, 12.675), (-8.2, 12.0)]),
-    ('IRQ', 'F', [(-8.2, 12.0), (-0.4, 12.0), (-0.375, 11.975), (-0.3, 11.975), (-0.275, 11.95), (-0.225, 11.95), (-0.175, 11.9), (-0.15, 11.9), (0.625, 11.125), (0.625, 11.1)]),
-    ('FPRX', 'F', [(-25.9, 2.4), (-25.9, 4.325)]),
-    ('FPRX', 'B', [(-25.9, 4.325), (-25.9, 5.9)]),
-    ('FPRX', 'F', [(-25.9, 5.9), (-24.475, 7.325), (-24.475, 7.35), (-23.675, 8.15), (-23.675, 8.175), (-23.65, 8.2), (-23.65, 8.275), (-23.625, 8.3), (-23.625, 8.35), (-23.6, 8.375), (-23.6, 8.4), (-23.55, 8.45), (-23.55, 8.475), (-23.275, 8.75), (-21.45, 10.575), (-21.45, 13.2), (-20.95, 14.0), (-20.2, 14.65), (-19.3, 14.95), (-17.3, 14.95), (-16.7, 14.35), (-12.575, 14.35), (-12.1, 13.875), (-3.85, 13.875), (-3.65, 14.075)]),
-    ('FPRX', 'B', [(-3.65, 14.075), (-1.025, 11.45)]),
-    ('FPRX', 'F', [(-1.025, 11.45), (-0.7, 11.125), (-0.675, 11.125), (-0.65, 11.1), (-0.625, 11.1)]),
-    ('FPTX', 'B', [(-25.2, 1.35), (-25.2, 7.35)]),
-    ('FPTX', 'F', [(-25.2, 7.35), (-22.15, 10.4), (-22.15, 13.2), (-21.55, 14.2), (-20.6, 15.0), (-19.4, 15.35), (-17.15, 15.35), (-16.5, 14.7), (-9.6, 14.7), (-9.325, 14.425), (-4.975, 14.425)]),
-    ('FPTX', 'B', [(-4.975, 14.425), (-2.0, 11.45)]),
-    ('FPTX', 'F', [(-2.0, 11.45), (-2.0, 11.35), (-1.975, 11.325), (-1.975, 11.3), (-1.95, 11.275), (-1.95, 11.25), (-1.925, 11.225), (-1.925, 11.2), (-1.9, 11.175), (-1.9, 11.15), (-1.875, 11.125), (-1.875, 11.1)]),
 ]
 # f10: H2's slot reaches x -20.7, and FPRX's run under it (y 10.25, IRQ 0.35 below and SDP under that) came 0.45 off it
 # (the edge clearance is 0.5): FPRX now goes round the slot's left and top beside FPTX (FPTX outside, 0.35 apart), both
 # redrawn by hand from (-23.275, 8.75) / (-25.2, 7.35): track centres >= 2.35 from the line the slot's centre runs on,
 # <= 11.4 from the board's top-left corner's centre (R12: 0.5 edge clearance + half the track). IRQ as f9.
-HAND_VIA = [('FPTX', -25.2, 1.35), ('IRQ', -13.325, 13.0), ('IRQ', -10.925, 12.675), ('IRQ', -9.175, 12.675), ('IRQ', -8.2, 12.0), ('FPRX', -25.9, 4.325), ('FPRX', -25.9, 5.9), ('FPRX', -3.65, 14.075), ('FPRX', -1.025, 11.45), ('FPTX', -25.2, 7.35), ('FPTX', -4.975, 14.425), ('FPTX', -2.0, 11.45)]
+HAND_VIA = [('FPTX', -25.2, 1.35)]
+# f12: J3 moved right of the middle; the hand routes from the escapes to J3 (f8..f11) are gone. The escapes go into the
+# DSN as fixed wiring (locked, added in both runs: freerouting does not give fixed wiring back) and freerouting takes
+# FPTX / IRQ / FPRX on from their ends.
+
+
+def hand(b):
+    for n, lay, pts in HAND:
+        for (x0_, y0_), (x1_, y1_) in zip(pts, pts[1:]):
+            t = pcbnew.PCB_TRACK(b); t.SetStart(P(x0_, y0_)); t.SetEnd(P(x1_, y1_)); t.SetWidth(mm(0.2))
+            t.SetLayer(pcbnew.F_Cu if lay == 'F' else pcbnew.B_Cu); t.SetNet(nets[n]); t.SetLocked(True); b.Add(t)
+    for n, x_, y_ in HAND_VIA:
+        v = pcbnew.PCB_VIA(b); v.SetPosition(P(x_, y_)); v.SetWidth(mm(0.6)); v.SetDrill(mm(0.3))
+        v.SetNet(nets[n]); v.SetLocked(True); b.Add(v)
+
+
+hand(b)
 os.chdir(HERE)
 if 'dsn' in sys.argv[1:]:
     core.keepouts()
@@ -629,27 +655,10 @@ if 'dsn' in sys.argv[1:]:
 else:
     if os.path.exists(f'{NAME}.ses'):
         import_ses(b, nets, f'{NAME}.ses')
-        # f8: freerouting left FPTX / IRQ unrouted (the core's GPIO0..2 face the left edge, the way round the core to J3
-        # is full). FPRX's track, and the GND / 3V3 / 1V1 tracks round the left side's pins (the pours and the 3V3 area
-        # over the core join those pads), are taken out here and HAND (below) routes FPRX / FPTX / IRQ / that 1V1
-        for t in list(b.GetTracks()):
-            if t.IsLocked():
-                continue
-            pts = [xy(t.GetPosition())] if t.GetClass() == 'PCB_VIA' else [xy(t.GetStart()), xy(t.GetEnd())]
-            box = all(-27.5 < x_ < -23.6 and -1.0 < y_ < 3.6 for x_, y_ in pts)
-            if t.GetNetname() == 'FPRX' or (box and t.GetNetname() in ('GND', '3V3')) or (
-                    box and t.GetNetname() == '1V1' and t.GetClass() != 'PCB_VIA'):
-                b.Remove(t)
-        print('pruned dangling', prune_dangling(b, [t for t in b.GetTracks() if t.GetClass() != 'PCB_VIA' and not t.IsLocked()
-                                                    and all(-28 < x_ < -23.6 and -3.5 < y_ < 4 for x_, y_ in
-                                                            (xy(t.GetStart()), xy(t.GetEnd())))]))
-        for n, lay, pts in HAND:                    # f8: hand routes (board coordinates), locked
-            for (x0_, y0_), (x1_, y1_) in zip(pts, pts[1:]):
-                t = pcbnew.PCB_TRACK(b); t.SetStart(P(x0_, y0_)); t.SetEnd(P(x1_, y1_)); t.SetWidth(mm(0.2))
-                t.SetLayer(pcbnew.F_Cu if lay == 'F' else pcbnew.B_Cu); t.SetNet(nets[n]); t.SetLocked(True); b.Add(t)
-        for n, x_, y_ in HAND_VIA:
-            v = pcbnew.PCB_VIA(b); v.SetPosition(P(x_, y_)); v.SetWidth(mm(0.6)); v.SetDrill(mm(0.3))
-            v.SetNet(nets[n]); v.SetLocked(True); b.Add(v)
+        # f8..f11 took the .ses's GND / 3V3 / 1V1 tracks round the core's left pins out here and routed FPRX / FPTX / IRQ
+        # by hand; f12: the pins' escapes (HAND) go into the DSN as fixed wiring and freerouting does the rest, so the
+        # .ses is taken as it is
+        print('pruned dangling', prune_dangling(b, [t for t in b.GetTracks() if t.GetClass() != 'PCB_VIA' and not t.IsLocked()]))
     stitch(b)
     b.Save(f'{NAME}.kicad_pcb')
     # GND pour on both layers, filled on a reloaded board; pieces with no way to GND are dropped
