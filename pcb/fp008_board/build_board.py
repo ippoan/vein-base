@@ -183,7 +183,7 @@ WIN = [NOTCH_B, NOTCH_T]
 assert NOTCH_B[0] >= HS[1] + 0.5, 'J1\'s adapter over the heat sink'
 BAND_CLR = 0.5                                      # bare copper on B and the notch off the bracket's band
 KEEP = 3.5                                          # clear of each screw hole's centre (M3 head 5.5, its boss; f4, f8)
-WALL = 1.5                                          # F parts' courtyards off the outline: the module's rear wall (f8, thickness not measured)
+WALL = 1.5                                          # F parts' courtyards off the outline: the module's rear wall (f8; measured 1.4, 2026-11-26: 0.1 to spare)
 
 
 def outline(n=10, notch=True):
