@@ -1,4 +1,4 @@
-"""FP008 USB board (f10): the Grow FP008 face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through one
+"""FP008 USB board (f11): the Grow FP008 face / palm vein module (Hangzhou Grow, user manual V1.01) on a PC through one
 USB-C cable: the PC sees the module's camera (UVC) and an RP2354A (USB CDC), both behind one hub. The RP2354A talks to
 the module's UART (the same commands as the FP001S, EF AA), holds the keys, does the face-check exchange and takes
 signed firmware over its serial port (A / B with fallback): the firmware is alc-app-s3's crates/fp001s-rp2354
@@ -88,6 +88,14 @@ f10 (2026-11-23, the maker measured the real module: the holes' x spacing "about
   H1..H4 are NPTH oval slots SLOT_L 4.25 (x) x HOLE_D 3.4 (y) centred at (+-18.575, +-12.5): an M3 goes in anywhere with
   its centre on |x| HX0 18.15..HX1 19.0 (A = 36.3..38.0), y +-12.5 as f8 (the maker's 25). KEEP, the bracket's band
   (|x| 14.4..22.75) and the holes' 3.0 off the outline are taken from that whole line (hole_d), not one centre.
+f11 (2026-11-26, user measured the real module with calipers; user: "無駄に穴広げる必要なくない？"): the module's
+  holes are plain pilot holes for the bracket's screws, which are the supplied self-tapping ones: nominal 2 (head 3.2,
+  7.9 overall, so 2 x 6), bigger than the holes. The board goes between the bracket and the module, so they become
+  2 x 8 (6 + the board's 1.6), heads on the bracket. Hole pairs measured closed (inner edges) / spread (outer edges):
+  y 22.4 / 26.9, x 34.3 / 38.5; their means 24.65 / 36.4 are short by the jaws' back thickness t (fitting y to the
+  maker's 25 gives t ~0.35, x ~36.75). So H1..H4 are round again, at (+-HX 18.35, +-12.5) (A 36.7), drilled HOLE_D 2.4
+  (M2 loose: a 2.0 screw is free for +-0.2, A 36.3..37.1, y 24.6..25.4): KiCad's MountingHole_2.2mm_M2 with its drill
+  set to 2.4. The hole lies inside f10's slot, so every clearance (KEEP, the bracket's band, FPRX round it) only grows.
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
@@ -102,7 +110,7 @@ from kicad_ses import import_ses, prune_dangling  # noqa: E402
 sys.path.insert(0, HERE)
 from rp_core import Core  # noqa: E402
 
-REV = 'f10'
+REV = 'f11'
 NAME = 'fp008_board'
 FP = '/usr/share/kicad/footprints/'
 OX, OY = 100.0, 100.0
@@ -110,14 +118,16 @@ mm = pcbnew.FromMM
 
 X0, X1, Y0, Y1 = -27.5, 27.5, -17.0, 17.0          # the FP008's rear body 55.45 x 34.45, a hair inside
 RC = 12.0                                           # corner radius (guess from the drawing)
-# f10 (2026-11-23, the maker measured the real module: x "about 37"; the manual's drawing gave 36.3): the holes are
-# slots along x, their centre anywhere on x HX0..HX1 (A = 36.3..38.0 takes both), y +-12.5 (the maker's answer, fixed)
-HX0, HX1, HY = 18.15, 19.0, 12.5                    # |x| range of a hole's centre, |y|
-HOLE_D = 3.4                                        # M3, loose (f8): the slot's width (y)
-SLOT_L = HX1 - HX0 + HOLE_D                         # the slot's length (x): 4.25
+# f11 (2026-11-26, user's caliper on the real module: A ~36.4..36.9, y ~25): round holes for the supplied nominal 2
+# self-tapping screws (2 x 8 through the bracket and the board). f10's slots (HX0 18.15..HX1 19.0, M3 3.4) are gone;
+# HX0 = HX1 keeps the slot code (SLOTS, hole_d) as a point per hole.
+HX0 = HX1 = 18.35                                   # |x| of a hole's centre (A 36.7)
+HY = 12.5                                           # |y| (the maker's 25)
+HOLE_D = 2.4                                        # M2 loose: a 2.0 screw free for +-0.2
+SLOT_L = HX1 - HX0 + HOLE_D                         # = HOLE_D: round
 SLOTS = [(sx * HX0, sx * HX1, sy * HY) for sx in (-1, 1) for sy in (-1, 1)]   # (x a, x b, y): the line a centre runs on
 SLOTS = [(min(a, c), max(a, c), y) for a, c, y in SLOTS]
-HOLES = [((a + c) / 2, y) for a, c, y in SLOTS]     # the slots' middles (+-18.575, +-12.5): the footprints' places
+HOLES = [((a + c) / 2, y) for a, c, y in SLOTS]     # the holes' centres (+-18.35, +-12.5): the footprints' places
 
 
 def hole_d(L, T, Rr=None, B=None):
@@ -409,12 +419,11 @@ assert hx1 <= SOCK[0] or hx0 >= SOCK[1] or hy1 <= SOCK[2] or hy0 >= SOCK[3], ('J
 print(f'J3 housing x {hx0:.2f}..{hx1:.2f} y {hy0:.2f}..{hy1:.2f}, {SOCK[2] - hy1:.2f} under the socket')
 
 for i, ((a, c, y), (x, _)) in enumerate(zip(SLOTS, HOLES), 1):
-    for xe in (a, c):                               # the M3 head (5.5) on the board at either end of the slot (f10)
+    for xe in (a, c):                               # 3.0 inside the outline (the bracket over it, f8)
         assert inside(xe, y, 3.0), ('hole too near the edge', xe, y)
-    h = load('MountingHole.pretty', 'MountingHole_3.2mm_M3', f'H{i}', 'M3', x, y)
-    for p in h.Pads():                              # NPTH: the hole is the pad, an oval slot SLOT_L x HOLE_D (f10)
-        p.SetShape(pcbnew.PAD_SHAPE_OVAL); p.SetDrillShape(pcbnew.PAD_DRILL_SHAPE_OBLONG)
-        p.SetDrillSize(pcbnew.VECTOR2I(mm(SLOT_L), mm(HOLE_D))); p.SetSize(pcbnew.VECTOR2I(mm(SLOT_L), mm(HOLE_D)))
+    h = load('MountingHole.pretty', 'MountingHole_2.2mm_M2', f'H{i}', 'M2', x, y)
+    for p in h.Pads():                              # NPTH: the hole is the pad, round HOLE_D (f11)
+        p.SetDrillSize(pcbnew.VECTOR2I(mm(HOLE_D), mm(HOLE_D))); p.SetSize(pcbnew.VECTOR2I(mm(HOLE_D), mm(HOLE_D)))
 
 # ---- outline
 def edge_loop(pts):
