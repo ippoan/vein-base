@@ -1,4 +1,4 @@
-"""3D preview of the FP008 USB board (f10: the screw holes slots; f9: the parts face the module, a notch in the bottom edge for the L adapters; J3 vertical) (site/fp008-board/) from the STEP with parts that the CI writes
+"""3D preview of the FP008 USB board (f11: round holes for the supplied nominal 2 self-tapping screws; f10: slots; f9: the parts face the module, a notch in the bottom edge for the L adapters; J3 vertical) (site/fp008-board/) from the STEP with parts that the CI writes
 (fab/fp008/fp008_board_v<VER>_full.step, KiCad library models fetched by tools/kicad_3d_models.py) and the CI's
 pos.csv. The two USB-C (HRO TYPE-C-31-M-12) have no model in the KiCad library and are drawn as plain boxes.
     python3 pcb/fp008_board/build_3d.py      # from the repo root, with CadQuery (after the board's CI step)
@@ -55,16 +55,16 @@ bb = board.BoundingBox()
 size = (bb.xlen, bb.ylen)
 
 # ---- the board as the FP008's back lid, parts inside (f4). z = up = out of the module's back: the board on z 0..1.6,
-# its parts below z = 0 in the module's back; the module's four rear screw holes take M3 x 6 screws from the lid (f8). The two
+# its parts below z = 0 in the module's back; the module's four rear screw holes take nominal 2 x 8 self-tapping screws through the bracket and the lid (f11; M3 x 6 in f8..f10). The two
 # USB-C sit side by side at the bottom edge (f8), openings -y at the notch (f9; world +x = the board's -x: seen from behind);
 # the cables take an L-shaped (90 deg) adapter at the plug. The module's inside is not known: drawn as a recess
 # CAV deep with bosses at the screw holes (guesses), the 8P socket somewhere inside (top centre, from the photo).
 FW, FH, FL = 59.54, 38.54, 2.2                     # flange (manual 1.3.1)
 BW, BH, BD = 55.45, 34.45, 15.35                   # rear body
 R_BODY, R_FLANGE = 12.4, 14.0                      # corner radii (guess from the drawing)
-HOLES = [(sx * 18.5, sy * 12.5) for sx in (-1, 1) for sy in (-1, 1)]     # the module's holes at the maker's "about 37" (f10);
-# the board's slots (build_board.py's HX0..HX1, in the STEP) take a centre anywhere on |x| 18.15..19.0 (A 36.3..38.0)
-CAV, WALL, BOSS = 5.0, 1.5, 3.0                    # the module's rear recess depth, wall, boss radius (guesses; M3 f8)
+HOLES = [(sx * 18.35, sy * 12.5) for sx in (-1, 1) for sy in (-1, 1)]    # = build_board.py's HX / HY (f11, user's caliper
+# 2026-11-26: A ~36.4..36.9, y ~25); the board's holes 2.4 take a 2.0 screw +-0.2
+CAV, WALL, BOSS = 5.0, 1.5, 3.0                    # the module's rear recess depth, wall, boss radius (guesses)
 
 
 def rrect(w, h, r, z0, z1):
@@ -74,11 +74,11 @@ def rrect(w, h, r, z0, z1):
 fp = (rrect(BW, BH, R_BODY, -BD, 0).union(rrect(FW, FH, R_FLANGE, -BD - FL, -BD))
       .cut(rrect(BW - 2 * WALL, BH - 2 * WALL, R_BODY - WALL, -CAV, 0)))
 for x, y in HOLES:
-    fp = fp.union(cq.Workplane().circle(BOSS).circle(1.7).extrude(CAV).translate((x, y, -CAV)))
+    fp = fp.union(cq.Workplane().circle(BOSS).circle(1.0).extrude(CAV).translate((x, y, -CAV)))
 screws = None
 for x, y in HOLES:
-    sc = (cq.Workplane().circle(1.5).extrude(6.0).translate((x, y, T - 6.0))     # M3 x 6 (the maker, 2026-11-23)
-          .union(cq.Workplane().circle(2.75).extrude(2.1).translate((x, y, T))))   # pan head 5.5
+    sc = (cq.Workplane().circle(1.0).extrude(8.0).translate((x, y, T - 8.0))     # nominal 2 tapping x 8 (f11)
+          .union(cq.Workplane().circle(1.6).extrude(1.3).translate((x, y, T))))   # pan head 3.2 (on the bracket)
     screws = sc if screws is None else screws.union(sc)
 
 # J3 (f7: vertical, just under the module's socket, the plug in straight from below the board) -> +y to the wall,
@@ -126,7 +126,7 @@ parts = [('lid', f'FP008(マニュアル 1.3.1: つば 59.5 × 38.5、後ろの�
           '#30343a', 0.55, 'lid', fp),
          ('cable', 'J3 → FP008 のケーブル(MX1.25 8P、1 → 1)。中のソケットの位置は未確認', '#d9775c', 1, 'mods', cable),
          ('adapter', f'USB-C の L 字の変換(オス → 90° のメス、参考の外形 {AD_W:g} × {AD_D:g} × {AD_DOWN + AD_UP:g}、写真から)。根元は FP008 の後ろのくぼみ(基板から {-AD_BOTTOM:.1f} 下まで)、胴は基板の下の切り欠きを通る', '#8a8f96', 0.6, 'mods', adapters),
-         ('screw', 'M3 × 6 ねじ × 4(ふたの上から FP008 の後ろのねじ穴へ。前後 25 はメーカー回答、左右はメーカー実測の約 37 で描いた。基板の穴は左右 36.3〜38.0 のどこでも入る長穴 4.25 × 3.4)', '#6b6f75', 1, 'mods', screws),
+         ('screw', '呼び 2 のタッピング × 8 × 4(付属の 2 × 6 に基板の 1.6 を足した長さ。ブラケットの上から FP008 の後ろのねじ穴へ。ブラケットは描いていない。穴の間隔は実測: 前後 25・左右 36.7)', '#6b6f75', 1, 'mods', screws),
          ('shell', 'USB-C J1(PC へ)・J2(USB スピーカーなどの機器、ハブのポート 3)。基板の内側の下の辺の真ん中に並べ(f8: ブラケットとブラケットの間)、口は下の切り欠きに向く。KiCad に 3D モデルが無いので外形だけの箱',
           '#b8bcc2', 1, 'shell', usb('J1').union(usb('J2'))),
          ('conn', 'J3 PicoBlade 53398-0871(MX1.25 8P 縦型、ハウジング 4.7、FP008 のケーブル)', '#f1efe8', 1, 'shell', comp(groups['conn'])),
@@ -134,13 +134,13 @@ parts = [('lid', f'FP008(マニュアル 1.3.1: つば 59.5 × 38.5、後ろの�
           comp(groups['ics'])),
          ('pass', 'C・R', '#b08850', 1, 'shell', comp(groups['pass'])),
          ('led', 'D1(電源 LED、内側)', '#d23c3c', 1, 'shell', comp(groups['led'])),
-         ('board', f'基板 f10(FP008 の裏のふた、{size[0]:.0f} × {size[1]:.0f} × {T:g})。部品は内側', '#2f6b45', 1, 'shell', lid)]
+         ('board', f'基板 f11(FP008 の裏のふた、{size[0]:.0f} × {size[1]:.0f} × {T:g})。部品は内側', '#2f6b45', 1, 'shell', lid)]
 dims = [('基板', f'{size[0]:.0f} × {size[1]:.0f} × {T:g}。FP008 の後ろの本体の形(角 R12、外にはみ出さない)。下の辺の真ん中に L 字の変換が通る切り欠き 1 つ(幅 27.8・辺から 10.3、内角 R0.5。f8 の窓 2 つを f9 で辺まで開いた。ブラケットの帯の内側)。部品は内側(FP008 の中、高さ 3.3 まで。J3 は 4.7、プラグを挿すと約 5.7)'),
-        ('固定', 'FP008 の後ろの 4 つのねじ穴に M3 × 6 ねじで。基板の穴は横長の長穴 4.25 × 3.4(f10、中心 ±18.575, ±12.5): ねじの中心が左右 36.3〜38.0(メーカー実測 約 37、マニュアルの背面図から 36.3)のどこでも入る。前後 25 はメーカー回答(2026-11-23)。部品・パッド・切り欠きはねじの中心が動く線分から 3.5 離す'),
+        ('固定', 'FP008 の後ろの 4 つのねじ穴(溝のない下穴)に、ブラケットの上から付属と同じ呼び 2 のタッピングで(付属は 2 × 6、基板 1.6 を挟むので 2 × 8)。基板の穴は丸穴 2.4(f11、中心 ±18.35, ±12.5): 実測(2026-11-26、ノギス)で左右 36.4〜36.9・前後 約 25、ねじ 2.0 に ±0.2 の遊び。部品・パッド・切り欠きは穴の中心から 3.5 離す'),
         ('J1 / J2', 'USB-C を下の辺の真ん中に 2 つ並べ、口は下の切り欠きに向く。J1 = PC へ、J2 = USB スピーカーなどの機器(ハブのポート 3)。L 字の変換(オス → 90° のメス)は基板を FP008 から外して挿し、胴が切り欠きを通って上を向く。ケーブルは後ろへ'),
         ('J3', 'MX1.25 8P の縦型(53398-0871)、内側の上の真ん中で、FP008 の中のソケット(上のふちの壁ぎわ)のすぐ下。プラグは FP008 の側からまっすぐ挿す'),
         ('未確認', 'L 字の変換の寸法(切り欠きの 1 つ分 13.4 × 10.3 に入るか)、根元が FP008 の後ろのくぼみに入るか(約 5.1 の深さが要る)、ねじ穴の位置と太さ、本体の角の形、後ろのくぼみの深さ(部品 3.3、J3 のプラグと線の曲がり約 7.5 が入るか)、中のソケットの位置、ケーブルの長さ')]
-write_page('fp008-board', 'FP008 USB 基板 f10', [(k, l, c, o, g, s) for k, l, c, o, g, s in parts],
+write_page('fp008-board', 'FP008 USB 基板 f11', [(k, l, c, o, g, s) for k, l, c, o, g, s in parts],
            'Grow FP008(顔・手のひら静脈)の裏にふたとしてねじで留め、USB-C 1 本で PC につなぐ基板(RP2354A が UART・鍵・シリアル OTA を持つ)。部品は FP008 の内側。'
            'ドラッグで回転、ホイール/ピンチで拡大。分解表示で基板と FP008 が離れる。', dims,
            '基板の部品は KiCad の 3D モデル(CI で取得)、USB-C は外形だけの箱。FP008 は外形だけで、中は仮。単位 mm。', 0,
