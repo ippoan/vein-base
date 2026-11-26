@@ -96,6 +96,9 @@ f11 (2026-11-26, user measured the real module with calipers; user: "無駄に�
   maker's 25 gives t ~0.35, x ~36.75). So H1..H4 are round again, at (+-HX 18.35, +-12.5) (A 36.7), drilled HOLE_D 2.4
   (M2 loose: a 2.0 screw is free for +-0.2, A 36.3..37.1, y 24.6..25.4): KiCad's MountingHole_2.2mm_M2 with its drill
   set to 2.4. The hole lies inside f10's slot, so every clearance (KEEP, the bracket's band, FPRX round it) only grows.
+  Depths into the module, from the rim the board sits on (user's caliper, 2026-11-26): the 8P socket's top 10.9 (J3,
+  its plug and the wires' bend 7.5: 3.4 to spare), a heat sink near one end 4.4 (the parts on F, up to 3.3: 1.1 to
+  spare). Not measured: whether the L adapters' elbows (~5.1 down, in the notch) sit over the heat sink.
 Routing comes from freerouting and is kept in fp008_board.ses (the board file itself is always generated):
     python3 build_board.py dsn   # placement only -> .dsn (freerouting 2.4.1 -> .ses)
     python3 build_board.py       # placement + tracks / vias from the .ses -> fp008_board.kicad_pcb
