@@ -57,14 +57,16 @@ size = (bb.xlen, bb.ylen)
 # ---- the board as the FP008's back lid, parts inside (f4). z = up = out of the module's back: the board on z 0..1.6,
 # its parts below z = 0 in the module's back; the module's four rear screw holes take nominal 2 x 8 self-tapping screws through the bracket and the lid (f11; M3 x 6 in f8..f10). The two
 # USB-C sit side by side at the bottom edge (f8), openings -y at the notch (f9; world +x = the board's -x: seen from behind);
-# the cables take an L-shaped (90 deg) adapter at the plug. The module's inside is not known: drawn as a recess
-# CAV deep with bosses at the screw holes (guesses), the 8P socket somewhere inside (top centre, from the photo).
+# the cables take an L-shaped (90 deg) adapter at the plug. The module's inside (user's caliper, 2026-11-26, from the
+# rim the board sits on): the 8P socket's top 10.9 down (drawn as a recess CAV deep), a heat sink near one end whose
+# top is HS_DEPTH 4.4 down (not drawn: its place is only seen in a photo). The bosses at the screw holes are guesses.
 FW, FH, FL = 59.54, 38.54, 2.2                     # flange (manual 1.3.1)
 BW, BH, BD = 55.45, 34.45, 15.35                   # rear body
 R_BODY, R_FLANGE = 12.4, 14.0                      # corner radii (guess from the drawing)
 HOLES = [(sx * 18.35, sy * 12.5) for sx in (-1, 1) for sy in (-1, 1)]    # = build_board.py's HX / HY (f11, user's caliper
 # 2026-11-26: A ~36.4..36.9, y ~25); the board's holes 2.4 take a 2.0 screw +-0.2
-CAV, WALL, BOSS = 5.0, 1.5, 3.0                    # the module's rear recess depth, wall, boss radius (guesses)
+CAV, WALL, BOSS = 10.9, 1.5, 3.0                   # the recess down to the 8P socket's top (measured); wall, boss radius (guesses)
+HS_DEPTH = 4.4                                     # the heat sink's top under the rim (measured): parts <= 3.3 clear it by 1.1
 
 
 def rrect(w, h, r, z0, z1):
@@ -106,7 +108,7 @@ for a, b_ in zip(path, path[1:]):
 
 # the L adapters on the two USB-C (f5: USB-C plug -> female turned 90 deg, the female end up; size from a product
 # photo, = build_board.py's AD_W / AD_D): the elbow sits against the receptacle's face under the board, in the module's
-# rear recess, and the body rises through the board's notch (f9; asserted clear of the board; the recess is a guess, so
+# rear recess, and the body rises through the board's notch (f9; asserted clear of the board; the recess's floor is not even, so
 # its overlap with the elbow is only reported)
 AD_W, AD_D, AD_DOWN, AD_UP = 12.4, 7.5, 3.5, 19.0   # across, deep, below / above the plug's centre line
 zc = -USB_H / 2
@@ -120,9 +122,9 @@ lid = cq.Workplane().add(flip(board))
 clash = adapters.intersect(lid).val().Volume()
 assert clash < 0.01, f'the adapters hit the board ({clash:.3f} mm3): the notch is too small'
 AD_BOTTOM = zc - AD_DOWN
-print(f'adapter elbows reach {-AD_BOTTOM:.1f} under the board; the guessed recess is {CAV:g} deep')
+print(f"adapter elbows reach {-AD_BOTTOM:.1f} under the board; the 8P socket's top is {CAV:g} down, the heat sink {HS_DEPTH:g} (measured)")
 
-parts = [('lid', f'FP008(マニュアル 1.3.1: つば 59.5 × 38.5、後ろの本体 55.5 × 34.5 × 15.4。後ろのくぼみ {CAV:g}・壁 {WALL:g}・ねじのボスは仮)',
+parts = [('lid', f'FP008(マニュアル 1.3.1: つば 59.5 × 38.5、後ろの本体 55.5 × 34.5 × 15.4。後ろのくぼみは中の 8P のソケットのてっぺんまで {CAV:g}(実測)。片方の端寄りに放熱板があり、てっぺんは縁から {HS_DEPTH:g}(実測、図には描いていない)。壁 {WALL:g}・ねじのボスは仮)',
           '#30343a', 0.55, 'lid', fp),
          ('cable', 'J3 → FP008 のケーブル(MX1.25 8P、1 → 1)。中のソケットの位置は未確認', '#d9775c', 1, 'mods', cable),
          ('adapter', f'USB-C の L 字の変換(オス → 90° のメス、参考の外形 {AD_W:g} × {AD_D:g} × {AD_DOWN + AD_UP:g}、写真から)。根元は FP008 の後ろのくぼみ(基板から {-AD_BOTTOM:.1f} 下まで)、胴は基板の下の切り欠きを通る', '#8a8f96', 0.6, 'mods', adapters),
@@ -139,7 +141,7 @@ dims = [('基板', f'{size[0]:.0f} × {size[1]:.0f} × {T:g}。FP008 の後ろ�
         ('固定', 'FP008 の後ろの 4 つのねじ穴(溝のない下穴)に、ブラケットの上から付属と同じ呼び 2 のタッピングで(付属は 2 × 6、基板 1.6 を挟むので 2 × 8)。基板の穴は丸穴 2.4(f11、中心 ±18.35, ±12.5): 実測(2026-11-26、ノギス)で左右 36.4〜36.9・前後 約 25、ねじ 2.0 に ±0.2 の遊び。部品・パッド・切り欠きは穴の中心から 3.5 離す'),
         ('J1 / J2', 'USB-C を下の辺の真ん中に 2 つ並べ、口は下の切り欠きに向く。J1 = PC へ、J2 = USB スピーカーなどの機器(ハブのポート 3)。L 字の変換(オス → 90° のメス)は基板を FP008 から外して挿し、胴が切り欠きを通って上を向く。ケーブルは後ろへ'),
         ('J3', 'MX1.25 8P の縦型(53398-0871)、内側の上の真ん中で、FP008 の中のソケット(上のふちの壁ぎわ)のすぐ下。プラグは FP008 の側からまっすぐ挿す'),
-        ('未確認', 'L 字の変換の寸法(切り欠きの 1 つ分 13.4 × 10.3 に入るか)、根元が FP008 の後ろのくぼみに入るか(約 5.1 の深さが要る)、ねじ穴の位置と太さ、本体の角の形、後ろのくぼみの深さ(部品 3.3、J3 のプラグと線の曲がり約 7.5 が入るか)、中のソケットの位置、ケーブルの長さ')]
+        ('未確認', 'L 字の変換の寸法(切り欠きの 1 つ分 13.4 × 10.3 に入るか)、根元(基板から約 5.1 下まで)が放熱板(縁から 4.4 下)の上に来ないか、本体の角の形、中のソケットの横の位置、ケーブルの長さ。実測済み(2026-11-26): ねじ穴の間隔(前後 約 25・左右 36.4〜36.9)とねじ(付属は呼び 2 のタッピング × 6)、放熱板のてっぺんは縁から 4.4(部品 3.3 と 1.1 空く)、8P のソケットのてっぺんは縁から 10.9(J3 のプラグと線の曲がり 7.5 と 3.4 空く)')]
 write_page('fp008-board', 'FP008 USB 基板 f11', [(k, l, c, o, g, s) for k, l, c, o, g, s in parts],
            'Grow FP008(顔・手のひら静脈)の裏にふたとしてねじで留め、USB-C 1 本で PC につなぐ基板(RP2354A が UART・鍵・シリアル OTA を持つ)。部品は FP008 の内側。'
            'ドラッグで回転、ホイール/ピンチで拡大。分解表示で基板と FP008 が離れる。', dims,
