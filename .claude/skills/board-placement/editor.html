@@ -9,7 +9,7 @@
 #v3{width:100%;height:380px;display:block;touch-action:none;border-radius:12px;background:var(--bg-neutral)}
 </style>
 <div class="row"><button id="b2" class="on">2D(上から)</button><button id="b3">3D</button><span id="sliders"></span></div>
-<div class="row"><button id="rot">選んだ部品を 90° 回す</button><button id="reset">初期に戻す</button></div>
+<div class="row"><button id="rot">選んだ部品を 90° 回す</button><button id="reset">初期に戻す</button><button id="flip">裏返す(3D)</button><button id="home">視点を戻す(3D)</button></div>
 <svg id="sv" width="100%" viewBox="0 0 380 400" style="touch-action:none;user-select:none"></svg>
 <canvas id="v3" style="display:none"></canvas>
 <div class="row" id="sel">選択: なし(部品をタップかドラッグで選ぶ。3D は何もない所をドラッグで回す)</div>
@@ -81,13 +81,20 @@ if(!big)h+=`<text class="ts" x="${X(x)}" y="${Y(b[2])+12}" text-anchor="middle" 
 document.getElementById('sv').innerHTML=h;}
 /* ---- 3D ---- */
 let r3=null;
-function init3(){const cv=document.getElementById('v3');if(!window.THREE){document.getElementById('sel').textContent='3D のライブラリが読めなかった';return null;}
+/* the camera stays put; dragging turns the model (piv, pivoting on the view's middle) any way and any number of turns */
+function init3(){const cv=document.getElementById('v3');if(!window.THREE){document.getElementById('sel').textContent='3D のライブラリが読めなかった(2D は使える)';return null;}
 const rd=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});const sc=new THREE.Scene();
 const cam=new THREE.PerspectiveCamera(35,1,1,2000);sc.add(new THREE.AmbientLight(0xffffff,0.7));const dl=new THREE.DirectionalLight(0xffffff,0.6);dl.position.set(40,-60,120);sc.add(dl);
-const g=new THREE.Group();sc.add(g);const o={rd,sc,cam,g,yaw:-0.5,pitch:0.9,dist:(V.x1-V.x0)*2.2,meshes:{}};
-const cx=(V.x0+V.x1)/2,cy=(V.y0+V.y1)/2;o.c=new THREE.Vector3(cx,cy,-3);return o;}
+const dl2=new THREE.DirectionalLight(0xffffff,0.35);dl2.position.set(-40,60,-120);sc.add(dl2);
+const c=new THREE.Vector3((V.x0+V.x1)/2,(V.y0+V.y1)/2,-3);const piv=new THREE.Group();piv.position.copy(c);sc.add(piv);
+const g=new THREE.Group();g.position.set(-c.x,-c.y,-c.z);piv.add(g);
+const o={rd,sc,cam,g,piv,c,dist:(V.x1-V.x0)*2.2,meshes:{}};home3(o);return o;}
+function home3(o){o.piv.quaternion.set(0,0,0,1);const yaw=-0.5,pitch=0.9;
+o.cam.position.set(o.c.x+o.dist*Math.sin(yaw)*Math.cos(pitch),o.c.y-o.dist*Math.cos(yaw)*Math.cos(pitch),o.c.z+o.dist*Math.sin(pitch));o.cam.up.set(0,0,1);o.cam.lookAt(o.c);}
 function cam3(){const o=r3,cv=o.rd.domElement,w=cv.clientWidth,h=cv.clientHeight;o.rd.setSize(w,h,false);o.rd.setPixelRatio(window.devicePixelRatio||1);o.cam.aspect=w/h;
-o.cam.position.set(o.c.x+o.dist*Math.sin(o.yaw)*Math.cos(o.pitch),o.c.y-o.dist*Math.cos(o.yaw)*Math.cos(o.pitch),o.c.z+o.dist*Math.sin(o.pitch));o.cam.up.set(0,0,1);o.cam.lookAt(o.c);o.cam.updateProjectionMatrix();}
+const d=o.cam.position.clone().sub(o.c).normalize().multiplyScalar(o.dist);o.cam.position.copy(o.c).add(d);o.cam.updateProjectionMatrix();}
+function turn3(dx,dy){const o=r3;o.cam.updateMatrixWorld();const right=new THREE.Vector3().setFromMatrixColumn(o.cam.matrixWorld,0),up=new THREE.Vector3().setFromMatrixColumn(o.cam.matrixWorld,1);
+o.piv.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(up,dx*0.008)).premultiply(new THREE.Quaternion().setFromAxisAngle(right,dy*0.008));}
 function shapeOf(p){const s=new THREE.Shape();p.forEach(([x,y],i)=>i?s.lineTo(x,y):s.moveTo(x,y));return s;}
 const HEX={purple:0x7F77DD,teal:0x1D9E75,gray:0x888780,coral:0xD85A30,amber:0xBA7517,blue:0x378ADD};
 function boxMesh(b,z0,z1,color,op){const m=new THREE.Mesh(new THREE.BoxGeometry(b[1]-b[0],b[3]-b[2],Math.max(z1-z0,0.05)),new THREE.MeshLambertMaterial({color,transparent:op<1,opacity:op}));m.position.set((b[0]+b[1])/2,(b[2]+b[3])/2,(z0+z1)/2);return m;}
@@ -105,21 +112,24 @@ cam3();r3.rd.render(r3.sc,r3.cam);}
 /* ---- interaction ---- */
 const sv=document.getElementById('sv'),cv=document.getElementById('v3');let drag=null;
 function pt2(e){const p=sv.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(sv.getScreenCTM().inverse());return [(q.x-OX)/S,V.y1+4-q.y/S];}
-function pt3(e,z){const r=cv.getBoundingClientRect(),v=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);const rc=new THREE.Raycaster();rc.setFromCamera(v,r3.cam);return [rc,rc.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),-z),new THREE.Vector3())];}
+function pt3(e){const r=cv.getBoundingClientRect(),v=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);const rc=new THREE.Raycaster();rc.setFromCamera(v,r3.cam);
+r3.g.updateMatrixWorld(true);const pl=new THREE.Plane(new THREE.Vector3(0,0,1),0).applyMatrix4(r3.g.matrixWorld);const q=rc.ray.intersectPlane(pl,new THREE.Vector3());return [rc,q&&r3.g.worldToLocal(q)];}
 function pick(id,x,y){sel=id;const it=find(id);const [ix,iy]=pos(it);drag={dx:x-ix,dy:y-iy};document.getElementById('sel').textContent='選択: '+(it.label||id)+(it.note?'('+it.note+')':'');}
 function move(x,y){const it=find(sel),nx=Math.round((x-drag.dx)*10)/10,ny=Math.round((y-drag.dy)*10)/10;if(it.fixed)return;it.x=nx;if(it.lockY==null)it.y=ny;redraw();}
 sv.addEventListener('pointerdown',e=>{const g=e.target.closest('[data-id]');if(!g)return;const [x,y]=pt2(e);pick(g.dataset.id,x,y);sv.setPointerCapture(e.pointerId);redraw();});
 sv.addEventListener('pointermove',e=>{if(!drag)return;const [x,y]=pt2(e);move(x,y);});
 sv.addEventListener('pointerup',()=>{drag=null;});
 let orbit=null;
-cv.addEventListener('pointerdown',e=>{const [rc]=pt3(e,0);const hit=rc.intersectObjects(Object.values(r3.meshes))[0];cv.setPointerCapture(e.pointerId);
-if(hit){const p=pt3(e,0)[1];pick(hit.object.userData.id,p.x,p.y);redraw();}else orbit={x:e.clientX,y:e.clientY};});
-cv.addEventListener('pointermove',e=>{if(drag){const p=pt3(e,0)[1];if(p)move(p.x,p.y);}else if(orbit){r3.yaw-=(e.clientX-orbit.x)*0.008;r3.pitch=Math.max(-1.5,Math.min(1.5,r3.pitch+(e.clientY-orbit.y)*0.008));orbit={x:e.clientX,y:e.clientY};draw3();}});
+cv.addEventListener('pointerdown',e=>{if(!r3)return;const [rc,p]=pt3(e);const hit=rc.intersectObjects(Object.values(r3.meshes))[0];cv.setPointerCapture(e.pointerId);
+if(hit&&p){pick(hit.object.userData.id,p.x,p.y);redraw();}else orbit={x:e.clientX,y:e.clientY};});
+cv.addEventListener('pointermove',e=>{if(!r3)return;if(drag){const p=pt3(e)[1];if(p)move(p.x,p.y);}else if(orbit){turn3(e.clientX-orbit.x,e.clientY-orbit.y);orbit={x:e.clientX,y:e.clientY};draw3();}});
 cv.addEventListener('pointerup',()=>{drag=null;orbit=null;});
-cv.addEventListener('wheel',e=>{e.preventDefault();r3.dist*=e.deltaY>0?1.1:0.9;draw3();},{passive:false});
+cv.addEventListener('wheel',e=>{if(!r3)return;e.preventDefault();r3.dist*=e.deltaY>0?1.1:0.9;draw3();},{passive:false});
+document.getElementById('flip').addEventListener('click',()=>{if(mode!=='3d'||!r3)return;r3.cam.updateMatrixWorld();const right=new THREE.Vector3().setFromMatrixColumn(r3.cam.matrixWorld,0);r3.piv.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(right,Math.PI));draw3();});
+document.getElementById('home').addEventListener('click',()=>{if(mode!=='3d'||!r3)return;home3(r3);draw3();});
 function redraw(){if(mode==='2d')draw2();else draw3();report();}
 function setMode(m){mode=m;document.getElementById('b2').classList.toggle('on',m==='2d');document.getElementById('b3').classList.toggle('on',m==='3d');
-sv.style.display=m==='2d'?'block':'none';cv.style.display=m==='3d'?'block':'none';if(m==='3d'&&!r3)r3=init3();redraw();}
+sv.style.display=m==='2d'?'block':'none';cv.style.display=m==='3d'?'block':'none';if(m==='3d'&&!r3)r3=init3();if(m==='3d'&&!r3){setMode('2d');return;}redraw();}
 document.getElementById('b2').addEventListener('click',()=>setMode('2d'));
 document.getElementById('b3').addEventListener('click',()=>setMode('3d'));
 document.getElementById('sliders').innerHTML=(C.sliders||[]).map(s=>`${s.label} <input id="s_${s.id}" type="range" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.value}"><span id="v_${s.id}"></span>`).join(' ');
