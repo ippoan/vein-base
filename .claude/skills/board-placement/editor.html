@@ -1,0 +1,133 @@
+<h2 class="sr-only">基板の配置エディター(2D / 3D、ドラッグで動かして制約を判定する)</h2>
+<style>
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--text-secondary);margin:6px 0}
+.row button{font-size:13px;padding:4px 10px;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:var(--surface-2);color:var(--text-primary);cursor:pointer}
+.row button.on{border-color:var(--border-accent);color:var(--text-accent)}
+#chk{font-size:12px;line-height:1.6;margin:6px 0}
+#chk .ng{color:var(--text-danger)}#chk .ok{color:var(--text-success)}
+#out{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);white-space:pre-wrap;word-break:break-all}
+#v3{width:100%;height:380px;display:block;touch-action:none;border-radius:12px;background:var(--bg-neutral)}
+</style>
+<div class="row"><button id="b2" class="on">2D(上から)</button><button id="b3">3D</button><span id="sliders"></span></div>
+<div class="row"><button id="rot">選んだ部品を 90° 回す</button><button id="reset">初期に戻す</button></div>
+<svg id="sv" width="100%" viewBox="0 0 380 400" style="touch-action:none;user-select:none"></svg>
+<canvas id="v3" style="display:none"></canvas>
+<div class="row" id="sel">選択: なし(部品をタップかドラッグで選ぶ。3D は何もない所をドラッグで回す)</div>
+<div id="chk"></div>
+<div class="row"><button id="send">この配置で頼む</button></div>
+<div id="out"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/*CONFIG*/
+const C=CONFIG;
+const deep=o=>JSON.parse(JSON.stringify(o));
+let P={},st,sel=null,mode='2d';
+function initState(){P={};for(const s of C.sliders||[])P[s.id]=s.value;st={items:deep(C.items)};}
+initState();
+const ev=v=>typeof v==='number'?v:Function(...Object.keys(P),'return ('+v+')')(...Object.values(P));
+const outline=()=>C.outline.map(([x,y])=>[ev(x),ev(y)]);
+function rotExt(e,r){let [a,b,c,d]=e;const n=((r/90)%4+4)%4;for(let k=0;k<n;k++){[a,b,c,d]=[-d,-c,a,b];}return [a,b,c,d];}
+const find=id=>st.items.find(i=>i.id===id);
+function pos(it){return [it.x,it.lockY!=null?ev(it.lockY):it.y];}
+function bx(it){const e=it.circle?[-it.circle,it.circle,-it.circle,it.circle]:rotExt(it.ext,it.r||0);const [x,y]=pos(it);return [x+e[0],x+e[1],y+e[2],y+e[3]];}
+function relBoxes(it,list){const [x,y]=pos(it);return (list||[]).map(e=>{const q=rotExt(e,it.r||0);return [x+q[0],x+q[1],y+q[2],y+q[3]];});}
+function inPoly(p,x,y){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const [x0,y0]=p[j],[x1,y1]=p[i];if((y0>y)!==(y1>y)&&x<x0+(y-y0)*(x1-x0)/(y1-y0))c=!c;}return c;}
+function edgeD(p,x,y){let d=1e9;for(let i=0,j=p.length-1;i<p.length;j=i++){const [x0,y0]=p[j],[x1,y1]=p[i],dx=x1-x0,dy=y1-y0;const t=Math.max(0,Math.min(1,((x-x0)*dx+(y-y0)*dy)/(dx*dx+dy*dy||1)));d=Math.min(d,Math.hypot(x-x0-t*dx,y-y0-t*dy));}return d;}
+function boxD(b,cx,cy){return Math.hypot(Math.max(b[0]-cx,0,cx-b[1]),Math.max(b[2]-cy,0,cy-b[3]));}
+function ov(a,b){return a[0]<b[1]&&b[0]<a[1]&&a[2]<b[3]&&b[2]<a[3];}
+const R=C.rules||{};
+function checks(){const res=[],its=st.items,ol=outline(),body=C.body&&C.body.pts;
+const env={};for(const it of its){const [x,y]=pos(it);env[it.id.replace(/[^A-Za-z0-9_]/g,'_')]={x,y,r:it.r||0,box:bx(it)};}Object.assign(env,P);
+for(const c of C.customChecks||[]){let ok=false,v='';try{const f=Function(...Object.keys(env),'return ['+c.expr+','+(c.value||'""')+']');[ok,v]=f(...Object.values(env));}catch(e){v='式の誤り';}res.push([!!ok,c.label+(v!==''&&v!=null?` (${typeof v==='number'?v.toFixed(2):v})`:'')]);}
+for(const it of its){if(it.circle)continue;const b=bx(it);let bad=null,where=new Set();
+for(const x of [b[0],b[1]])for(let y of [b[2],b[3]]){if(it.edgeOpen)y=Math.min(y,ev(it.edgeOpen));
+const onB=(it.side==='B');if(!inPoly(ol,x,y)||edgeD(ol,x,y)<(R.edge??0.2)){bad='基板の外';}
+if(onB||!body)continue;
+if(inPoly(body,x,y)){where.add('in');if(edgeD(body,x,y)<(R.wall??1.5))bad=(C.body.name||'本体')+'の壁に載る';}else{where.add('out');if(edgeD(body,x,y)<(R.outside??0.3))bad=(C.body.name||'本体')+'の外の面に近い';}}
+if(where.size>1)bad=(C.body.name||'本体')+'の壁をまたぐ';
+if(it.mustIn==='body'&&where.has('out'))bad=(C.body.name||'本体')+'の外に出た';
+if(it.mustIn==='out'&&where.has('in'))bad=(C.body.name||'本体')+'の上に来た';
+if(bad)res.push([false,`${it.id}: ${bad}`]);
+for(const k of C.keepouts||[]){if(k.side&&k.side!==(it.side||'F'))continue;if(k.only&&!k.only.includes(it.id))continue;if(k.except&&k.except.includes(it.id))continue;
+const cx=k.of?pos(find(k.of))[0]:k.x,cy=k.of?pos(find(k.of))[1]:k.y;if(k.of===it.id)continue;
+const d=boxD(b,cx,cy);if(d<k.r)res.push([false,`${it.id}: ${k.name} から ${d.toFixed(2)}(${k.r} 以上)`]);}
+for(const z of C.zones||[]){if(z.side&&z.side!==(it.side||'F'))continue;if(z.tallOnly&&!((it.h||0)>z.maxH))continue;
+const boxes=z.exposedOnly?relBoxes(it,it.exposedB):[b];for(const q of boxes)if(ov(q,z.box)){res.push([false,`${it.id}: ${z.name}`]);break;}}}
+const F=its.filter(i=>!i.circle&&(i.side||'F')==='F');
+for(let i=0;i<F.length;i++)for(let j=i+1;j<F.length;j++)if(ov(bx(F[i]),bx(F[j])))res.push([false,`${F[i].id} と ${F[j].id} が重なる`]);
+const seen=new Set();return res.filter(([ok,t])=>{if(seen.has(t))return false;seen.add(t);return true;});}
+function summary(){const f=v=>(+v).toFixed(1);return `${C.title} の配置案: `+(C.sliders||[]).map(s=>`${s.label} ${f(P[s.id])}`).concat(st.items.map(it=>{const [x,y]=pos(it);const n=it.label||it.id;return it.lockY!=null?`${n} x ${f(x)}`:`${n} (${f(x)}, ${f(y)}${it.rotatable===false?'':', '+(it.r||0)+'°'})`;})).join(' / ');}
+function report(){document.getElementById('chk').innerHTML=checks().map(([ok,t])=>`<div class="${ok?'ok':'ng'}">${ok?'OK':'NG'} ${t}</div>`).join('');document.getElementById('out').textContent=summary();for(const s of C.sliders||[])document.getElementById('v_'+s.id).textContent=(+P[s.id]).toFixed(1);}
+/* ---- 2D ---- */
+const V=C.view,S=380/(V.x1-V.x0+8),OX=(4-V.x0)*S,H=Math.round((V.y1-V.y0+8)*S);
+document.getElementById('sv').setAttribute('viewBox',`0 0 380 ${H}`);
+const X=x=>OX+x*S,Y=y=>(V.y1+4-y)*S;
+const rect=(b,a)=>`<rect x="${X(b[0])}" y="${Y(b[3])}" width="${(b[1]-b[0])*S}" height="${(b[3]-b[2])*S}" ${a}/>`;
+const poly=(p,a)=>`<polygon points="${p.map(([x,y])=>X(x)+','+Y(y)).join(' ')}" ${a}/>`;
+const COL={purple:'c-purple',teal:'c-teal',gray:'c-gray',coral:'c-coral',amber:'c-amber',blue:'c-blue'};
+function draw2(){let h='';
+for(const z of C.zones||[])if(z.draw!==false)h+=rect(z.box,z.side==='B'?'fill="var(--bg-neutral)"':'fill="none" stroke="#BA7517" stroke-width="0.6" stroke-dasharray="3 3"');
+h+=poly(outline(),'fill="none" stroke="var(--border-stronger)" stroke-width="1"');
+if(C.body)h+=poly(C.body.pts,'fill="none" stroke="#BA7517" stroke-width="1" stroke-dasharray="6 4"');
+for(const g of C.guides||[])h+=g.circle?`<circle cx="${X(g.x)}" cy="${Y(g.y)}" r="${g.circle*S}" fill="none" stroke="var(--text-primary)" stroke-width="0.8"/>`:rect(g.box,'fill="none" stroke="#BA7517" stroke-width="0.6" stroke-dasharray="3 3"');
+for(const it of st.items){const [x,y]=pos(it),b=bx(it),sw=sel===it.id?2:0.5,cls=COL[it.color]||'c-teal';
+if(it.circle){for(const k of it.rings||[])h+=k.hex?poly([...Array(6)].map((_,i)=>[x+k.hex*Math.cos(Math.PI/3*i),y+k.hex*Math.sin(Math.PI/3*i)]),'fill="none" stroke="#D85A30" stroke-width="0.8"'):`<circle cx="${X(x)}" cy="${Y(y)}" r="${k.r*S}" fill="none" stroke="#D85A30" stroke-width="0.8" stroke-dasharray="4 3"/>`;
+h+=`<g class="${cls}" data-id="${it.id}" style="cursor:grab"><circle cx="${X(x)}" cy="${Y(y)}" r="${it.circle*S}" stroke-width="${sw}"/><text class="ts" x="${X(x)}" y="${Y(y)+4}" text-anchor="middle">${it.label||it.id}</text></g>`;continue;}
+for(const g of relBoxes(it,it.ghost))h+=rect(g,'rx="3" fill="none" stroke="var(--text-secondary)" stroke-width="0.8" stroke-dasharray="3 3"');
+const big=(b[1]-b[0])>6&&(b[3]-b[2])>3,dash=it.side==='B'?'stroke-dasharray="3 2" fill-opacity="0.3"':'';
+h+=`<g class="${cls}" data-id="${it.id}" style="cursor:grab">${rect(b,`rx="1.5" stroke-width="${sw}" ${dash}`)}${big?`<text class="ts" x="${X((b[0]+b[1])/2)}" y="${Y((b[2]+b[3])/2)+4}" text-anchor="middle">${it.label||it.id}${it.r?' '+it.r+'°':''}</text>`:''}</g>`;
+if(it.pin1){const p=relBoxes(it,[it.pin1])[0];h+=`<circle cx="${X((p[0]+p[1])/2)}" cy="${Y((p[2]+p[3])/2)}" r="3" fill="var(--text-danger)" style="pointer-events:none"/>`;}
+if(!big)h+=`<text class="ts" x="${X(x)}" y="${Y(b[2])+12}" text-anchor="middle" style="pointer-events:none">${it.label||it.id}</text>`;}
+document.getElementById('sv').innerHTML=h;}
+/* ---- 3D ---- */
+let r3=null;
+function init3(){const cv=document.getElementById('v3');if(!window.THREE){document.getElementById('sel').textContent='3D のライブラリが読めなかった';return null;}
+const rd=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});const sc=new THREE.Scene();
+const cam=new THREE.PerspectiveCamera(35,1,1,2000);sc.add(new THREE.AmbientLight(0xffffff,0.7));const dl=new THREE.DirectionalLight(0xffffff,0.6);dl.position.set(40,-60,120);sc.add(dl);
+const g=new THREE.Group();sc.add(g);const o={rd,sc,cam,g,yaw:-0.5,pitch:0.9,dist:(V.x1-V.x0)*2.2,meshes:{}};
+const cx=(V.x0+V.x1)/2,cy=(V.y0+V.y1)/2;o.c=new THREE.Vector3(cx,cy,-3);return o;}
+function cam3(){const o=r3,cv=o.rd.domElement,w=cv.clientWidth,h=cv.clientHeight;o.rd.setSize(w,h,false);o.rd.setPixelRatio(window.devicePixelRatio||1);o.cam.aspect=w/h;
+o.cam.position.set(o.c.x+o.dist*Math.sin(o.yaw)*Math.cos(o.pitch),o.c.y-o.dist*Math.cos(o.yaw)*Math.cos(o.pitch),o.c.z+o.dist*Math.sin(o.pitch));o.cam.up.set(0,0,1);o.cam.lookAt(o.c);o.cam.updateProjectionMatrix();}
+function shapeOf(p){const s=new THREE.Shape();p.forEach(([x,y],i)=>i?s.lineTo(x,y):s.moveTo(x,y));return s;}
+const HEX={purple:0x7F77DD,teal:0x1D9E75,gray:0x888780,coral:0xD85A30,amber:0xBA7517,blue:0x378ADD};
+function boxMesh(b,z0,z1,color,op){const m=new THREE.Mesh(new THREE.BoxGeometry(b[1]-b[0],b[3]-b[2],Math.max(z1-z0,0.05)),new THREE.MeshLambertMaterial({color,transparent:op<1,opacity:op}));m.position.set((b[0]+b[1])/2,(b[2]+b[3])/2,(z0+z1)/2);return m;}
+function draw3(){if(!r3)return;const g=r3.g;while(g.children.length)g.remove(g.children[0]);r3.meshes={};const T=C.thickness||1.6;
+const bd=new THREE.Mesh(new THREE.ExtrudeGeometry(shapeOf(outline()),{depth:T,bevelEnabled:false}),new THREE.MeshLambertMaterial({color:0x2f6b45}));g.add(bd);
+if(C.body){const s=shapeOf(C.body.pts);const m=new THREE.Mesh(new THREE.ExtrudeGeometry(s,{depth:C.body.depth||15,bevelEnabled:false}),new THREE.MeshLambertMaterial({color:0x30343a,transparent:true,opacity:0.18}));m.position.z=-(C.body.depth||15);g.add(m);}
+for(const z of C.zones||[])if(z.z!=null)g.add(boxMesh(z.box,-(C.body&&C.body.depth||15),-z.z,HEX.amber,0.5));
+for(const it of st.items){const [x,y]=pos(it);let m;const col=sel===it.id?0xE24B4A:(HEX[it.color]||HEX.teal);
+if(it.circle){m=new THREE.Mesh(new THREE.CylinderGeometry(it.circle,it.circle,T+0.2,32),new THREE.MeshLambertMaterial({color:col}));m.rotation.x=Math.PI/2;m.position.set(x,y,T/2);
+for(const k of it.rings||[])if(k.hex&&k.h){const n=new THREE.Mesh(new THREE.CylinderGeometry(k.hex,k.hex,k.h,6),new THREE.MeshLambertMaterial({color:0xc0603a,transparent:true,opacity:0.7}));n.rotation.x=Math.PI/2;n.position.set(x,y,-k.h/2);g.add(n);}}
+else{const b=bx(it),h=it.h||1;m=it.side==='B'?boxMesh(b,T,T+Math.max(h,0.1),col,1):boxMesh(b,-h,0,col,1);
+for(const q of relBoxes(it,it.ghost))g.add(boxMesh(q,-(it.ghostH||6),0,0x8a8f96,0.35));}
+m.userData.id=it.id;r3.meshes[it.id]=m;g.add(m);}
+cam3();r3.rd.render(r3.sc,r3.cam);}
+/* ---- interaction ---- */
+const sv=document.getElementById('sv'),cv=document.getElementById('v3');let drag=null;
+function pt2(e){const p=sv.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(sv.getScreenCTM().inverse());return [(q.x-OX)/S,V.y1+4-q.y/S];}
+function pt3(e,z){const r=cv.getBoundingClientRect(),v=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);const rc=new THREE.Raycaster();rc.setFromCamera(v,r3.cam);return [rc,rc.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),-z),new THREE.Vector3())];}
+function pick(id,x,y){sel=id;const it=find(id);const [ix,iy]=pos(it);drag={dx:x-ix,dy:y-iy};document.getElementById('sel').textContent='選択: '+(it.label||id)+(it.note?'('+it.note+')':'');}
+function move(x,y){const it=find(sel),nx=Math.round((x-drag.dx)*10)/10,ny=Math.round((y-drag.dy)*10)/10;if(it.fixed)return;it.x=nx;if(it.lockY==null)it.y=ny;redraw();}
+sv.addEventListener('pointerdown',e=>{const g=e.target.closest('[data-id]');if(!g)return;const [x,y]=pt2(e);pick(g.dataset.id,x,y);sv.setPointerCapture(e.pointerId);redraw();});
+sv.addEventListener('pointermove',e=>{if(!drag)return;const [x,y]=pt2(e);move(x,y);});
+sv.addEventListener('pointerup',()=>{drag=null;});
+let orbit=null;
+cv.addEventListener('pointerdown',e=>{const [rc]=pt3(e,0);const hit=rc.intersectObjects(Object.values(r3.meshes))[0];cv.setPointerCapture(e.pointerId);
+if(hit){const p=pt3(e,0)[1];pick(hit.object.userData.id,p.x,p.y);redraw();}else orbit={x:e.clientX,y:e.clientY};});
+cv.addEventListener('pointermove',e=>{if(drag){const p=pt3(e,0)[1];if(p)move(p.x,p.y);}else if(orbit){r3.yaw-=(e.clientX-orbit.x)*0.008;r3.pitch=Math.max(-1.5,Math.min(1.5,r3.pitch+(e.clientY-orbit.y)*0.008));orbit={x:e.clientX,y:e.clientY};draw3();}});
+cv.addEventListener('pointerup',()=>{drag=null;orbit=null;});
+cv.addEventListener('wheel',e=>{e.preventDefault();r3.dist*=e.deltaY>0?1.1:0.9;draw3();},{passive:false});
+function redraw(){if(mode==='2d')draw2();else draw3();report();}
+function setMode(m){mode=m;document.getElementById('b2').classList.toggle('on',m==='2d');document.getElementById('b3').classList.toggle('on',m==='3d');
+sv.style.display=m==='2d'?'block':'none';cv.style.display=m==='3d'?'block':'none';if(m==='3d'&&!r3)r3=init3();redraw();}
+document.getElementById('b2').addEventListener('click',()=>setMode('2d'));
+document.getElementById('b3').addEventListener('click',()=>setMode('3d'));
+document.getElementById('sliders').innerHTML=(C.sliders||[]).map(s=>`${s.label} <input id="s_${s.id}" type="range" min="${s.min}" max="${s.max}" step="${s.step}" value="${s.value}"><span id="v_${s.id}"></span>`).join(' ');
+for(const s of C.sliders||[])document.getElementById('s_'+s.id).addEventListener('input',e=>{P[s.id]=parseFloat(e.target.value);redraw();});
+document.getElementById('rot').addEventListener('click',()=>{const it=sel&&find(sel);if(!it){document.getElementById('sel').textContent='先に部品をタップして選んでください';return;}
+if(it.rotatable===false||it.circle){document.getElementById('sel').textContent='選択: '+sel+'(これは回せない)';return;}
+it.r=((it.r||0)+90)%360;document.getElementById('sel').textContent='選択: '+sel+' を '+it.r+'° にした';redraw();});
+document.getElementById('reset').addEventListener('click',()=>{initState();sel=null;for(const s of C.sliders||[])document.getElementById('s_'+s.id).value=s.value;redraw();});
+document.getElementById('send').addEventListener('click',()=>sendPrompt(summary()+'。この配置で実装して'));
+redraw();
+</script>
